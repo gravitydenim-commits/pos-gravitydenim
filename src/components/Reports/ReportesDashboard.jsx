@@ -1,0 +1,229 @@
+import React, { useMemo, useState } from 'react';
+import { BarChart3, TrendingUp, DollarSign, Percent, Package, Users, Activity, FileText } from 'lucide-react';
+
+export default function ReportesDashboard({ sales, issuers }) {
+  // Procesar datos para el mes actual
+  const { currentMonthTotal, currentMonthIVA, salesByIssuer, topProducts } = useMemo(() => {
+    let currentMonthTotal = 0;
+    let currentMonthIVA = 0;
+    const issuerTotals = {};
+    const productSales = {};
+
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    sales.forEach(sale => {
+      // Parsear fecha (Firestore Timestamp o Date)
+      const saleDate = sale.date?.toDate ? sale.date.toDate() : new Date(sale.date);
+      
+      const isCurrentMonth = saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
+
+      const total = sale.totals?.total || 0;
+      const iva = sale.totals?.ivaAmount || 0;
+
+      if (isCurrentMonth) {
+        currentMonthTotal += total;
+        currentMonthIVA += iva;
+      }
+
+      // Tabla multi-RUC (Acumulado general o mensual, lo haremos general)
+      const issuerId = sale.issuerId || 'Desconocido';
+      if (!issuerTotals[issuerId]) {
+        issuerTotals[issuerId] = {
+          name: sale.issuerName || issuerId,
+          total: 0,
+          ventas: 0
+        };
+      }
+      issuerTotals[issuerId].total += total;
+      issuerTotals[issuerId].ventas += 1;
+
+      // Ranking de productos
+      if (sale.items && Array.isArray(sale.items)) {
+        sale.items.forEach(item => {
+          if (!productSales[item.name]) {
+            productSales[item.name] = { name: item.name, qty: 0, revenue: 0 };
+          }
+          productSales[item.name].qty += item.qty;
+          productSales[item.name].revenue += (item.price * item.qty);
+        });
+      }
+    });
+
+    const topProductsArray = Object.values(productSales)
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, 10); // Top 10
+
+    return { 
+      currentMonthTotal, 
+      currentMonthIVA, 
+      salesByIssuer: Object.values(issuerTotals).sort((a, b) => b.total - a.total), 
+      topProducts: topProductsArray 
+    };
+  }, [sales]);
+
+  const [activeTab, setActiveTab] = useState('sri');
+
+  return (
+    <div className="report-container animate-fade-in" style={{ padding: '2rem', height: '100%', overflowY: 'auto' }}>
+      <div className="header" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2><Activity className="inline" style={{verticalAlign: 'bottom'}}/> Dashboard de Reportes</h2>
+          <span style={{color: 'var(--text-muted)'}}>Inteligencia Multi-RUC y Rendimiento</span>
+        </div>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <button 
+            onClick={() => setActiveTab('sri')}
+            style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: activeTab === 'sri' ? 'var(--accent)' : 'transparent', border: '1px solid var(--accent)', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}
+          >
+            Reportes SRI
+          </button>
+          <button 
+            onClick={() => setActiveTab('internos')}
+            style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: activeTab === 'internos' ? '#10b981' : 'transparent', border: '1px solid #10b981', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}
+          >
+            Detallados Internos
+          </button>
+        </div>
+      </div>
+
+      {activeTab === 'sri' && (
+        <>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+        
+        {/* KPI: Recaudación Mes */}
+        <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ padding: '15px', background: 'rgba(59, 130, 246, 0.2)', borderRadius: '50%', color: '#3b82f6' }}>
+            <DollarSign size={32} />
+          </div>
+          <div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.2rem' }}>Recaudación Mes Actual</p>
+            <h3 style={{ fontSize: '1.8rem', margin: 0 }}>${currentMonthTotal.toFixed(2)}</h3>
+          </div>
+        </div>
+
+        {/* KPI: IVA Acumulado */}
+        <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ padding: '15px', background: 'rgba(239, 68, 68, 0.2)', borderRadius: '50%', color: '#ef4444' }}>
+            <Percent size={32} />
+          </div>
+          <div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.2rem' }}>IVA Acumulado (15%) SRI</p>
+            <h3 style={{ fontSize: '1.8rem', margin: 0 }}>${currentMonthIVA.toFixed(2)}</h3>
+          </div>
+        </div>
+
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+        
+        {/* Rendimiento Multi-RUC */}
+        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+          <h3 style={{ color: 'var(--accent)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Users size={20} /> Rendimiento Multi-RUC
+          </h3>
+          {salesByIssuer.length > 0 ? (
+            <table className="pos-table">
+              <thead>
+                <tr>
+                  <th>Emisor / Hermano</th>
+                  <th>Nº Ventas</th>
+                  <th>Facturación</th>
+                </tr>
+              </thead>
+              <tbody>
+                {salesByIssuer.map((issuer, idx) => (
+                  <tr key={idx}>
+                    <td>{issuer.name}</td>
+                    <td>{issuer.ventas}</td>
+                    <td style={{ color: 'var(--success)' }}>${issuer.total.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p style={{ color: 'var(--text-muted)' }}>No hay ventas registradas aún.</p>
+          )}
+        </div>
+
+        {/* Ranking de Productos */}
+        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+          <h3 style={{ color: 'var(--accent)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Package size={20} /> Ranking Top Productos
+          </h3>
+          {topProducts.length > 0 && (
+            <table className="pos-table">
+              <thead>
+                <tr>
+                  <th>Prenda / Jean</th>
+                  <th>Unid. Vendidas</th>
+                  <th>Ingresos</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topProducts.map((product, idx) => (
+                  <tr key={idx}>
+                    <td>{product.name}</td>
+                    <td>{product.qty}</td>
+                    <td style={{ color: 'var(--success)' }}>${product.revenue.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+      </div>
+      </>
+      )}
+
+      {activeTab === 'internos' && (
+        <div className="glass-panel" style={{ padding: '1.5rem', marginTop: '1rem' }}>
+          <h3 style={{ color: '#10b981', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <FileText size={20} /> Historial Detallado de Transacciones
+          </h3>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="pos-table" style={{ minWidth: '800px' }}>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Emisor</th>
+                  <th>Cliente</th>
+                  <th>Clave de Acceso / ID</th>
+                  <th>Cant. Prendas</th>
+                  <th>Subtotal</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sales.sort((a,b) => new Date(b.date?.toDate ? b.date.toDate() : b.date) - new Date(a.date?.toDate ? a.date.toDate() : a.date)).map((sale, idx) => {
+                  const saleDate = sale.date?.toDate ? sale.date.toDate() : new Date(sale.date);
+                  const itemsQty = sale.items ? sale.items.reduce((acc, item) => acc + item.qty, 0) : 0;
+                  return (
+                    <tr key={idx}>
+                      <td>{saleDate.toLocaleString()}</td>
+                      <td>{sale.issuerName || sale.issuerId}</td>
+                      <td>{sale.customer?.nombre || 'Consumidor Final'}</td>
+                      <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{sale.id}</td>
+                      <td>{itemsQty}</td>
+                      <td>${(sale.totals?.subtotal || 0).toFixed(2)}</td>
+                      <td style={{ color: 'var(--success)', fontWeight: 'bold' }}>${(sale.totals?.total || 0).toFixed(2)}</td>
+                    </tr>
+                  );
+                })}
+                {sales.length === 0 && (
+                  <tr>
+                    <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No hay transacciones registradas</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
