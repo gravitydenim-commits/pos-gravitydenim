@@ -760,8 +760,8 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
                   onClick={confirmCheckout}
                   className="w-2/3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2"
                 >
-                  <Printer size={18} />
-                  🚀 Confirmar y Emitir al SRI
+                  {checkoutWithPrint && <Printer size={18} />}
+                  {checkoutWithPrint ? '🚀 Confirmar, Emitir e Imprimir' : '🚀 Confirmar y Emitir (Sin Imprimir)'}
                 </button>
               </div>
 
