@@ -341,6 +341,10 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
       </body>
       </html>
     `;
+        if (!printWindow) {
+            alert("⚠️ El navegador de la tablet bloqueó la ventana de impresión. Por favor, permita las ventanas emergentes (pop-ups) para este sitio.");
+            return;
+        }
         printWindow.document.open();
         printWindow.document.write(htmlContent);
         printWindow.document.close();
@@ -507,14 +511,14 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                         }
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                        lineNumber: 428,
+                                        lineNumber: 433,
                                         columnNumber: 15
                                     }, this),
                                     " Catálogo Compartido"
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                lineNumber: 428,
+                                lineNumber: 433,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -527,7 +531,7 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                         }
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                        lineNumber: 431,
+                                        lineNumber: 436,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("select", {
@@ -542,7 +546,7 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                 children: "-- Seleccione Emisor (Hermano) --"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                lineNumber: 437,
+                                                lineNumber: 442,
                                                 columnNumber: 15
                                             }, this),
                                             issuers.map((issuer)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -556,25 +560,25 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                     ]
                                                 }, issuer.id, true, {
                                                     fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                    lineNumber: 439,
+                                                    lineNumber: 444,
                                                     columnNumber: 17
                                                 }, this))
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                        lineNumber: 432,
+                                        lineNumber: 437,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                lineNumber: 430,
+                                lineNumber: 435,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                        lineNumber: 427,
+                        lineNumber: 432,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -589,18 +593,18 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                             size: 32
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                            lineNumber: 447,
+                                            lineNumber: 452,
                                             columnNumber: 75
                                         }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$tag$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Tag$3e$__["Tag"], {
                                             size: 32
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                            lineNumber: 447,
+                                            lineNumber: 452,
                                             columnNumber: 96
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                        lineNumber: 447,
+                                        lineNumber: 452,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -608,7 +612,7 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                         children: prod.nombre || prod.name
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                        lineNumber: 448,
+                                        lineNumber: 453,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -619,24 +623,24 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                        lineNumber: 449,
+                                        lineNumber: 454,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, prod.id, true, {
                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                lineNumber: 446,
+                                lineNumber: 451,
                                 columnNumber: 13
                             }, this))
                     }, void 0, false, {
                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                        lineNumber: 444,
+                        lineNumber: 449,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                lineNumber: 426,
+                lineNumber: 431,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -656,19 +660,19 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                     }
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                    lineNumber: 458,
+                                    lineNumber: 463,
                                     columnNumber: 15
                                 }, this),
                                 " Carrito"
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/POS/POSScreen.jsx",
-                            lineNumber: 458,
+                            lineNumber: 463,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                        lineNumber: 457,
+                        lineNumber: 462,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -689,7 +693,7 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                         children: "El carrito está vacío"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                        lineNumber: 464,
+                                        lineNumber: 469,
                                         columnNumber: 15
                                     }, this),
                                     cart.map((item)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -702,7 +706,7 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                             children: item.name
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 471,
+                                                            lineNumber: 476,
                                                             columnNumber: 19
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -729,7 +733,7 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                                     step: "0.01"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                                    lineNumber: 473,
+                                                                    lineNumber: 478,
                                                                     columnNumber: 21
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -740,19 +744,19 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                                     children: "c/u"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                                    lineNumber: 480,
+                                                                    lineNumber: 485,
                                                                     columnNumber: 21
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 472,
+                                                            lineNumber: 477,
                                                             columnNumber: 19
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                    lineNumber: 470,
+                                                    lineNumber: 475,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -765,12 +769,12 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                                 size: 16
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                                lineNumber: 485,
+                                                                lineNumber: 490,
                                                                 columnNumber: 94
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 485,
+                                                            lineNumber: 490,
                                                             columnNumber: 19
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -782,7 +786,7 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                             children: item.qty
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 486,
+                                                            lineNumber: 491,
                                                             columnNumber: 19
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -795,12 +799,12 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                                 size: 16
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                                lineNumber: 487,
+                                                                lineNumber: 492,
                                                                 columnNumber: 119
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 487,
+                                                            lineNumber: 492,
                                                             columnNumber: 19
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -810,18 +814,18 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                                 size: 16
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                                lineNumber: 488,
+                                                                lineNumber: 493,
                                                                 columnNumber: 85
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 488,
+                                                            lineNumber: 493,
                                                             columnNumber: 19
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                    lineNumber: 484,
+                                                    lineNumber: 489,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -836,19 +840,19 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                    lineNumber: 491,
+                                                    lineNumber: 496,
                                                     columnNumber: 17
                                                 }, this)
                                             ]
                                         }, item.id, true, {
                                             fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                            lineNumber: 469,
+                                            lineNumber: 474,
                                             columnNumber: 15
                                         }, this))
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                lineNumber: 462,
+                                lineNumber: 467,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -879,14 +883,14 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                         size: 16
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                        lineNumber: 503,
+                                                        lineNumber: 508,
                                                         columnNumber: 17
                                                     }, this),
                                                     " Datos del Cliente (SRI)"
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                lineNumber: 502,
+                                                lineNumber: 507,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -909,7 +913,7 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                                     children: "Cédula"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                                    lineNumber: 512,
+                                                                    lineNumber: 517,
                                                                     columnNumber: 21
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -918,7 +922,7 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                                     children: "RUC"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                                    lineNumber: 513,
+                                                                    lineNumber: 518,
                                                                     columnNumber: 21
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -927,7 +931,7 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                                     children: "Pasaporte"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                                    lineNumber: 514,
+                                                                    lineNumber: 519,
                                                                     columnNumber: 21
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -936,18 +940,18 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                                     children: "Consumidor Final"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                                    lineNumber: 515,
+                                                                    lineNumber: 520,
                                                                     columnNumber: 21
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 507,
+                                                            lineNumber: 512,
                                                             columnNumber: 19
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                        lineNumber: 506,
+                                                        lineNumber: 511,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -968,7 +972,7 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                                 className: "text-white placeholder:text-gray-400"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                                lineNumber: 520,
+                                                                lineNumber: 525,
                                                                 columnNumber: 19
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -984,30 +988,30 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                                     className: "animate-spin"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                                    lineNumber: 536,
+                                                                    lineNumber: 541,
                                                                     columnNumber: 42
                                                                 }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$search$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Search$3e$__["Search"], {
                                                                     size: 16
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                                    lineNumber: 536,
+                                                                    lineNumber: 541,
                                                                     columnNumber: 91
                                                                 }, this)
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                                lineNumber: 531,
+                                                                lineNumber: 536,
                                                                 columnNumber: 19
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                        lineNumber: 519,
+                                                        lineNumber: 524,
                                                         columnNumber: 17
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                lineNumber: 505,
+                                                lineNumber: 510,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1035,12 +1039,12 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                             className: "text-white placeholder:text-gray-400"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 543,
+                                                            lineNumber: 548,
                                                             columnNumber: 19
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                        lineNumber: 542,
+                                                        lineNumber: 547,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1060,18 +1064,18 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                             className: "text-white placeholder:text-gray-400"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 556,
+                                                            lineNumber: 561,
                                                             columnNumber: 19
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                        lineNumber: 555,
+                                                        lineNumber: 560,
                                                         columnNumber: 17
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                lineNumber: 541,
+                                                lineNumber: 546,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1099,12 +1103,12 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                             className: "text-white placeholder:text-gray-400"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 571,
+                                                            lineNumber: 576,
                                                             columnNumber: 19
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                        lineNumber: 570,
+                                                        lineNumber: 575,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1124,24 +1128,24 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                             className: "text-white placeholder:text-gray-400"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 584,
+                                                            lineNumber: 589,
                                                             columnNumber: 19
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                        lineNumber: 583,
+                                                        lineNumber: 588,
                                                         columnNumber: 17
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                lineNumber: 569,
+                                                lineNumber: 574,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                        lineNumber: 501,
+                                        lineNumber: 506,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1151,7 +1155,7 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                 children: vatIncluded ? 'IVA Incluido (15%)' : 'Más IVA (+15%)'
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                lineNumber: 601,
+                                                lineNumber: 606,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
@@ -1163,26 +1167,26 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                         onChange: (e)=>setVatIncluded(e.target.checked)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                        lineNumber: 603,
+                                                        lineNumber: 608,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                         className: "slider"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                        lineNumber: 608,
+                                                        lineNumber: 613,
                                                         columnNumber: 17
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                lineNumber: 602,
+                                                lineNumber: 607,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                        lineNumber: 600,
+                                        lineNumber: 605,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1192,7 +1196,7 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                 children: "Subtotal"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                lineNumber: 614,
+                                                lineNumber: 619,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -1202,13 +1206,13 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                lineNumber: 615,
+                                                lineNumber: 620,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                        lineNumber: 613,
+                                        lineNumber: 618,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1218,7 +1222,7 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                 children: "Base Imponible (15%)"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                lineNumber: 618,
+                                                lineNumber: 623,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -1228,13 +1232,13 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                lineNumber: 619,
+                                                lineNumber: 624,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                        lineNumber: 617,
+                                        lineNumber: 622,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1244,7 +1248,7 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                 children: "IVA (15%)"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                lineNumber: 622,
+                                                lineNumber: 627,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -1254,13 +1258,13 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                lineNumber: 623,
+                                                lineNumber: 628,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                        lineNumber: 621,
+                                        lineNumber: 626,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1275,7 +1279,7 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                 children: "TOTAL"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                lineNumber: 626,
+                                                lineNumber: 631,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -1285,13 +1289,13 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                lineNumber: 627,
+                                                lineNumber: 632,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                        lineNumber: 625,
+                                        lineNumber: 630,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1319,14 +1323,14 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                         size: 20
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                        lineNumber: 647,
+                                                        lineNumber: 652,
                                                         columnNumber: 17
                                                     }, this),
                                                     "Solo Pagar"
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                lineNumber: 632,
+                                                lineNumber: 637,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -1347,506 +1351,618 @@ function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustome
                                                         size: 20
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                        lineNumber: 665,
+                                                        lineNumber: 670,
                                                         columnNumber: 17
                                                     }, this),
                                                     "Pagar e Imprimir"
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                lineNumber: 651,
+                                                lineNumber: 656,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                        lineNumber: 631,
+                                        lineNumber: 636,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                lineNumber: 498,
+                                lineNumber: 503,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                        lineNumber: 461,
+                        lineNumber: 466,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                lineNumber: 456,
+                lineNumber: 461,
                 columnNumber: 7
             }, this),
             showPreviewModal && (()=>{
                 const issuerData = issuers.find((i)=>i.id === selectedIssuer);
                 return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                    className: "fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 backdrop-blur-sm p-4 animate-fade-in",
+                    className: "modal-overlay animate-fade-in",
                     children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "flex flex-col max-h-[85vh] w-full max-w-md bg-slate-900 rounded-xl overflow-hidden shadow-2xl border border-slate-700",
+                        className: "modal-content",
+                        style: {
+                            maxWidth: '400px'
+                        },
                         children: [
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                className: "bg-slate-900 text-white p-4 text-center font-bold text-lg flex justify-between items-center border-b border-slate-800",
+                                className: "modal-header",
+                                style: {
+                                    padding: '1rem 1.5rem'
+                                },
                                 children: [
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                        style: {
+                                            fontWeight: 'bold',
+                                            fontSize: '1.1rem'
+                                        },
                                         children: "Vista Previa (80mm)"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                        lineNumber: 684,
+                                        lineNumber: 688,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                                         onClick: ()=>setShowPreviewModal(false),
-                                        className: "text-gray-400 hover:text-white",
+                                        style: {
+                                            background: 'transparent',
+                                            color: 'var(--text-muted)',
+                                            border: 'none',
+                                            fontSize: '1.5rem',
+                                            cursor: 'pointer'
+                                        },
                                         children: "×"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                        lineNumber: 685,
+                                        lineNumber: 689,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                lineNumber: 683,
+                                lineNumber: 687,
                                 columnNumber: 15
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                className: "flex-1 overflow-y-auto p-4 bg-slate-950",
-                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                    className: "bg-white text-black p-4 rounded",
-                                    style: {
-                                        fontFamily: 'monospace'
-                                    },
-                                    children: [
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                            className: "text-center mb-4 border-b border-dashed border-gray-400 pb-4",
-                                            children: [
-                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h2", {
-                                                    className: "text-xl font-bold uppercase",
-                                                    children: issuerData?.name
-                                                }, void 0, false, {
-                                                    fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                    lineNumber: 693,
-                                                    columnNumber: 21
-                                                }, this),
-                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                    className: "text-sm",
-                                                    children: [
-                                                        "RUC: ",
-                                                        issuerData?.ruc
-                                                    ]
-                                                }, void 0, true, {
-                                                    fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                    lineNumber: 694,
-                                                    columnNumber: 21
-                                                }, this),
-                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                    className: "text-xs mt-1",
-                                                    children: issuerData?.direccionMatriz || 'Dirección Matriz'
-                                                }, void 0, false, {
-                                                    fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                    lineNumber: 695,
-                                                    columnNumber: 21
-                                                }, this),
-                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                    className: "text-xs mt-1",
-                                                    children: [
-                                                        "OBLIGADO A LLEVAR CONTABILIDAD: ",
-                                                        issuerData?.obligadoContabilidad ? 'SI' : 'NO'
-                                                    ]
-                                                }, void 0, true, {
-                                                    fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                    lineNumber: 696,
-                                                    columnNumber: 21
-                                                }, this),
-                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                    className: "text-sm font-bold mt-2",
-                                                    children: "GRAVITY DENIM POS"
-                                                }, void 0, false, {
-                                                    fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                    lineNumber: 697,
-                                                    columnNumber: 21
-                                                }, this)
-                                            ]
-                                        }, void 0, true, {
-                                            fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                            lineNumber: 692,
-                                            columnNumber: 19
-                                        }, this),
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                            className: "mb-4 text-xs space-y-1 border-b border-dashed border-gray-400 pb-4",
-                                            children: [
-                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                    children: [
-                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                            className: "font-bold",
-                                                            children: "CLIENTE:"
-                                                        }, void 0, false, {
-                                                            fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 702,
-                                                            columnNumber: 24
-                                                        }, this),
-                                                        " ",
-                                                        customer.nombre
-                                                    ]
-                                                }, void 0, true, {
-                                                    fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                    lineNumber: 702,
-                                                    columnNumber: 21
-                                                }, this),
-                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                    children: [
-                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                            className: "font-bold",
-                                                            children: "CI/RUC:"
-                                                        }, void 0, false, {
-                                                            fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 703,
-                                                            columnNumber: 24
-                                                        }, this),
-                                                        " ",
-                                                        customer.numeroIdentificacion
-                                                    ]
-                                                }, void 0, true, {
-                                                    fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                    lineNumber: 703,
-                                                    columnNumber: 21
-                                                }, this),
-                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                    children: [
-                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                            className: "font-bold",
-                                                            children: "CORREO:"
-                                                        }, void 0, false, {
-                                                            fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 704,
-                                                            columnNumber: 24
-                                                        }, this),
-                                                        " ",
-                                                        customer.correo
-                                                    ]
-                                                }, void 0, true, {
-                                                    fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                    lineNumber: 704,
-                                                    columnNumber: 21
-                                                }, this),
-                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                    children: [
-                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                            className: "font-bold",
-                                                            children: "DIR:"
-                                                        }, void 0, false, {
-                                                            fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 705,
-                                                            columnNumber: 24
-                                                        }, this),
-                                                        " ",
-                                                        customer.direccion
-                                                    ]
-                                                }, void 0, true, {
-                                                    fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                    lineNumber: 705,
-                                                    columnNumber: 21
-                                                }, this)
-                                            ]
-                                        }, void 0, true, {
-                                            fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                            lineNumber: 701,
-                                            columnNumber: 19
-                                        }, this),
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                            className: "mb-4 text-xs border-b border-dashed border-gray-400 pb-4",
-                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("table", {
-                                                className: "w-full text-left",
+                                className: "modal-body",
+                                style: {
+                                    background: '#f8fafc',
+                                    color: '#0f172a',
+                                    padding: '1.5rem',
+                                    overflowY: 'auto',
+                                    maxHeight: '60vh',
+                                    fontFamily: 'monospace'
+                                },
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                        style: {
+                                            textAlign: 'center',
+                                            borderBottom: '1px dashed #94a3b8',
+                                            paddingBottom: '1rem',
+                                            marginBottom: '1rem'
+                                        },
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h2", {
+                                                style: {
+                                                    fontSize: '1.2rem',
+                                                    margin: 0,
+                                                    textTransform: 'uppercase'
+                                                },
+                                                children: issuerData?.name
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                lineNumber: 696,
+                                                columnNumber: 19
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                style: {
+                                                    margin: '4px 0'
+                                                },
                                                 children: [
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("thead", {
-                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("tr", {
-                                                            className: "border-b border-gray-300",
-                                                            children: [
-                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
-                                                                    className: "py-1",
-                                                                    children: "CANT"
-                                                                }, void 0, false, {
-                                                                    fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                                    lineNumber: 713,
-                                                                    columnNumber: 27
-                                                                }, this),
-                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
-                                                                    className: "py-1",
-                                                                    children: "DESCRIPCION"
-                                                                }, void 0, false, {
-                                                                    fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                                    lineNumber: 714,
-                                                                    columnNumber: 27
-                                                                }, this),
-                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
-                                                                    className: "py-1 text-right",
-                                                                    children: "TOTAL"
-                                                                }, void 0, false, {
-                                                                    fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                                    lineNumber: 715,
-                                                                    columnNumber: 27
-                                                                }, this)
-                                                            ]
-                                                        }, void 0, true, {
-                                                            fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 712,
-                                                            columnNumber: 25
-                                                        }, this)
+                                                    "RUC: ",
+                                                    issuerData?.ruc
+                                                ]
+                                            }, void 0, true, {
+                                                fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                lineNumber: 697,
+                                                columnNumber: 19
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                style: {
+                                                    margin: '4px 0',
+                                                    fontSize: '11px'
+                                                },
+                                                children: issuerData?.direccionMatriz || 'Dirección Matriz'
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                lineNumber: 698,
+                                                columnNumber: 19
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                style: {
+                                                    margin: '4px 0',
+                                                    fontSize: '11px'
+                                                },
+                                                children: [
+                                                    "OBLIGADO CONTABILIDAD: ",
+                                                    issuerData?.obligadoContabilidad ? 'SI' : 'NO'
+                                                ]
+                                            }, void 0, true, {
+                                                fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                lineNumber: 699,
+                                                columnNumber: 19
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                style: {
+                                                    fontWeight: 'bold',
+                                                    marginTop: '8px'
+                                                },
+                                                children: "GRAVITY DENIM POS"
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                lineNumber: 700,
+                                                columnNumber: 19
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                        lineNumber: 695,
+                                        columnNumber: 17
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                        style: {
+                                            fontSize: '11px',
+                                            borderBottom: '1px dashed #94a3b8',
+                                            paddingBottom: '1rem',
+                                            marginBottom: '1rem'
+                                        },
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                style: {
+                                                    margin: '2px 0'
+                                                },
+                                                children: [
+                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("b", {
+                                                        children: "CLIENTE:"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                        lineNumber: 711,
-                                                        columnNumber: 23
+                                                        lineNumber: 704,
+                                                        columnNumber: 50
                                                     }, this),
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("tbody", {
-                                                        children: cart.map((item)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("tr", {
-                                                                children: [
-                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
-                                                                        className: "py-1 align-top",
-                                                                        children: item.qty
-                                                                    }, void 0, false, {
-                                                                        fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                                        lineNumber: 721,
-                                                                        columnNumber: 29
-                                                                    }, this),
-                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
-                                                                        className: "py-1 pr-2",
-                                                                        children: item.name
-                                                                    }, void 0, false, {
-                                                                        fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                                        lineNumber: 722,
-                                                                        columnNumber: 29
-                                                                    }, this),
-                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
-                                                                        className: "py-1 text-right align-top",
-                                                                        children: [
-                                                                            "$",
-                                                                            (item.price * item.qty).toFixed(2)
-                                                                        ]
-                                                                    }, void 0, true, {
-                                                                        fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                                        lineNumber: 723,
-                                                                        columnNumber: 29
-                                                                    }, this)
-                                                                ]
-                                                            }, item.id, true, {
-                                                                fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                                lineNumber: 720,
-                                                                columnNumber: 27
-                                                            }, this))
+                                                    " ",
+                                                    customer.nombre
+                                                ]
+                                            }, void 0, true, {
+                                                fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                lineNumber: 704,
+                                                columnNumber: 19
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                style: {
+                                                    margin: '2px 0'
+                                                },
+                                                children: [
+                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("b", {
+                                                        children: "CI/RUC:"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                        lineNumber: 718,
+                                                        lineNumber: 705,
+                                                        columnNumber: 50
+                                                    }, this),
+                                                    " ",
+                                                    customer.numeroIdentificacion
+                                                ]
+                                            }, void 0, true, {
+                                                fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                lineNumber: 705,
+                                                columnNumber: 19
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                style: {
+                                                    margin: '2px 0'
+                                                },
+                                                children: [
+                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("b", {
+                                                        children: "CORREO:"
+                                                    }, void 0, false, {
+                                                        fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                        lineNumber: 706,
+                                                        columnNumber: 50
+                                                    }, this),
+                                                    " ",
+                                                    customer.correo
+                                                ]
+                                            }, void 0, true, {
+                                                fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                lineNumber: 706,
+                                                columnNumber: 19
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                style: {
+                                                    margin: '2px 0'
+                                                },
+                                                children: [
+                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("b", {
+                                                        children: "DIR:"
+                                                    }, void 0, false, {
+                                                        fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                        lineNumber: 707,
+                                                        columnNumber: 50
+                                                    }, this),
+                                                    " ",
+                                                    customer.direccion
+                                                ]
+                                            }, void 0, true, {
+                                                fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                lineNumber: 707,
+                                                columnNumber: 19
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                        lineNumber: 703,
+                                        columnNumber: 17
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("table", {
+                                        style: {
+                                            width: '100%',
+                                            fontSize: '11px',
+                                            borderBottom: '1px dashed #94a3b8',
+                                            paddingBottom: '1rem',
+                                            marginBottom: '1rem'
+                                        },
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("thead", {
+                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("tr", {
+                                                    children: [
+                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
+                                                            style: {
+                                                                textAlign: 'left',
+                                                                borderBottom: '1px solid #94a3b8',
+                                                                paddingBottom: '4px'
+                                                            },
+                                                            children: "CANT"
+                                                        }, void 0, false, {
+                                                            fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                            lineNumber: 713,
+                                                            columnNumber: 23
+                                                        }, this),
+                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
+                                                            style: {
+                                                                textAlign: 'left',
+                                                                borderBottom: '1px solid #94a3b8',
+                                                                paddingBottom: '4px'
+                                                            },
+                                                            children: "DESCRIPCION"
+                                                        }, void 0, false, {
+                                                            fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                            lineNumber: 714,
+                                                            columnNumber: 23
+                                                        }, this),
+                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
+                                                            style: {
+                                                                textAlign: 'right',
+                                                                borderBottom: '1px solid #94a3b8',
+                                                                paddingBottom: '4px'
+                                                            },
+                                                            children: "TOTAL"
+                                                        }, void 0, false, {
+                                                            fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                            lineNumber: 715,
+                                                            columnNumber: 23
+                                                        }, this)
+                                                    ]
+                                                }, void 0, true, {
+                                                    fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                    lineNumber: 712,
+                                                    columnNumber: 21
+                                                }, this)
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                lineNumber: 711,
+                                                columnNumber: 19
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("tbody", {
+                                                children: cart.map((item)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("tr", {
+                                                        children: [
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
+                                                                style: {
+                                                                    paddingTop: '4px',
+                                                                    verticalAlign: 'top'
+                                                                },
+                                                                children: item.qty
+                                                            }, void 0, false, {
+                                                                fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                                lineNumber: 721,
+                                                                columnNumber: 25
+                                                            }, this),
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
+                                                                style: {
+                                                                    paddingTop: '4px',
+                                                                    paddingRight: '8px'
+                                                                },
+                                                                children: item.name
+                                                            }, void 0, false, {
+                                                                fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                                lineNumber: 722,
+                                                                columnNumber: 25
+                                                            }, this),
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
+                                                                style: {
+                                                                    paddingTop: '4px',
+                                                                    textAlign: 'right',
+                                                                    verticalAlign: 'top'
+                                                                },
+                                                                children: [
+                                                                    "$",
+                                                                    (item.price * item.qty).toFixed(2)
+                                                                ]
+                                                            }, void 0, true, {
+                                                                fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                                lineNumber: 723,
+                                                                columnNumber: 25
+                                                            }, this)
+                                                        ]
+                                                    }, item.id, true, {
+                                                        fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                        lineNumber: 720,
                                                         columnNumber: 23
+                                                    }, this))
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                lineNumber: 718,
+                                                columnNumber: 19
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                        lineNumber: 710,
+                                        columnNumber: 17
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                        style: {
+                                            fontSize: '12px',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '4px'
+                                        },
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                style: {
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between'
+                                                },
+                                                children: [
+                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                        children: "SUB-TOTAL:"
+                                                    }, void 0, false, {
+                                                        fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                        lineNumber: 730,
+                                                        columnNumber: 85
+                                                    }, this),
+                                                    " ",
+                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                        children: [
+                                                            "$",
+                                                            subtotal.toFixed(2)
+                                                        ]
+                                                    }, void 0, true, {
+                                                        fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                        lineNumber: 730,
+                                                        columnNumber: 109
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                lineNumber: 710,
-                                                columnNumber: 21
-                                            }, this)
-                                        }, void 0, false, {
-                                            fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                            lineNumber: 709,
-                                            columnNumber: 19
-                                        }, this),
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                            className: "text-sm space-y-1 text-right",
-                                            children: [
-                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                    className: "flex justify-between",
-                                                    children: [
-                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                            children: "SUB-TOTAL:"
-                                                        }, void 0, false, {
-                                                            fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 732,
-                                                            columnNumber: 57
-                                                        }, this),
-                                                        " ",
-                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                            children: [
-                                                                "$",
-                                                                subtotal.toFixed(2)
-                                                            ]
-                                                        }, void 0, true, {
-                                                            fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 732,
-                                                            columnNumber: 81
-                                                        }, this)
-                                                    ]
-                                                }, void 0, true, {
-                                                    fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                    lineNumber: 732,
-                                                    columnNumber: 21
-                                                }, this),
-                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                    className: "flex justify-between text-gray-600 text-xs",
-                                                    children: [
-                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                            children: "BASE IMPONIBLE (15%):"
-                                                        }, void 0, false, {
-                                                            fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 733,
-                                                            columnNumber: 79
-                                                        }, this),
-                                                        " ",
-                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                            children: [
-                                                                "$",
-                                                                baseImponible.toFixed(2)
-                                                            ]
-                                                        }, void 0, true, {
-                                                            fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 733,
-                                                            columnNumber: 114
-                                                        }, this)
-                                                    ]
-                                                }, void 0, true, {
-                                                    fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                    lineNumber: 733,
-                                                    columnNumber: 21
-                                                }, this),
-                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                    className: "flex justify-between text-gray-600 text-xs",
-                                                    children: [
-                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                            children: "IVA (15%):"
-                                                        }, void 0, false, {
-                                                            fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 734,
-                                                            columnNumber: 79
-                                                        }, this),
-                                                        " ",
-                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                            children: [
-                                                                "$",
-                                                                ivaAmount.toFixed(2)
-                                                            ]
-                                                        }, void 0, true, {
-                                                            fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 734,
-                                                            columnNumber: 103
-                                                        }, this)
-                                                    ]
-                                                }, void 0, true, {
-                                                    fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                    lineNumber: 734,
-                                                    columnNumber: 21
-                                                }, this),
-                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                    className: "flex justify-between font-bold text-lg mt-2 border-t border-black pt-2",
-                                                    children: [
-                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                            children: "TOTAL NETO:"
-                                                        }, void 0, false, {
-                                                            fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 736,
-                                                            columnNumber: 23
-                                                        }, this),
-                                                        " ",
-                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                            children: [
-                                                                "$",
-                                                                total.toFixed(2)
-                                                            ]
-                                                        }, void 0, true, {
-                                                            fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                            lineNumber: 736,
-                                                            columnNumber: 48
-                                                        }, this)
-                                                    ]
-                                                }, void 0, true, {
-                                                    fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                    lineNumber: 735,
-                                                    columnNumber: 21
-                                                }, this)
-                                            ]
-                                        }, void 0, true, {
-                                            fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                            lineNumber: 731,
-                                            columnNumber: 19
-                                        }, this),
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                            className: "text-center mt-6 text-xs text-gray-500",
-                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                children: "-- Vista previa antes de transmisión SRI --"
-                                            }, void 0, false, {
-                                                fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                lineNumber: 741,
-                                                columnNumber: 21
-                                            }, this)
-                                        }, void 0, false, {
-                                            fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                            lineNumber: 740,
-                                            columnNumber: 19
-                                        }, this)
-                                    ]
-                                }, void 0, true, {
-                                    fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                    lineNumber: 690,
-                                    columnNumber: 17
-                                }, this)
-                            }, void 0, false, {
-                                fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                lineNumber: 689,
-                                columnNumber: 15
-                            }, this),
-                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                className: "p-4 bg-slate-900 border-t border-slate-800 flex gap-3 sticky bottom-0",
-                                children: [
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
-                                        onClick: ()=>setShowPreviewModal(false),
-                                        className: "w-1/3 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-lg transition-colors",
-                                        children: "Regresar"
-                                    }, void 0, false, {
-                                        fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                        lineNumber: 748,
-                                        columnNumber: 17
-                                    }, this),
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
-                                        onClick: confirmCheckout,
-                                        className: "w-2/3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2",
-                                        children: [
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$printer$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Printer$3e$__["Printer"], {
-                                                size: 18
-                                            }, void 0, false, {
-                                                fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                                lineNumber: 758,
+                                                lineNumber: 730,
                                                 columnNumber: 19
                                             }, this),
-                                            "🚀 Confirmar y Emitir al SRI"
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                style: {
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    color: '#475569'
+                                                },
+                                                children: [
+                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                        children: "BASE IMPONIBLE (15%):"
+                                                    }, void 0, false, {
+                                                        fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                        lineNumber: 731,
+                                                        columnNumber: 103
+                                                    }, this),
+                                                    " ",
+                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                        children: [
+                                                            "$",
+                                                            baseImponible.toFixed(2)
+                                                        ]
+                                                    }, void 0, true, {
+                                                        fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                        lineNumber: 731,
+                                                        columnNumber: 138
+                                                    }, this)
+                                                ]
+                                            }, void 0, true, {
+                                                fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                lineNumber: 731,
+                                                columnNumber: 19
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                style: {
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    color: '#475569'
+                                                },
+                                                children: [
+                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                        children: "IVA (15%):"
+                                                    }, void 0, false, {
+                                                        fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                        lineNumber: 732,
+                                                        columnNumber: 103
+                                                    }, this),
+                                                    " ",
+                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                        children: [
+                                                            "$",
+                                                            ivaAmount.toFixed(2)
+                                                        ]
+                                                    }, void 0, true, {
+                                                        fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                        lineNumber: 732,
+                                                        columnNumber: 127
+                                                    }, this)
+                                                ]
+                                            }, void 0, true, {
+                                                fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                lineNumber: 732,
+                                                columnNumber: 19
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                style: {
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    fontWeight: 'bold',
+                                                    fontSize: '1.2rem',
+                                                    marginTop: '8px',
+                                                    paddingTop: '8px',
+                                                    borderTop: '1px solid #0f172a'
+                                                },
+                                                children: [
+                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                        children: "TOTAL NETO:"
+                                                    }, void 0, false, {
+                                                        fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                        lineNumber: 734,
+                                                        columnNumber: 21
+                                                    }, this),
+                                                    " ",
+                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                        children: [
+                                                            "$",
+                                                            total.toFixed(2)
+                                                        ]
+                                                    }, void 0, true, {
+                                                        fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                        lineNumber: 734,
+                                                        columnNumber: 46
+                                                    }, this)
+                                                ]
+                                            }, void 0, true, {
+                                                fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                lineNumber: 733,
+                                                columnNumber: 19
+                                            }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                        lineNumber: 754,
+                                        lineNumber: 729,
+                                        columnNumber: 17
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                        style: {
+                                            textAlign: 'center',
+                                            marginTop: '1.5rem',
+                                            fontSize: '10px',
+                                            color: '#64748b'
+                                        },
+                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                            children: "-- Vista previa antes de transmisión SRI --"
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                            lineNumber: 739,
+                                            columnNumber: 19
+                                        }, this)
+                                    }, void 0, false, {
+                                        fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                        lineNumber: 738,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/POS/POSScreen.jsx",
-                                lineNumber: 747,
+                                lineNumber: 693,
+                                columnNumber: 15
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                className: "modal-footer",
+                                style: {
+                                    padding: '1rem 1.5rem',
+                                    display: 'flex',
+                                    gap: '1rem',
+                                    background: 'var(--panel-bg)'
+                                },
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                        onClick: ()=>setShowPreviewModal(false),
+                                        className: "btn-secondary",
+                                        style: {
+                                            flex: 1
+                                        },
+                                        children: "Regresar"
+                                    }, void 0, false, {
+                                        fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                        lineNumber: 745,
+                                        columnNumber: 17
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                        onClick: confirmCheckout,
+                                        className: "btn-success",
+                                        style: {
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '0.5rem',
+                                            flex: 2
+                                        },
+                                        children: [
+                                            checkoutWithPrint && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$printer$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Printer$3e$__["Printer"], {
+                                                size: 18
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                                lineNumber: 757,
+                                                columnNumber: 41
+                                            }, this),
+                                            checkoutWithPrint ? 'Emitir e Imprimir' : 'Solo Emitir'
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                        lineNumber: 752,
+                                        columnNumber: 17
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/src/components/POS/POSScreen.jsx",
+                                lineNumber: 744,
                                 columnNumber: 15
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/POS/POSScreen.jsx",
-                        lineNumber: 680,
+                        lineNumber: 684,
                         columnNumber: 13
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/components/POS/POSScreen.jsx",
-                    lineNumber: 678,
+                    lineNumber: 683,
                     columnNumber: 11
                 }, this);
             })()
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/POS/POSScreen.jsx",
-        lineNumber: 424,
+        lineNumber: 429,
         columnNumber: 5
     }, this);
 }

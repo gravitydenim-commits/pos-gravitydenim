@@ -501,4 +501,30 @@ input:checked + .slider:before {
   transform: translateX(26px);
 }
 
+@media (max-width: 1024px) {
+  .pos-container {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .products-section {
+    flex: none;
+    height: 50vh;
+  }
+
+  .cart-section {
+    flex: none;
+    height: auto;
+  }
+
+  .products-grid {
+    height: 100%;
+  }
+
+  .app-layout {
+    height: auto;
+    overflow-y: auto;
+  }
+}
+
 /*# sourceMappingURL=src_index_144e4m2.css.map*/

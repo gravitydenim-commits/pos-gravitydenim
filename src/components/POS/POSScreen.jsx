@@ -680,88 +680,82 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
       {showPreviewModal && (() => {
         const issuerData = issuers.find(i => i.id === selectedIssuer);
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 backdrop-blur-sm p-4 animate-fade-in">
-            {/* Contenedor Principal */}
-            <div className="flex flex-col max-h-[85vh] w-full max-w-md bg-slate-900 rounded-xl overflow-hidden shadow-2xl border border-slate-700">
+          <div className="modal-overlay animate-fade-in">
+            <div className="modal-content" style={{ maxWidth: '400px' }}>
               
               {/* Header del Modal */}
-              <div className="bg-slate-900 text-white p-4 text-center font-bold text-lg flex justify-between items-center border-b border-slate-800">
-                <span>Vista Previa (80mm)</span>
-                <button onClick={() => setShowPreviewModal(false)} className="text-gray-400 hover:text-white">&times;</button>
+              <div className="modal-header" style={{ padding: '1rem 1.5rem' }}>
+                <span style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>Vista Previa (80mm)</span>
+                <button onClick={() => setShowPreviewModal(false)} style={{ background: 'transparent', color: 'var(--text-muted)', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
               </div>
 
-              {/* Cuerpo Central con Scroll */}
-              <div className="flex-1 overflow-y-auto p-4 bg-slate-950">
-                <div className="bg-white text-black p-4 rounded" style={{ fontFamily: 'monospace' }}>
-                  {/* Encabezado Emisor */}
-                  <div className="text-center mb-4 border-b border-dashed border-gray-400 pb-4">
-                    <h2 className="text-xl font-bold uppercase">{issuerData?.name}</h2>
-                    <p className="text-sm">RUC: {issuerData?.ruc}</p>
-                    <p className="text-xs mt-1">{issuerData?.direccionMatriz || 'Dirección Matriz'}</p>
-                    <p className="text-xs mt-1">OBLIGADO A LLEVAR CONTABILIDAD: {issuerData?.obligadoContabilidad ? 'SI' : 'NO'}</p>
-                    <p className="text-sm font-bold mt-2">GRAVITY DENIM POS</p>
-                  </div>
+              {/* Cuerpo Central (El Ticket) */}
+              <div className="modal-body" style={{ background: '#f8fafc', color: '#0f172a', padding: '1.5rem', overflowY: 'auto', maxHeight: '60vh', fontFamily: 'monospace' }}>
+                
+                <div style={{ textAlign: 'center', borderBottom: '1px dashed #94a3b8', paddingBottom: '1rem', marginBottom: '1rem' }}>
+                  <h2 style={{ fontSize: '1.2rem', margin: 0, textTransform: 'uppercase' }}>{issuerData?.name}</h2>
+                  <p style={{ margin: '4px 0' }}>RUC: {issuerData?.ruc}</p>
+                  <p style={{ margin: '4px 0', fontSize: '11px' }}>{issuerData?.direccionMatriz || 'Dirección Matriz'}</p>
+                  <p style={{ margin: '4px 0', fontSize: '11px' }}>OBLIGADO CONTABILIDAD: {issuerData?.obligadoContabilidad ? 'SI' : 'NO'}</p>
+                  <p style={{ fontWeight: 'bold', marginTop: '8px' }}>GRAVITY DENIM POS</p>
+                </div>
 
-                  {/* Datos del Cliente */}
-                  <div className="mb-4 text-xs space-y-1 border-b border-dashed border-gray-400 pb-4">
-                    <p><span className="font-bold">CLIENTE:</span> {customer.nombre}</p>
-                    <p><span className="font-bold">CI/RUC:</span> {customer.numeroIdentificacion}</p>
-                    <p><span className="font-bold">CORREO:</span> {customer.correo}</p>
-                    <p><span className="font-bold">DIR:</span> {customer.direccion}</p>
-                  </div>
+                <div style={{ fontSize: '11px', borderBottom: '1px dashed #94a3b8', paddingBottom: '1rem', marginBottom: '1rem' }}>
+                  <p style={{ margin: '2px 0' }}><b>CLIENTE:</b> {customer.nombre}</p>
+                  <p style={{ margin: '2px 0' }}><b>CI/RUC:</b> {customer.numeroIdentificacion}</p>
+                  <p style={{ margin: '2px 0' }}><b>CORREO:</b> {customer.correo}</p>
+                  <p style={{ margin: '2px 0' }}><b>DIR:</b> {customer.direccion}</p>
+                </div>
 
-                  {/* Tabla de Productos */}
-                  <div className="mb-4 text-xs border-b border-dashed border-gray-400 pb-4">
-                    <table className="w-full text-left">
-                      <thead>
-                        <tr className="border-b border-gray-300">
-                          <th className="py-1">CANT</th>
-                          <th className="py-1">DESCRIPCION</th>
-                          <th className="py-1 text-right">TOTAL</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {cart.map(item => (
-                          <tr key={item.id}>
-                            <td className="py-1 align-top">{item.qty}</td>
-                            <td className="py-1 pr-2">{item.name}</td>
-                            <td className="py-1 text-right align-top">${(item.price * item.qty).toFixed(2)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                <table style={{ width: '100%', fontSize: '11px', borderBottom: '1px dashed #94a3b8', paddingBottom: '1rem', marginBottom: '1rem' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: 'left', borderBottom: '1px solid #94a3b8', paddingBottom: '4px' }}>CANT</th>
+                      <th style={{ textAlign: 'left', borderBottom: '1px solid #94a3b8', paddingBottom: '4px' }}>DESCRIPCION</th>
+                      <th style={{ textAlign: 'right', borderBottom: '1px solid #94a3b8', paddingBottom: '4px' }}>TOTAL</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cart.map(item => (
+                      <tr key={item.id}>
+                        <td style={{ paddingTop: '4px', verticalAlign: 'top' }}>{item.qty}</td>
+                        <td style={{ paddingTop: '4px', paddingRight: '8px' }}>{item.name}</td>
+                        <td style={{ paddingTop: '4px', textAlign: 'right', verticalAlign: 'top' }}>${(item.price * item.qty).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
 
-                  {/* Totales y Desglose de IVA */}
-                  <div className="text-sm space-y-1 text-right">
-                    <p className="flex justify-between"><span>SUB-TOTAL:</span> <span>${subtotal.toFixed(2)}</span></p>
-                    <p className="flex justify-between text-gray-600 text-xs"><span>BASE IMPONIBLE (15%):</span> <span>${baseImponible.toFixed(2)}</span></p>
-                    <p className="flex justify-between text-gray-600 text-xs"><span>IVA (15%):</span> <span>${ivaAmount.toFixed(2)}</span></p>
-                    <p className="flex justify-between font-bold text-lg mt-2 border-t border-black pt-2">
-                      <span>TOTAL NETO:</span> <span>${total.toFixed(2)}</span>
-                    </p>
+                <div style={{ fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>SUB-TOTAL:</span> <span>${subtotal.toFixed(2)}</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}><span>BASE IMPONIBLE (15%):</span> <span>${baseImponible.toFixed(2)}</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}><span>IVA (15%):</span> <span>${ivaAmount.toFixed(2)}</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.2rem', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #0f172a' }}>
+                    <span>TOTAL NETO:</span> <span>${total.toFixed(2)}</span>
                   </div>
+                </div>
 
-                  <div className="text-center mt-6 text-xs text-gray-500">
-                    <p>-- Vista previa antes de transmisión SRI --</p>
-                  </div>
+                <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '10px', color: '#64748b' }}>
+                  <p>-- Vista previa antes de transmisión SRI --</p>
                 </div>
               </div>
 
-              {/* Barra de Botones Fija Inferior */}
-              <div className="p-4 bg-slate-900 border-t border-slate-800 flex gap-3 sticky bottom-0">
+              {/* Botones de Acción Formateados */}
+              <div className="modal-footer" style={{ padding: '1rem 1.5rem', display: 'flex', gap: '1rem', background: 'var(--panel-bg)' }}>
                 <button 
                   onClick={() => setShowPreviewModal(false)}
-                  className="w-1/3 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-lg transition-colors"
+                  className="btn-secondary"
+                  style={{ flex: 1 }}
                 >
                   Regresar
                 </button>
                 <button 
                   onClick={confirmCheckout}
-                  className="w-2/3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2"
+                  className="btn-success"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', flex: 2 }}
                 >
                   {checkoutWithPrint && <Printer size={18} />}
-                  {checkoutWithPrint ? '🚀 Confirmar, Emitir e Imprimir' : '🚀 Confirmar y Emitir (Sin Imprimir)'}
+                  {checkoutWithPrint ? 'Emitir e Imprimir' : 'Solo Emitir'}
                 </button>
               </div>
 
