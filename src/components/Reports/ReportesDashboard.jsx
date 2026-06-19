@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { BarChart3, TrendingUp, DollarSign, Percent, Package, Users, Activity, FileText } from 'lucide-react';
+import { BarChart3, TrendingUp, DollarSign, Percent, Package, Users, Activity, FileText, Download } from 'lucide-react';
 
 export default function ReportesDashboard({ sales, issuers }) {
   // Procesar datos para el mes actual
@@ -64,6 +64,71 @@ export default function ReportesDashboard({ sales, issuers }) {
   }, [sales]);
 
   const [activeTab, setActiveTab] = useState('sri');
+
+  const exportToCSV = () => {
+    // 1. Definir las cabeceras requeridas por el ATS / Contador
+    const headers = [
+      "Fecha de Emisión",
+      "Tipo Comprobante",
+      "RUC Emisor",
+      "Emisor",
+      "Identificación Cliente",
+      "Nombre Cliente",
+      "Base Imponible 15%",
+      "Base Imponible 0%",
+      "Monto IVA 15%",
+      "Valor Total",
+      "Clave de Acceso"
+    ];
+
+    // 2. Mapear los datos de las ventas a las filas del CSV
+    const rows = sales.map(sale => {
+      const saleDate = sale.date?.toDate ? sale.date.toDate() : new Date(sale.date);
+      const fechaFormat = saleDate.toLocaleDateString('es-EC'); // dd/mm/yyyy
+      
+      const issuer = issuers?.find(i => i.id === sale.issuerId) || {};
+      const rucEmisor = issuer.ruc || sale.issuerId;
+      const emisorNombre = sale.issuerName || 'Desconocido';
+      
+      const idCliente = sale.customer?.numeroIdentificacion || '9999999999999';
+      const nombreCliente = sale.customer?.nombre || 'CONSUMIDOR FINAL';
+      
+      const base15 = (sale.totals?.baseImponible || 0).toFixed(2);
+      const base0 = "0.00"; // Gravity Denim solo vende ropa con IVA
+      const iva = (sale.totals?.ivaAmount || 0).toFixed(2);
+      const total = (sale.totals?.total || 0).toFixed(2);
+      
+      const claveAcceso = sale.id || 'N/A';
+
+      // Envolver en comillas para evitar problemas con las comas en los nombres
+      return [
+        `"${fechaFormat}"`,
+        `"18"`, // 18 es el código oficial del ATS para Documentos Electrónicos (o 01 para factura física)
+        `"${rucEmisor}"`,
+        `"${emisorNombre}"`,
+        `"${idCliente}"`,
+        `"${nombreCliente}"`,
+        `"${base15}"`,
+        `"${base0}"`,
+        `"${iva}"`,
+        `"${total}"`,
+        `"${claveAcceso}"`
+      ].join(",");
+    });
+
+    // 3. Unir cabeceras y filas con salto de línea
+    const csvContent = headers.join(",") + "\n" + rows.join("\n");
+
+    // 4. Crear un Blob y forzar la descarga en el navegador
+    const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" }); // \ufeff es BOM para UTF-8 en Excel
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Ventas_Gravity_Denim_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="report-container animate-fade-in" style={{ padding: '2rem', height: '100%', overflowY: 'auto' }}>
@@ -181,9 +246,18 @@ export default function ReportesDashboard({ sales, issuers }) {
 
       {activeTab === 'internos' && (
         <div className="glass-panel" style={{ padding: '1.5rem', marginTop: '1rem' }}>
-          <h3 style={{ color: '#10b981', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <FileText size={20} /> Historial Detallado de Transacciones
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h3 style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+              <FileText size={20} /> Historial Detallado de Transacciones
+            </h3>
+            <button 
+              onClick={exportToCSV}
+              className="btn-success" 
+              style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}
+            >
+              <Download size={16} /> Exportar Excel (CSV)
+            </button>
+          </div>
           <div style={{ overflowX: 'auto' }}>
             <table className="pos-table" style={{ minWidth: '800px' }}>
               <thead>
