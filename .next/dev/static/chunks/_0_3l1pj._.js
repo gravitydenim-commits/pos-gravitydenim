@@ -2052,7 +2052,9 @@ function ReportesDashboard({ sales, issuers }) {
                 salesByIssuer: Object.values(issuerTotals).sort({
                     "ReportesDashboard.useMemo": (a, b)=>b.total - a.total
                 }["ReportesDashboard.useMemo"]),
-                topProducts: topProductsArray
+                topProducts: Object.values(productSales).sort({
+                    "ReportesDashboard.useMemo": (a, b)=>b.qty - a.qty
+                }["ReportesDashboard.useMemo"]).slice(0, 5)
             };
         }
     }["ReportesDashboard.useMemo"], [

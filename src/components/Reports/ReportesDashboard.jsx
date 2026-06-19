@@ -55,7 +55,7 @@ export default function ReportesDashboard({ sales, issuers }) {
       currentMonthTotal, 
       currentMonthIVA, 
       salesByIssuer: Object.values(issuerTotals).sort((a, b) => b.total - a.total), 
-      topProducts: topProductsArray 
+      topProducts: Object.values(productSales).sort((a, b) => b.qty - a.qty).slice(0, 5)
     };
   }, [sales]);
 
