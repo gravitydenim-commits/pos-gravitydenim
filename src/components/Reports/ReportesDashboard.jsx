@@ -62,7 +62,7 @@ export default function ReportesDashboard({ sales, issuers }) {
   const [activeTab, setActiveTab] = useState('sri');
 
   const exportToCSV = () => {
-    // 1. Definir las cabeceras requeridas por el ATS / Contador
+    // 1. Definir las cabeceras requeridas por el ATS / Contador (incluye datos extra de cliente)
     const headers = [
       "Fecha de Emisión",
       "Tipo Comprobante",
@@ -70,6 +70,9 @@ export default function ReportesDashboard({ sales, issuers }) {
       "Emisor",
       "Identificación Cliente",
       "Nombre Cliente",
+      "Email Cliente",
+      "Teléfono Cliente",
+      "Dirección Cliente",
       "Base Imponible 15%",
       "Base Imponible 0%",
       "Monto IVA 15%",
@@ -77,17 +80,36 @@ export default function ReportesDashboard({ sales, issuers }) {
       "Clave de Acceso"
     ];
 
-    // 2. Mapear los datos de las ventas a las filas del CSV
-    const rows = sales.map(sale => {
+    // 2. Ordenar las ventas por nombre de emisor (para agruparlas)
+    const sortedSales = [...sales].sort((a, b) => {
+      const emisorA = a.issuerName || '';
+      const emisorB = b.issuerName || '';
+      return emisorA.localeCompare(emisorB);
+    });
+
+    const finalRows = [];
+    let currentEmisor = null;
+
+    sortedSales.forEach(sale => {
+      const issuer = issuers?.find(i => i.id === sale.issuerId) || {};
+      const emisorNombre = sale.issuerName || 'Desconocido';
+
+      // Inyectar fila separadora visual en el CSV si cambiamos de hermano/emisor
+      if (currentEmisor !== emisorNombre) {
+        finalRows.push(`"--- VENTAS DE: ${emisorNombre.toUpperCase()} ---",,,,,,,,,,,,,`);
+        currentEmisor = emisorNombre;
+      }
+
       const saleDate = sale.date?.toDate ? sale.date.toDate() : new Date(sale.date);
       const fechaFormat = saleDate.toLocaleDateString('es-EC'); // dd/mm/yyyy
       
-      const issuer = issuers?.find(i => i.id === sale.issuerId) || {};
       const rucEmisor = issuer.ruc || sale.issuerId;
-      const emisorNombre = sale.issuerName || 'Desconocido';
       
       const idCliente = sale.customer?.numeroIdentificacion || '9999999999999';
       const nombreCliente = sale.customer?.nombre || 'CONSUMIDOR FINAL';
+      const emailCliente = sale.customer?.correo || 'N/A';
+      const telefonoCliente = sale.customer?.telefono || 'N/A';
+      const direccionCliente = sale.customer?.direccion || 'N/A';
       
       const base15 = (sale.totals?.baseImponible || 0).toFixed(2);
       const base0 = "0.00"; // Gravity Denim solo vende ropa con IVA
@@ -96,24 +118,27 @@ export default function ReportesDashboard({ sales, issuers }) {
       
       const claveAcceso = sale.id || 'N/A';
 
-      // Envolver en comillas para evitar problemas con las comas en los nombres
-      return [
+      // Envolver en comillas para evitar problemas con las comas en los textos
+      finalRows.push([
         `"${fechaFormat}"`,
-        `"18"`, // 18 es el código oficial del ATS para Documentos Electrónicos (o 01 para factura física)
+        `"18"`, 
         `"${rucEmisor}"`,
         `"${emisorNombre}"`,
         `"${idCliente}"`,
         `"${nombreCliente}"`,
+        `"${emailCliente}"`,
+        `"${telefonoCliente}"`,
+        `"${direccionCliente}"`,
         `"${base15}"`,
         `"${base0}"`,
         `"${iva}"`,
         `"${total}"`,
         `"${claveAcceso}"`
-      ].join(",");
+      ].join(","));
     });
 
     // 3. Unir cabeceras y filas con salto de línea
-    const csvContent = headers.join(",") + "\n" + rows.join("\n");
+    const csvContent = headers.join(",") + "\n" + finalRows.join("\n");
 
     // 4. Crear un Blob y forzar la descarga en el navegador
     const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" }); // \ufeff es BOM para UTF-8 en Excel

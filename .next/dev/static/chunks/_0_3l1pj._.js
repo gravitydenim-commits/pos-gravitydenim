@@ -2062,7 +2062,7 @@ function ReportesDashboard({ sales, issuers }) {
     ]);
     const [activeTab, setActiveTab] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('sri');
     const exportToCSV = ()=>{
-        // 1. Definir las cabeceras requeridas por el ATS / Contador
+        // 1. Definir las cabeceras requeridas por el ATS / Contador (incluye datos extra de cliente)
         const headers = [
             "Fecha de Emisión",
             "Tipo Comprobante",
@@ -2070,43 +2070,66 @@ function ReportesDashboard({ sales, issuers }) {
             "Emisor",
             "Identificación Cliente",
             "Nombre Cliente",
+            "Email Cliente",
+            "Teléfono Cliente",
+            "Dirección Cliente",
             "Base Imponible 15%",
             "Base Imponible 0%",
             "Monto IVA 15%",
             "Valor Total",
             "Clave de Acceso"
         ];
-        // 2. Mapear los datos de las ventas a las filas del CSV
-        const rows = sales.map((sale)=>{
+        // 2. Ordenar las ventas por nombre de emisor (para agruparlas)
+        const sortedSales = [
+            ...sales
+        ].sort((a, b)=>{
+            const emisorA = a.issuerName || '';
+            const emisorB = b.issuerName || '';
+            return emisorA.localeCompare(emisorB);
+        });
+        const finalRows = [];
+        let currentEmisor = null;
+        sortedSales.forEach((sale)=>{
+            const issuer = issuers?.find((i)=>i.id === sale.issuerId) || {};
+            const emisorNombre = sale.issuerName || 'Desconocido';
+            // Inyectar fila separadora visual en el CSV si cambiamos de hermano/emisor
+            if (currentEmisor !== emisorNombre) {
+                finalRows.push(`"--- VENTAS DE: ${emisorNombre.toUpperCase()} ---",,,,,,,,,,,,,`);
+                currentEmisor = emisorNombre;
+            }
             const saleDate = sale.date?.toDate ? sale.date.toDate() : new Date(sale.date);
             const fechaFormat = saleDate.toLocaleDateString('es-EC'); // dd/mm/yyyy
-            const issuer = issuers?.find((i)=>i.id === sale.issuerId) || {};
             const rucEmisor = issuer.ruc || sale.issuerId;
-            const emisorNombre = sale.issuerName || 'Desconocido';
             const idCliente = sale.customer?.numeroIdentificacion || '9999999999999';
             const nombreCliente = sale.customer?.nombre || 'CONSUMIDOR FINAL';
+            const emailCliente = sale.customer?.correo || 'N/A';
+            const telefonoCliente = sale.customer?.telefono || 'N/A';
+            const direccionCliente = sale.customer?.direccion || 'N/A';
             const base15 = (sale.totals?.baseImponible || 0).toFixed(2);
             const base0 = "0.00"; // Gravity Denim solo vende ropa con IVA
             const iva = (sale.totals?.ivaAmount || 0).toFixed(2);
             const total = (sale.totals?.total || 0).toFixed(2);
             const claveAcceso = sale.id || 'N/A';
-            // Envolver en comillas para evitar problemas con las comas en los nombres
-            return [
+            // Envolver en comillas para evitar problemas con las comas en los textos
+            finalRows.push([
                 `"${fechaFormat}"`,
                 `"18"`,
                 `"${rucEmisor}"`,
                 `"${emisorNombre}"`,
                 `"${idCliente}"`,
                 `"${nombreCliente}"`,
+                `"${emailCliente}"`,
+                `"${telefonoCliente}"`,
+                `"${direccionCliente}"`,
                 `"${base15}"`,
                 `"${base0}"`,
                 `"${iva}"`,
                 `"${total}"`,
                 `"${claveAcceso}"`
-            ].join(",");
+            ].join(","));
         });
         // 3. Unir cabeceras y filas con salto de línea
-        const csvContent = headers.join(",") + "\n" + rows.join("\n");
+        const csvContent = headers.join(",") + "\n" + finalRows.join("\n");
         // 4. Crear un Blob y forzar la descarga en el navegador
         const blob = new Blob([
             "\ufeff" + csvContent
@@ -2149,14 +2172,14 @@ function ReportesDashboard({ sales, issuers }) {
                                         }
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                        lineNumber: 133,
+                                        lineNumber: 158,
                                         columnNumber: 15
                                     }, this),
                                     " Dashboard de Reportes"
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                lineNumber: 133,
+                                lineNumber: 158,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2166,13 +2189,13 @@ function ReportesDashboard({ sales, issuers }) {
                                 children: "Inteligencia Multi-RUC y Rendimiento"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                lineNumber: 134,
+                                lineNumber: 159,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                        lineNumber: 132,
+                        lineNumber: 157,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2195,7 +2218,7 @@ function ReportesDashboard({ sales, issuers }) {
                                 children: "Reportes SRI"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                lineNumber: 137,
+                                lineNumber: 162,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -2212,19 +2235,19 @@ function ReportesDashboard({ sales, issuers }) {
                                 children: "Detallados Internos"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                lineNumber: 143,
+                                lineNumber: 168,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                        lineNumber: 136,
+                        lineNumber: 161,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                lineNumber: 131,
+                lineNumber: 156,
                 columnNumber: 7
             }, this),
             activeTab === 'sri' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
@@ -2257,12 +2280,12 @@ function ReportesDashboard({ sales, issuers }) {
                                             size: 32
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                            lineNumber: 160,
+                                            lineNumber: 185,
                                             columnNumber: 13
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                        lineNumber: 159,
+                                        lineNumber: 184,
                                         columnNumber: 11
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2276,7 +2299,7 @@ function ReportesDashboard({ sales, issuers }) {
                                                 children: "Recaudación Mes Actual"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                lineNumber: 163,
+                                                lineNumber: 188,
                                                 columnNumber: 13
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -2290,19 +2313,19 @@ function ReportesDashboard({ sales, issuers }) {
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                lineNumber: 164,
+                                                lineNumber: 189,
                                                 columnNumber: 13
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                        lineNumber: 162,
+                                        lineNumber: 187,
                                         columnNumber: 11
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                lineNumber: 158,
+                                lineNumber: 183,
                                 columnNumber: 9
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2325,12 +2348,12 @@ function ReportesDashboard({ sales, issuers }) {
                                             size: 32
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                            lineNumber: 171,
+                                            lineNumber: 196,
                                             columnNumber: 13
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                        lineNumber: 170,
+                                        lineNumber: 195,
                                         columnNumber: 11
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2344,7 +2367,7 @@ function ReportesDashboard({ sales, issuers }) {
                                                 children: "IVA Acumulado (15%) SRI"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                lineNumber: 174,
+                                                lineNumber: 199,
                                                 columnNumber: 13
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -2358,25 +2381,25 @@ function ReportesDashboard({ sales, issuers }) {
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                lineNumber: 175,
+                                                lineNumber: 200,
                                                 columnNumber: 13
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                        lineNumber: 173,
+                                        lineNumber: 198,
                                         columnNumber: 11
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                lineNumber: 169,
+                                lineNumber: 194,
                                 columnNumber: 9
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                        lineNumber: 155,
+                        lineNumber: 180,
                         columnNumber: 7
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2404,14 +2427,14 @@ function ReportesDashboard({ sales, issuers }) {
                                             size: 20
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                            lineNumber: 186,
+                                            lineNumber: 211,
                                             columnNumber: 13
                                         }, this),
                                         " Rendimiento Multi-RUC"
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                    lineNumber: 185,
+                                    lineNumber: 210,
                                     columnNumber: 11
                                 }, this),
                                 salesByIssuer.length > 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("table", {
@@ -2424,32 +2447,32 @@ function ReportesDashboard({ sales, issuers }) {
                                                         children: "Emisor / Hermano"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                        lineNumber: 192,
+                                                        lineNumber: 217,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
                                                         children: "Nº Ventas"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                        lineNumber: 193,
+                                                        lineNumber: 218,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
                                                         children: "Facturación"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                        lineNumber: 194,
+                                                        lineNumber: 219,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                lineNumber: 191,
+                                                lineNumber: 216,
                                                 columnNumber: 17
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                            lineNumber: 190,
+                                            lineNumber: 215,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("tbody", {
@@ -2459,14 +2482,14 @@ function ReportesDashboard({ sales, issuers }) {
                                                             children: issuer.name
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                            lineNumber: 200,
+                                                            lineNumber: 225,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
                                                             children: issuer.ventas
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                            lineNumber: 201,
+                                                            lineNumber: 226,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -2479,24 +2502,24 @@ function ReportesDashboard({ sales, issuers }) {
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                            lineNumber: 202,
+                                                            lineNumber: 227,
                                                             columnNumber: 21
                                                         }, this)
                                                     ]
                                                 }, idx, true, {
                                                     fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                    lineNumber: 199,
+                                                    lineNumber: 224,
                                                     columnNumber: 19
                                                 }, this))
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                            lineNumber: 197,
+                                            lineNumber: 222,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                    lineNumber: 189,
+                                    lineNumber: 214,
                                     columnNumber: 13
                                 }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                     style: {
@@ -2505,18 +2528,18 @@ function ReportesDashboard({ sales, issuers }) {
                                     children: "No hay ventas registradas aún."
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                    lineNumber: 208,
+                                    lineNumber: 233,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                            lineNumber: 184,
+                            lineNumber: 209,
                             columnNumber: 9
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                        lineNumber: 181,
+                        lineNumber: 206,
                         columnNumber: 7
                     }, this)
                 ]
@@ -2543,14 +2566,14 @@ function ReportesDashboard({ sales, issuers }) {
                                         size: 20
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                        lineNumber: 221,
+                                        lineNumber: 246,
                                         columnNumber: 13
                                     }, this),
                                     " Ranking Top Productos (Este Mes)"
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                lineNumber: 220,
+                                lineNumber: 245,
                                 columnNumber: 11
                             }, this),
                             topProducts.length > 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("table", {
@@ -2563,32 +2586,32 @@ function ReportesDashboard({ sales, issuers }) {
                                                     children: "Prenda / Jean"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                    lineNumber: 227,
+                                                    lineNumber: 252,
                                                     columnNumber: 19
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
                                                     children: "Unidades Vendidas"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                    lineNumber: 228,
+                                                    lineNumber: 253,
                                                     columnNumber: 19
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
                                                     children: "Ingresos Generados"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                    lineNumber: 229,
+                                                    lineNumber: 254,
                                                     columnNumber: 19
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                            lineNumber: 226,
+                                            lineNumber: 251,
                                             columnNumber: 17
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                        lineNumber: 225,
+                                        lineNumber: 250,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("tbody", {
@@ -2598,7 +2621,7 @@ function ReportesDashboard({ sales, issuers }) {
                                                         children: product.name
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                        lineNumber: 235,
+                                                        lineNumber: 260,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -2608,7 +2631,7 @@ function ReportesDashboard({ sales, issuers }) {
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                        lineNumber: 236,
+                                                        lineNumber: 261,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -2622,24 +2645,24 @@ function ReportesDashboard({ sales, issuers }) {
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                        lineNumber: 237,
+                                                        lineNumber: 262,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, idx, true, {
                                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                lineNumber: 234,
+                                                lineNumber: 259,
                                                 columnNumber: 19
                                             }, this))
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                        lineNumber: 232,
+                                        lineNumber: 257,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                lineNumber: 224,
+                                lineNumber: 249,
                                 columnNumber: 13
                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                 style: {
@@ -2648,13 +2671,13 @@ function ReportesDashboard({ sales, issuers }) {
                                 children: "No hay prendas vendidas este mes aún."
                             }, void 0, false, {
                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                lineNumber: 243,
+                                lineNumber: 268,
                                 columnNumber: 14
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                        lineNumber: 219,
+                        lineNumber: 244,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2685,14 +2708,14 @@ function ReportesDashboard({ sales, issuers }) {
                                                 size: 20
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                lineNumber: 250,
+                                                lineNumber: 275,
                                                 columnNumber: 15
                                             }, this),
                                             " Historial Detallado de Transacciones"
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                        lineNumber: 249,
+                                        lineNumber: 274,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -2710,20 +2733,20 @@ function ReportesDashboard({ sales, issuers }) {
                                                 size: 16
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                lineNumber: 257,
+                                                lineNumber: 282,
                                                 columnNumber: 15
                                             }, this),
                                             " Exportar Excel (CSV)"
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                        lineNumber: 252,
+                                        lineNumber: 277,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                lineNumber: 248,
+                                lineNumber: 273,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2743,60 +2766,60 @@ function ReportesDashboard({ sales, issuers }) {
                                                         children: "Fecha"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                        lineNumber: 264,
+                                                        lineNumber: 289,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
                                                         children: "Emisor"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                        lineNumber: 265,
+                                                        lineNumber: 290,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
                                                         children: "Cliente"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                        lineNumber: 266,
+                                                        lineNumber: 291,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
                                                         children: "Clave de Acceso / ID"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                        lineNumber: 267,
+                                                        lineNumber: 292,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
                                                         children: "Cant. Prendas"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                        lineNumber: 268,
+                                                        lineNumber: 293,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
                                                         children: "Subtotal"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                        lineNumber: 269,
+                                                        lineNumber: 294,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
                                                         children: "Total"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                        lineNumber: 270,
+                                                        lineNumber: 295,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                lineNumber: 263,
+                                                lineNumber: 288,
                                                 columnNumber: 17
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                            lineNumber: 262,
+                                            lineNumber: 287,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("tbody", {
@@ -2810,21 +2833,21 @@ function ReportesDashboard({ sales, issuers }) {
                                                                 children: saleDate.toLocaleString()
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                                lineNumber: 279,
+                                                                lineNumber: 304,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
                                                                 children: sale.issuerName || sale.issuerId
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                                lineNumber: 280,
+                                                                lineNumber: 305,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
                                                                 children: sale.customer?.nombre || 'Consumidor Final'
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                                lineNumber: 281,
+                                                                lineNumber: 306,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -2835,14 +2858,14 @@ function ReportesDashboard({ sales, issuers }) {
                                                                 children: sale.id
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                                lineNumber: 282,
+                                                                lineNumber: 307,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
                                                                 children: itemsQty
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                                lineNumber: 283,
+                                                                lineNumber: 308,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -2852,7 +2875,7 @@ function ReportesDashboard({ sales, issuers }) {
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                                lineNumber: 284,
+                                                                lineNumber: 309,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -2866,13 +2889,13 @@ function ReportesDashboard({ sales, issuers }) {
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                                lineNumber: 285,
+                                                                lineNumber: 310,
                                                                 columnNumber: 23
                                                             }, this)
                                                         ]
                                                     }, idx, true, {
                                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                        lineNumber: 278,
+                                                        lineNumber: 303,
                                                         columnNumber: 21
                                                     }, this);
                                                 }),
@@ -2886,35 +2909,35 @@ function ReportesDashboard({ sales, issuers }) {
                                                         children: "No hay transacciones registradas"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                        lineNumber: 291,
+                                                        lineNumber: 316,
                                                         columnNumber: 21
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                                    lineNumber: 290,
+                                                    lineNumber: 315,
                                                     columnNumber: 19
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                            lineNumber: 273,
+                                            lineNumber: 298,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                    lineNumber: 261,
+                                    lineNumber: 286,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                                lineNumber: 260,
+                                lineNumber: 285,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-                        lineNumber: 247,
+                        lineNumber: 272,
                         columnNumber: 9
                     }, this)
                 ]
@@ -2922,7 +2945,7 @@ function ReportesDashboard({ sales, issuers }) {
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/Reports/ReportesDashboard.jsx",
-        lineNumber: 130,
+        lineNumber: 155,
         columnNumber: 5
     }, this);
 }
