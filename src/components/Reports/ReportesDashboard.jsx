@@ -39,8 +39,8 @@ export default function ReportesDashboard({ sales, issuers }) {
       issuerTotals[issuerId].total += total;
       issuerTotals[issuerId].ventas += 1;
 
-      // Ranking de productos
-      if (sale.items && Array.isArray(sale.items)) {
+      // Ranking de productos (Solo para el mes actual)
+      if (isCurrentMonth && sale.items && Array.isArray(sale.items)) {
         sale.items.forEach(item => {
           if (!productSales[item.name]) {
             productSales[item.name] = { name: item.name, qty: 0, revenue: 0 };
@@ -50,10 +50,6 @@ export default function ReportesDashboard({ sales, issuers }) {
         });
       }
     });
-
-    const topProductsArray = Object.values(productSales)
-      .sort((a, b) => b.qty - a.qty)
-      .slice(0, 10); // Top 10
 
     return { 
       currentMonthTotal, 
@@ -182,7 +178,7 @@ export default function ReportesDashboard({ sales, issuers }) {
 
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
         
         {/* Rendimiento Multi-RUC */}
         <div className="glass-panel" style={{ padding: '1.5rem' }}>
@@ -213,38 +209,41 @@ export default function ReportesDashboard({ sales, issuers }) {
           )}
         </div>
 
-        {/* Ranking de Productos */}
-        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+      </div>
+      </>
+      )}
+
+      {activeTab === 'internos' && (
+        <>
+        {/* Ranking de Productos del Mes */}
+        <div className="glass-panel" style={{ padding: '1.5rem', marginTop: '1rem' }}>
           <h3 style={{ color: 'var(--accent)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Package size={20} /> Ranking Top Productos
+            <Package size={20} /> Ranking Top Productos (Este Mes)
           </h3>
-          {topProducts.length > 0 && (
+          {topProducts.length > 0 ? (
             <table className="pos-table">
               <thead>
                 <tr>
                   <th>Prenda / Jean</th>
-                  <th>Unid. Vendidas</th>
-                  <th>Ingresos</th>
+                  <th>Unidades Vendidas</th>
+                  <th>Ingresos Generados</th>
                 </tr>
               </thead>
               <tbody>
                 {topProducts.map((product, idx) => (
                   <tr key={idx}>
                     <td>{product.name}</td>
-                    <td>{product.qty}</td>
-                    <td style={{ color: 'var(--success)' }}>${product.revenue.toFixed(2)}</td>
+                    <td>{product.qty} prendas</td>
+                    <td style={{ color: 'var(--success)', fontWeight: 'bold' }}>${product.revenue.toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          ) : (
+             <p style={{ color: 'var(--text-muted)' }}>No hay prendas vendidas este mes aún.</p>
           )}
         </div>
 
-      </div>
-      </>
-      )}
-
-      {activeTab === 'internos' && (
         <div className="glass-panel" style={{ padding: '1.5rem', marginTop: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h3 style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
@@ -296,6 +295,7 @@ export default function ReportesDashboard({ sales, issuers }) {
             </table>
           </div>
         </div>
+        </>
       )}
 
     </div>
