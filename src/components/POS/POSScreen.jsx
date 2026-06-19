@@ -269,6 +269,11 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
       </html>
     `;
 
+    if (!printWindow) {
+      alert("⚠️ El navegador de la tablet bloqueó la ventana de impresión. Por favor, permita las ventanas emergentes (pop-ups) para este sitio.");
+      return;
+    }
+
     printWindow.document.open();
     printWindow.document.write(htmlContent);
     printWindow.document.close();
