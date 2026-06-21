@@ -17,7 +17,10 @@ export default function ConfiguracionGeneral() {
     obligadoContabilidad: false,
     passwordP12: '',
     file: null,
-    fileName: ''
+    fileName: '',
+    estab: '001',
+    ptoEmi: '001',
+    secuencial: '1'
   });
 
   const [isUploading, setIsUploading] = useState(false);
@@ -56,7 +59,10 @@ export default function ConfiguracionGeneral() {
           correo: prev.correo || existing.correo || '',
           obligadoContabilidad: existing.obligadoContabilidad !== undefined ? existing.obligadoContabilidad : prev.obligadoContabilidad,
           passwordP12: prev.passwordP12 || '********',
-          fileName: prev.fileName || existing.p12Name || ''
+          fileName: prev.fileName || existing.p12Name || '',
+          estab: prev.estab || existing.estab || '001',
+          ptoEmi: prev.ptoEmi || existing.ptoEmi || '001',
+          secuencial: prev.secuencial || existing.secuencial || '1'
         }));
       }
     }
@@ -77,7 +83,10 @@ export default function ConfiguracionGeneral() {
       obligadoContabilidad: false,
       passwordP12: '',
       file: null,
-      fileName: ''
+      fileName: '',
+      estab: '001',
+      ptoEmi: '001',
+      secuencial: '1'
     });
   };
 
@@ -148,7 +157,10 @@ export default function ConfiguracionGeneral() {
         obligadoContabilidad: formData.obligadoContabilidad,
         passwordP12: formData.passwordP12 !== '********' ? formData.passwordP12 : existingIssuer?.passwordP12 || '', // Mantener la anterior si no cambió
         p12Url: p12DownloadUrl || existingIssuer?.p12Url || '', // Guardar la ruta del storage
-        p12Name: formData.fileName || existingIssuer?.p12Name || ''
+        p12Name: formData.fileName || existingIssuer?.p12Name || '',
+        estab: formData.estab,
+        ptoEmi: formData.ptoEmi,
+        secuencial: parseInt(formData.secuencial, 10) || 1
       };
 
       console.log(`💾 [Firestore] Actualizando documento en colección 'issuers' para ID: ${selectedIssuer}`);
@@ -250,6 +262,45 @@ export default function ConfiguracionGeneral() {
                 />
               </div>
 
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Establecimiento</label>
+                  <input 
+                    type="text" 
+                    name="estab"
+                    value={formData.estab}
+                    onChange={handleInputChange}
+                    placeholder="001"
+                    required
+                    style={{ width: '100%', padding: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--panel-border)', borderRadius: '6px', color: 'white', fontSize: '1rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Pto. Emisión</label>
+                  <input 
+                    type="text" 
+                    name="ptoEmi"
+                    value={formData.ptoEmi}
+                    onChange={handleInputChange}
+                    placeholder="001"
+                    required
+                    style={{ width: '100%', padding: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--panel-border)', borderRadius: '6px', color: 'white', fontSize: '1rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Secuencial Actual</label>
+                  <input 
+                    type="number" 
+                    name="secuencial"
+                    value={formData.secuencial}
+                    onChange={handleInputChange}
+                    placeholder="1"
+                    required
+                    style={{ width: '100%', padding: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--panel-border)', borderRadius: '6px', color: 'white', fontSize: '1rem' }}
+                  />
+                </div>
+              </div>
 
               <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <input 

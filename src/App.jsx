@@ -8,7 +8,8 @@ import ClientesScreen from './components/Customers/ClientesScreen';
 import AgregarClienteModal from './components/Customers/AgregarClienteModal';
 import ConfiguracionGeneral from './components/Settings/ConfiguracionGeneral';
 import LoginScreen from './components/Auth/LoginScreen';
-import { LayoutDashboard, Receipt, PackagePlus, Settings, LogOut, Loader2, Package, Users } from 'lucide-react';
+import FacturasSRI from './components/Contingencia/FacturasSRI';
+import { LayoutDashboard, Receipt, PackagePlus, Settings, LogOut, Loader2, Package, Users, AlertTriangle } from 'lucide-react';
 import { auth, db } from './firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, onSnapshot, addDoc, doc, setDoc, deleteDoc } from 'firebase/firestore';
@@ -239,6 +240,14 @@ function App() {
               </button>
 
               <button 
+                className={`nav-btn ${currentView === 'sri' ? 'active' : ''}`}
+                onClick={() => setCurrentView('sri')}
+              >
+                <AlertTriangle size={24} />
+                <span style={{ fontSize: '0.8rem' }}>Facturas SRI</span>
+              </button>
+
+              <button 
                 className={`nav-btn ${currentView === 'settings' ? 'active' : ''}`}
                 onClick={() => setCurrentView('settings')}
               >
@@ -289,6 +298,9 @@ function App() {
         )}
         {(currentView === 'report' && isAdmin) && (
           <ReportesDashboard issuers={issuers} sales={salesDB} />
+        )}
+        {(currentView === 'sri' && isAdmin) && (
+          <FacturasSRI />
         )}
         {(currentView === 'settings' && isAdmin) && (
           <ConfiguracionGeneral 

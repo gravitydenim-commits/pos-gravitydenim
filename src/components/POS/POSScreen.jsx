@@ -338,16 +338,24 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
         body: JSON.stringify({ cart, customer, vatIncluded, emisorId: issuerData.id })
       });
       
-      const sriData = await response.json();
-      
-      if (!response.ok || !sriData.success) {
-        throw new Error(sriData.message || 'La factura fue rechazada o hubo un error de conexión');
+      let sriData;
+      try {
+        sriData = await response.json();
+      } catch (e) {
+        throw new Error('El servidor no respondió correctamente.');
       }
       
       const claveAcceso = sriData.claveAcceso;
+      const estadoFactura = sriData.estado || (sriData.success ? 'AUTORIZADO' : 'RECHAZADO');
       
       if (!claveAcceso) {
-        throw new Error('El backend no generó una Clave de Acceso válida');
+        throw new Error(sriData.message || 'El backend no generó una Clave de Acceso válida');
+      }
+
+      if (estadoFactura === 'CONTINGENCIA_LOCAL') {
+        alert(`⚠️ Sin conexión con el SRI. La factura se guardó internamente y se emitirá automáticamente cuando regrese el internet.\nClave temporal: ${claveAcceso}`);
+      } else if (estadoFactura === 'RECHAZADO') {
+        throw new Error(sriData.message || 'La factura fue rechazada por el servidor.');
       }
 
       // 2. Descontar Stock en Firebase
@@ -381,7 +389,10 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
         customer: customer,
         items: cart,
         totals: totalsData,
-        claveAcceso
+        claveAcceso,
+        status: estadoFactura,
+        numeroComprobante: sriData.numeroComprobante || 'N/A',
+        secuencial: sriData.secuencialAsignado || null
       };
       await recordSale(saleRecord);
 
