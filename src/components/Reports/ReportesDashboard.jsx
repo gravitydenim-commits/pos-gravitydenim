@@ -2,29 +2,45 @@ import React, { useMemo, useState } from 'react';
 import { BarChart3, TrendingUp, DollarSign, Percent, Package, Users, Activity, FileText, Download } from 'lucide-react';
 
 export default function ReportesDashboard({ sales, issuers }) {
-  // Procesar datos para el mes actual
-  const { currentMonthTotal, currentMonthIVA, salesByIssuer, topProducts } = useMemo(() => {
+  // Procesar datos para el mes actual y el día de hoy
+  const { currentMonthTotal, currentMonthIVA, salesByIssuer, topProducts, todayTotal, todayEfectivo, todayTransferencia, monthEfectivo, monthTransferencia } = useMemo(() => {
     let currentMonthTotal = 0;
     let currentMonthIVA = 0;
+    let todayTotal = 0;
+    let todayEfectivo = 0;
+    let todayTransferencia = 0;
+    let monthEfectivo = 0;
+    let monthTransferencia = 0;
     const issuerTotals = {};
     const productSales = {};
 
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
+    const currentDate = now.getDate();
 
     sales.forEach(sale => {
       // Parsear fecha (Firestore Timestamp o Date)
       const saleDate = sale.date?.toDate ? sale.date.toDate() : new Date(sale.date);
       
       const isCurrentMonth = saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
+      const isToday = isCurrentMonth && saleDate.getDate() === currentDate;
 
       const total = sale.totals?.total || 0;
       const iva = sale.totals?.ivaAmount || 0;
+      const method = sale.paymentMethod || 'EFECTIVO';
 
       if (isCurrentMonth) {
         currentMonthTotal += total;
         currentMonthIVA += iva;
+        if (method === 'EFECTIVO') monthEfectivo += total;
+        else monthTransferencia += total;
+      }
+
+      if (isToday) {
+        todayTotal += total;
+        if (method === 'EFECTIVO') todayEfectivo += total;
+        else todayTransferencia += total;
       }
 
       // Tabla multi-RUC (Acumulado general o mensual, lo haremos general)
@@ -54,6 +70,11 @@ export default function ReportesDashboard({ sales, issuers }) {
     return { 
       currentMonthTotal, 
       currentMonthIVA, 
+      todayTotal,
+      todayEfectivo,
+      todayTransferencia,
+      monthEfectivo,
+      monthTransferencia,
       salesByIssuer: Object.values(issuerTotals).sort((a, b) => b.total - a.total), 
       topProducts: Object.values(productSales).sort((a, b) => b.qty - a.qty).slice(0, 5)
     };
@@ -77,7 +98,8 @@ export default function ReportesDashboard({ sales, issuers }) {
       "Base Imponible 0%",
       "Monto IVA 15%",
       "Valor Total",
-      "Clave de Acceso"
+      "Clave de Acceso",
+      "Método de Pago"
     ];
 
     // 2. Ordenar las ventas por nombre de emisor (para agruparlas)
@@ -117,6 +139,7 @@ export default function ReportesDashboard({ sales, issuers }) {
       const total = (sale.totals?.total || 0).toFixed(2);
       
       const claveAcceso = sale.id || 'N/A';
+      const metodoPago = sale.paymentMethod || 'EFECTIVO';
 
       // Envolver en comillas para evitar problemas con las comas en los textos
       finalRows.push([
@@ -133,7 +156,8 @@ export default function ReportesDashboard({ sales, issuers }) {
         `"${base0}"`,
         `"${iva}"`,
         `"${total}"`,
-        `"${claveAcceso}"`
+        `"${claveAcceso}"`,
+        `"${metodoPago}"`
       ].join(","));
     });
 
@@ -240,6 +264,29 @@ export default function ReportesDashboard({ sales, issuers }) {
 
       {activeTab === 'internos' && (
         <>
+        {/* Métricas de Hoy y Mes */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+          
+          <div className="glass-panel" style={{ padding: '1.5rem', borderLeft: '4px solid #10b981' }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Ventas de Hoy</p>
+            <h3 style={{ fontSize: '2rem', margin: 0, color: 'white' }}>${todayTotal.toFixed(2)}</h3>
+            <div style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}>
+              <span style={{ color: '#10b981' }}>💵 Efec: ${todayEfectivo.toFixed(2)}</span>
+              <span style={{ color: '#3b82f6', marginLeft: '10px' }}>🏦 Transf: ${todayTransferencia.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div className="glass-panel" style={{ padding: '1.5rem', borderLeft: '4px solid #3b82f6' }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Ventas del Mes</p>
+            <h3 style={{ fontSize: '2rem', margin: 0, color: 'white' }}>${currentMonthTotal.toFixed(2)}</h3>
+            <div style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}>
+              <span style={{ color: '#10b981' }}>💵 Efec: ${monthEfectivo.toFixed(2)}</span>
+              <span style={{ color: '#3b82f6', marginLeft: '10px' }}>🏦 Transf: ${monthTransferencia.toFixed(2)}</span>
+            </div>
+          </div>
+
+        </div>
+
         {/* Ranking de Productos del Mes */}
         <div className="glass-panel" style={{ padding: '1.5rem', marginTop: '1rem' }}>
           <h3 style={{ color: 'var(--accent)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -291,6 +338,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                   <th>Cliente</th>
                   <th>Clave de Acceso / ID</th>
                   <th>Cant. Prendas</th>
+                  <th>Método Pago</th>
                   <th>Subtotal</th>
                   <th>Total</th>
                 </tr>
@@ -306,6 +354,9 @@ export default function ReportesDashboard({ sales, issuers }) {
                       <td>{sale.customer?.nombre || 'Consumidor Final'}</td>
                       <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{sale.id}</td>
                       <td>{itemsQty}</td>
+                      <td style={{ fontSize: '0.85rem', color: sale.paymentMethod === 'TRANSFERENCIA' ? '#3b82f6' : '#10b981' }}>
+                        {sale.paymentMethod || 'EFECTIVO'}
+                      </td>
                       <td>${(sale.totals?.subtotal || 0).toFixed(2)}</td>
                       <td style={{ color: 'var(--success)', fontWeight: 'bold' }}>${(sale.totals?.total || 0).toFixed(2)}</td>
                     </tr>

@@ -11,6 +11,7 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
   const [selectedIssuer, setSelectedIssuer] = useState(''); 
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [checkoutWithPrint, setCheckoutWithPrint] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('EFECTIVO');
 
   // --- DATOS DEL CLIENTE ---
   const [customer, setCustomer] = useState({
@@ -156,7 +157,7 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
   }, [cart, vatIncluded]);
 
 
-  const imprimirTicketRIDE = (issuerData, cartData, totalsData, customerData, claveAcceso) => {
+  const imprimirTicketRIDE = (issuerData, cartData, totalsData, customerData, claveAcceso, paymentMet) => {
     console.log("🖨️ [RIDE] Conectando con ticketera térmica 80mm...");
     const printWindow = window.open('', '_blank', 'width=400,height=600');
     
@@ -250,6 +251,10 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
             <tr>
               <td>IVA 15%:</td>
               <td class="text-right">$${totalsData.ivaAmount.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td style="padding-top: 4px;">PAGO:</td>
+              <td class="text-right font-bold" style="padding-top: 4px;">${paymentMet}</td>
             </tr>
             <tr>
               <td class="font-bold" style="padding-top: 4px;">TOTAL:</td>
@@ -372,7 +377,7 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
       // (La lógica de guardado de cliente fue trasladada al paso 0, al inicio de confirmCheckout)
       // 3. Imprimir si corresponde
       if (withPrint) {
-        imprimirTicketRIDE(issuerData, cart, totalsData, customer, claveAcceso);
+        imprimirTicketRIDE(issuerData, cart, totalsData, customer, claveAcceso, paymentMethod);
       } else {
         console.log("🖨️ [RIDE] Impresión física omitida por el operador.");
       }
@@ -392,7 +397,8 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
         claveAcceso,
         status: estadoFactura,
         numeroComprobante: sriData.numeroComprobante || 'N/A',
-        secuencial: sriData.secuencialAsignado || null
+        secuencial: sriData.secuencialAsignado || null,
+        paymentMethod: paymentMethod
       };
       await recordSale(saleRecord);
 
@@ -401,6 +407,7 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
       // 5. Limpiar carrito y resetear form con retraso para asegurar impresión térmica
       setTimeout(() => {
         setCart([]);
+        setPaymentMethod('EFECTIVO');
         setCustomer({
           tipoDocumento: 'CEDULA',
           numeroIdentificacion: '',
@@ -625,6 +632,40 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
               </label>
             </div>
 
+            {/* MÉTODO DE PAGO */}
+            <div style={{ padding: '0.5rem 0', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button 
+                onClick={() => setPaymentMethod('EFECTIVO')}
+                style={{ 
+                  flex: 1, 
+                  padding: '8px', 
+                  borderRadius: '8px', 
+                  border: `2px solid ${paymentMethod === 'EFECTIVO' ? 'var(--success)' : 'var(--panel-border)'}`,
+                  background: paymentMethod === 'EFECTIVO' ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
+                  color: 'white',
+                  fontWeight: paymentMethod === 'EFECTIVO' ? 'bold' : 'normal',
+                  cursor: 'pointer'
+                }}
+              >
+                💵 Efectivo
+              </button>
+              <button 
+                onClick={() => setPaymentMethod('TRANSFERENCIA')}
+                style={{ 
+                  flex: 1, 
+                  padding: '8px', 
+                  borderRadius: '8px', 
+                  border: `2px solid ${paymentMethod === 'TRANSFERENCIA' ? 'var(--success)' : 'var(--panel-border)'}`,
+                  background: paymentMethod === 'TRANSFERENCIA' ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
+                  color: 'white',
+                  fontWeight: paymentMethod === 'TRANSFERENCIA' ? 'bold' : 'normal',
+                  cursor: 'pointer'
+                }}
+              >
+                🏦 Transferencia
+              </button>
+            </div>
+
             {/* TOTALES */}
             <div className="summary-row">
               <span>Subtotal</span>
@@ -741,6 +782,7 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>SUB-TOTAL:</span> <span>${subtotal.toFixed(2)}</span></div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}><span>BASE IMPONIBLE (15%):</span> <span>${baseImponible.toFixed(2)}</span></div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}><span>IVA (15%):</span> <span>${ivaAmount.toFixed(2)}</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '11px', fontWeight: 'bold' }}><span>MÉTODO DE PAGO:</span> <span>{paymentMethod}</span></div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.2rem', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #0f172a' }}>
                     <span>TOTAL NETO:</span> <span>${total.toFixed(2)}</span>
                   </div>

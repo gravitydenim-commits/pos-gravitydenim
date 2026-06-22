@@ -85,6 +85,8 @@ export default function FacturasSRI() {
           ${venta.items.map(i => `<tr><td>${i.qty}x ${i.name.substring(0, 15)}</td><td style="text-align:right">$${(i.price * i.qty).toFixed(2)}</td></tr>`).join('')}
         </table>
         <div class="divider"></div>
+        <p style="margin: 2px 0;"><b>PAGO:</b> ${venta.paymentMethod || 'EFECTIVO'}</p>
+        <div class="divider"></div>
         <h3 style="text-align:right">TOTAL: $${(venta.totals?.total || 0).toFixed(2)}</h3>
         <div class="divider"></div>
         <div style="font-size: 10px; word-break: break-all;">CLAVE: ${venta.claveAcceso}</div>
