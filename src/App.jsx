@@ -198,8 +198,8 @@ function App() {
   return (
     <div className="app-layout">
       {/* Sidebar Navigation */}
-      <nav className="sidebar glass-panel" style={{ justifyContent: 'space-between', paddingBottom: '1rem' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', width: '100%' }}>
+      <nav className="sidebar glass-panel">
+        <div className="sidebar-main-nav">
           <div className="sidebar-logo">
             <h2>GD</h2>
           </div>
@@ -209,7 +209,7 @@ function App() {
             onClick={() => setCurrentView('pos')}
           >
             <Receipt size={24} />
-            <span style={{ fontSize: '0.8rem' }}>Caja</span>
+            <span className="nav-btn-text">Caja</span>
           </button>
           
           {/* Solo visible para Administradores */}
@@ -220,7 +220,7 @@ function App() {
                 onClick={() => setCurrentView('inventory')}
               >
                 <Package size={24} />
-                <span style={{ fontSize: '0.8rem' }}>Inventario</span>
+                <span className="nav-btn-text">Inventario</span>
               </button>
 
               <button 
@@ -228,7 +228,7 @@ function App() {
                 onClick={() => setCurrentView('customers')}
               >
                 <Users size={24} />
-                <span style={{ fontSize: '0.8rem' }}>Clientes</span>
+                <span className="nav-btn-text">Clientes</span>
               </button>
 
               <button 
@@ -236,7 +236,7 @@ function App() {
                 onClick={() => setCurrentView('report')}
               >
                 <LayoutDashboard size={24} />
-                <span style={{ fontSize: '0.8rem' }}>Reportes</span>
+                <span className="nav-btn-text">Reportes</span>
               </button>
 
               <button 
@@ -244,7 +244,7 @@ function App() {
                 onClick={() => setCurrentView('sri')}
               >
                 <AlertTriangle size={24} />
-                <span style={{ fontSize: '0.8rem' }}>Facturas SRI</span>
+                <span className="nav-btn-text">Facturas SRI</span>
               </button>
 
               <button 
@@ -252,31 +252,29 @@ function App() {
                 onClick={() => setCurrentView('settings')}
               >
                 <Settings size={24} />
-                <span style={{ fontSize: '0.8rem' }}>Ajustes</span>
+                <span className="nav-btn-text">Ajustes</span>
               </button>
 
-              <hr style={{ width: '60%', borderColor: 'var(--panel-border)', margin: '1rem 0' }} />
+              <hr className="sidebar-divider" />
 
               <button 
-                className="nav-btn"
-                style={{ color: 'var(--success)' }}
+                className="nav-btn nav-btn-add"
                 onClick={() => { setProductToEdit(null); setIsModalOpen(true); }}
               >
                 <PackagePlus size={24} />
-                <span style={{ fontSize: '0.75rem', textAlign: 'center' }}>+ Producto</span>
+                <span className="nav-btn-text">+ Producto</span>
               </button>
             </>
           )}
         </div>
 
         {/* User Info & Logout */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '1rem' }}>
-          <div style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+        <div className="sidebar-user-nav">
+          <div className="user-role-badge">
             <span>{isAdmin ? '🛡️ Admin' : '👤 Ventas'}</span>
           </div>
           <button 
-            className="nav-btn"
-            style={{ color: 'var(--danger)' }}
+            className="nav-btn nav-btn-logout"
             onClick={handleLogout}
             title="Cerrar Sesión"
           >
