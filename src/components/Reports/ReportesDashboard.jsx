@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { BarChart3, TrendingUp, DollarSign, Percent, Package, Users, Activity, FileText, Download } from 'lucide-react';
+import { BarChart3, TrendingUp, DollarSign, Percent, Package, Users, Activity, FileText, Download, FileType2, FileCode2 } from 'lucide-react';
+import { generarFacturaA4 } from '../../utils/generadorA4';
 
 export default function ReportesDashboard({ sales, issuers }) {
   // Procesar datos para el mes actual y el día de hoy
@@ -229,33 +230,81 @@ export default function ReportesDashboard({ sales, issuers }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
         
-        {/* Rendimiento Multi-RUC */}
-        <div className="glass-panel" style={{ padding: '1.5rem' }}>
-          <h3 style={{ color: 'var(--accent)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Users size={20} /> Rendimiento Multi-RUC
-          </h3>
-          {salesByIssuer.length > 0 ? (
-            <table className="pos-table">
+        {/* Reporte de Ventas Estilo Ecufac */}
+        <div className="glass-panel" style={{ padding: '1.5rem', overflowX: 'auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '2px solid var(--accent)', paddingBottom: '10px' }}>
+            <h3 style={{ color: 'var(--text-main)', margin: 0, fontSize: '1.2rem' }}>Reporte de ventas</h3>
+          </div>
+          
+          <div style={{ minWidth: '1000px' }}>
+            <table className="pos-table" style={{ fontSize: '0.85rem' }}>
               <thead>
-                <tr>
-                  <th>Emisor / Hermano</th>
-                  <th>Nº Ventas</th>
-                  <th>Facturación</th>
+                <tr style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)' }}>
+                  <th>EMISION</th>
+                  <th>AUTORIZACION</th>
+                  <th>EST</th>
+                  <th>PEM</th>
+                  <th>NUM</th>
+                  <th>CLIENTE</th>
+                  <th>DOC</th>
+                  <th>ST 0</th>
+                  <th>ST IVA</th>
+                  <th>IVA</th>
+                  <th>TOTAL</th>
+                  <th>ESTADO</th>
+                  <th>CLAVE ACCESO/AUTORIZACION</th>
                 </tr>
               </thead>
               <tbody>
-                {salesByIssuer.map((issuer, idx) => (
-                  <tr key={idx}>
-                    <td>{issuer.name}</td>
-                    <td>{issuer.ventas}</td>
-                    <td style={{ color: 'var(--success)' }}>${issuer.total.toFixed(2)}</td>
-                  </tr>
-                ))}
+                {sales.sort((a,b) => new Date(b.date?.toDate ? b.date.toDate() : b.date) - new Date(a.date?.toDate ? a.date.toDate() : a.date)).map((sale, idx) => {
+                  const saleDate = sale.date?.toDate ? sale.date.toDate() : new Date(sale.date);
+                  const isAutorizado = sale.status === 'AUTORIZADO';
+                  const issuer = issuers?.find(i => i.id === sale.issuerId) || {};
+                  
+                  return (
+                    <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td>{saleDate.toLocaleDateString('sv-SE')}</td>
+                      <td>{isAutorizado ? saleDate.toLocaleString('sv-SE', {hour12: false}) : ''}</td>
+                      <td>{issuer.establecimiento || '001'}</td>
+                      <td>{issuer.puntoEmision || '100'}</td>
+                      <td style={{ background: '#3b82f6', color: 'white', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', margin: '4px' }}>
+                        {sale.numeroComprobante ? sale.numeroComprobante.split('-')[2] : (sale.secuencial || '000')}
+                      </td>
+                      <td>{sale.customer?.nombre || 'CONSUMIDOR FINAL'}</td>
+                      <td>{sale.customer?.numeroIdentificacion || '9999999999999'}</td>
+                      <td className="text-right">0.00</td>
+                      <td className="text-right">{(sale.totals?.baseImponible || 0).toFixed(2)}</td>
+                      <td className="text-right">{(sale.totals?.ivaAmount || 0).toFixed(2)}</td>
+                      <td className="text-right font-bold">{(sale.totals?.total || 0).toFixed(2)}</td>
+                      <td style={{ color: isAutorizado ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>
+                        {sale.status}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '0.7rem' }}>{sale.claveAcceso || sale.id}</span>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button 
+                              onClick={() => generarFacturaA4(sale, issuer)}
+                              style={{ background: '#10b981', border: 'none', padding: '4px', borderRadius: '4px', color: 'white', cursor: 'pointer' }}
+                              title="Descargar PDF (RIDE A4)"
+                            >
+                              <FileText size={14} />
+                            </button>
+                            <button 
+                              style={{ background: '#ef4444', border: 'none', padding: '4px', borderRadius: '4px', color: 'white', cursor: 'pointer', opacity: 0.7 }}
+                              title="Descargar XML"
+                            >
+                              <FileCode2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
-          ) : (
-            <p style={{ color: 'var(--text-muted)' }}>No hay ventas registradas aún.</p>
-          )}
+          </div>
         </div>
 
       </div>
