@@ -9,7 +9,8 @@ import AgregarClienteModal from './components/Customers/AgregarClienteModal';
 import ConfiguracionGeneral from './components/Settings/ConfiguracionGeneral';
 import LoginScreen from './components/Auth/LoginScreen';
 import FacturasSRI from './components/Contingencia/FacturasSRI';
-import { LayoutDashboard, Receipt, PackagePlus, Settings, LogOut, Loader2, Package, Users, AlertTriangle } from 'lucide-react';
+import GuiasScreen from './components/GuiasRemision/GuiasScreen';
+import { LayoutDashboard, Receipt, PackagePlus, Settings, LogOut, Loader2, Package, Users, AlertTriangle, Truck } from 'lucide-react';
 import { auth, db } from './firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, onSnapshot, addDoc, doc, setDoc, deleteDoc } from 'firebase/firestore';
@@ -39,6 +40,7 @@ function App() {
 
   const [currentView, setCurrentView] = useState('pos'); // 'pos', 'report', 'settings', 'inventory'
   const [salesDB, setSalesDB] = useState([]); 
+  const [guiasDB, setGuiasDB] = useState([]); 
   
   const [customersDB, setCustomersDB] = useState([]);
   const [productsDB, setProductsDB] = useState([]);
@@ -76,6 +78,11 @@ function App() {
         unsubVentas = onSnapshot(collection(db, 'ventas'), (snapshot) => {
           const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
           setSalesDB(data);
+        });
+
+        const unsubGuias = onSnapshot(collection(db, 'guias_remision'), (snapshot) => {
+          const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+          setGuiasDB(data);
         });
 
         unsubIssuers = onSnapshot(collection(db, 'issuers'), (snapshot) => {
@@ -121,6 +128,16 @@ function App() {
       await addDoc(collection(db, 'ventas'), saleData);
     } catch (error) {
       console.error("Error al registrar venta", error);
+    }
+  };
+
+  const saveGuia = async (guiaData) => {
+    try {
+      await addDoc(collection(db, 'guias_remision'), guiaData);
+      alert('✅ Guía de Remisión guardada con éxito.');
+    } catch (error) {
+      console.error("Error al registrar guía", error);
+      alert('⚠️ Error al guardar la guía.');
     }
   };
 
@@ -248,6 +265,14 @@ function App() {
               </button>
 
               <button 
+                className={`nav-btn ${currentView === 'guias' ? 'active' : ''}`}
+                onClick={() => setCurrentView('guias')}
+              >
+                <Truck size={24} />
+                <span className="nav-btn-text">Guías de Remisión</span>
+              </button>
+
+              <button 
                 className={`nav-btn ${currentView === 'settings' ? 'active' : ''}`}
                 onClick={() => setCurrentView('settings')}
               >
@@ -299,6 +324,9 @@ function App() {
         )}
         {(currentView === 'sri' && isAdmin) && (
           <FacturasSRI />
+        )}
+        {(currentView === 'guias' && isAdmin) && (
+          <GuiasScreen guias={guiasDB} salesDB={salesDB} issuers={issuers} onSaveGuia={saveGuia} />
         )}
         {(currentView === 'settings' && isAdmin) && (
           <ConfiguracionGeneral 
