@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ShoppingCart, Plus, Minus, Trash2, Tag, Shirt, UserCircle, Printer, CreditCard, User, Search, Loader2 } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, Tag, Shirt, UserCircle, Printer, CreditCard, User, Search, Loader2, ShoppingBag, Scissors, Package } from 'lucide-react';
 import { db } from '../../firebase/config';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, setDoc } from 'firebase/firestore';
 
@@ -467,13 +467,17 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
         <div className="products-grid">
           {productsDB.map((prod) => (
             <div key={prod.id} className="product-card" onClick={() => addToCart(prod)}>
-              {prod.urlImagen ? (
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <img src={prod.urlImagen} alt={prod.nombre} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px' }} />
-                </div>
-              ) : (
-                <div className="product-icon">{prod.categoria === 'Jeans' ? <Shirt size={32}/> : <Tag size={32}/>}</div>
-              )}
+              <div className="product-icon">
+                {(() => {
+                  const cat = (prod.categoria || '').toLowerCase();
+                  if (cat.includes('jeans')) return <Shirt size={32}/>;
+                  if (cat.includes('chaqueta')) return <ShoppingBag size={32}/>;
+                  if (cat.includes('camisa')) return <Shirt size={32}/>;
+                  if (cat.includes('accesorio')) return <Tag size={32}/>;
+                  if (cat.includes('sastreria') || cat.includes('costura')) return <Scissors size={32}/>;
+                  return <Package size={32}/>;
+                })()}
+              </div>
               <div className="product-name">{prod.nombre || prod.name}</div>
               <div className="product-price">${(prod.precioBase || prod.price || 0).toFixed(2)}</div>
             </div>
