@@ -10,7 +10,7 @@ import ConfiguracionGeneral from './components/Settings/ConfiguracionGeneral';
 import LoginScreen from './components/Auth/LoginScreen';
 import FacturasSRI from './components/Contingencia/FacturasSRI';
 import GuiasScreen from './components/GuiasRemision/GuiasScreen';
-import { LayoutDashboard, Receipt, PackagePlus, Settings, LogOut, Loader2, Package, Users, AlertTriangle, Truck } from 'lucide-react';
+import { LayoutDashboard, Receipt, PackagePlus, Settings, LogOut, Loader2, Package, Users, AlertTriangle, Truck, Moon, Sun } from 'lucide-react';
 import { auth, db } from './firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, onSnapshot, addDoc, doc, setDoc, deleteDoc } from 'firebase/firestore';
@@ -37,6 +37,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [userRole, setUserRole] = useState(null); // 'admin' o 'ventas'
   const [authLoading, setAuthLoading] = useState(true);
+  const [isLightTheme, setIsLightTheme] = useState(false);
 
   const [currentView, setCurrentView] = useState('pos'); // 'pos', 'report', 'settings', 'inventory'
   const [salesDB, setSalesDB] = useState([]); 
@@ -54,6 +55,13 @@ function App() {
 
   // --- ESCUCHAR ESTADO DE AUTENTICACIÓN Y SINCRONIZAR FIRESTORE ---
   useEffect(() => {
+    // Inicializar tema desde localStorage
+    const savedTheme = localStorage.getItem('isLightTheme');
+    if (savedTheme === 'true') {
+      setIsLightTheme(true);
+      document.body.classList.add('light-theme');
+    }
+
     let unsubClientes;
     let unsubProductos;
     let unsubVentas;
@@ -142,7 +150,7 @@ function App() {
     } catch (error) {
       console.error("Error al registrar guía", error);
       alert('⚠️ Error al guardar la guía.');
-    }
+    };
   };
 
   const recordCustomer = async (customerData) => {
@@ -297,17 +305,28 @@ function App() {
           )}
         </div>
 
-        {/* User Info & Logout */}
-        <div className="sidebar-user-nav">
+        {/* User Info, Theme & Logout */}
+        <div className="sidebar-user-nav" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: 'auto' }}>
           <div className="user-role-badge">
             <span>{isAdmin ? '🛡️ Admin' : '👤 Ventas'}</span>
           </div>
+
+          <button 
+            className="nav-btn"
+            onClick={toggleTheme}
+            style={{ color: 'var(--text-muted)' }}
+          >
+            {isLightTheme ? <Moon size={24} /> : <Sun size={24} />}
+            <span className="nav-btn-text">{isLightTheme ? 'Tema Noche' : 'Tema Día'}</span>
+          </button>
+
           <button 
             className="nav-btn nav-btn-logout"
-            onClick={handleLogout}
+            onClick={() => signOut(auth)}
             title="Cerrar Sesión"
           >
             <LogOut size={24} />
+            <span className="nav-btn-text">Salir</span>
           </button>
         </div>
       </nav>
