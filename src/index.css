@@ -677,6 +677,15 @@ input:checked + .slider:before {
     font-size: 1.1rem;
     width: 100%;
   }
+  .cart-summary {
+    max-height: none !important;
+    overflow-y: visible !important;
+  }
+  div[style*="grid-template-columns: 1fr 1fr"], 
+  div[style*="grid-template-columns: 1fr 1fr 1fr"],
+  div[style*="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr))"] {
+    grid-template-columns: 1fr !important;
+  }
   .summary-row.total {
     font-size: 1.25rem;
   }
