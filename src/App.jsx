@@ -87,7 +87,11 @@ function App() {
 
         unsubIssuers = onSnapshot(collection(db, 'issuers'), (snapshot) => {
           const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-          setIssuers(data);
+          if (data.length > 0) {
+            setIssuers(data);
+          } else {
+            setIssuers(MOCK_ISSUERS);
+          }
         });
 
       } else {
