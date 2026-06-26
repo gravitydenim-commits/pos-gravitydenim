@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { PackagePlus, Edit, X, Save, Loader2 } from 'lucide-react';
+import { PackagePlus, Edit, X, Save, Loader2, UploadCloud } from 'lucide-react';
+import { storage } from '../../firebase/config';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export default function AgregarProductoModal({ onClose, onSave, initialData }) {
   const isEditing = !!initialData;
@@ -23,6 +25,26 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
   }, [initialData]);
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const storageRef = ref(storage, `products/${Date.now()}_${file.name}`);
+      const snapshot = await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      setFormData(prev => ({ ...prev, urlImagen: downloadURL }));
+      alert('✅ Imagen subida correctamente.');
+    } catch (error) {
+      console.error("Error al subir la imagen:", error);
+      alert('⚠️ Hubo un error al subir la imagen.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -131,14 +153,25 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
               </div>
 
               <div className="form-group">
-                <label>URL Imagen (Opcional)</label>
-                <input 
-                  type="text" 
-                  name="urlImagen" 
-                  placeholder="https://..." 
-                  value={formData.urlImagen} 
-                  onChange={handleChange} 
-                />
+                <label>Imagen del Producto</label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <label className="btn-secondary" style={{ cursor: 'pointer', display: 'flex', gap: '0.5rem', flex: 1, justifyContent: 'center' }}>
+                    {isUploading ? <Loader2 size={18} className="animate-spin" /> : <UploadCloud size={18} />}
+                    {isUploading ? 'Subiendo...' : 'Subir desde la PC'}
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      style={{ display: 'none' }} 
+                      onChange={handleImageUpload} 
+                      disabled={isUploading}
+                    />
+                  </label>
+                </div>
+                {formData.urlImagen && (
+                  <div style={{ marginTop: '0.5rem', textAlign: 'center' }}>
+                    <img src={formData.urlImagen} alt="Vista previa" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #333' }} />
+                  </div>
+                )}
               </div>
             </div>
 

@@ -467,7 +467,13 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
         <div className="products-grid">
           {productsDB.map((prod) => (
             <div key={prod.id} className="product-card" onClick={() => addToCart(prod)}>
-              <div className="product-icon">{prod.categoria === 'Jeans' ? <Shirt size={32}/> : <Tag size={32}/>}</div>
+              {prod.urlImagen ? (
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <img src={prod.urlImagen} alt={prod.nombre} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px' }} />
+                </div>
+              ) : (
+                <div className="product-icon">{prod.categoria === 'Jeans' ? <Shirt size={32}/> : <Tag size={32}/>}</div>
+              )}
               <div className="product-name">{prod.nombre || prod.name}</div>
               <div className="product-price">${(prod.precioBase || prod.price || 0).toFixed(2)}</div>
             </div>
