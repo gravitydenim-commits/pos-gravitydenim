@@ -23,8 +23,14 @@ export default function NuevaGuiaModal({ isOpen, onClose, onSave, salesDB, issue
   if (!isOpen) return null;
 
   const handleImportarFactura = () => {
-    // Buscar la factura por comprobante o clave
-    const factura = salesDB.find(s => s.numeroComprobante?.includes(facturaSearch) || s.claveAcceso?.includes(facturaSearch));
+    // Buscar la factura por comprobante o clave o ID
+    const term = facturaSearch.trim();
+    const factura = salesDB.find(s => 
+      (s.numeroComprobante && s.numeroComprobante.includes(term)) || 
+      (s.claveAcceso && s.claveAcceso.includes(term)) ||
+      (s.id && s.id === term) ||
+      (s.secuencial && s.secuencial.includes(term))
+    );
     if (factura) {
       setFormData({
         ...formData,
