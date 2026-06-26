@@ -40,8 +40,8 @@ export default function LoginScreen() {
       <div className="glass-panel animate-fade-in" style={{ padding: '3rem', width: '400px', maxWidth: '90%', textAlign: 'center' }}>
         
         <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{ color: 'var(--accent)', fontWeight: 900, fontSize: '2.5rem', marginBottom: '0.5rem' }}>GD</h1>
-          <h2 style={{ color: 'var(--text-main)', fontSize: '1.5rem' }}>Punto de Venta</h2>
+          <img src="/logo.jpg" alt="Gravity Denim Logo" style={{ width: '180px', borderRadius: '12px', marginBottom: '1rem', objectFit: 'contain' }} />
+          <h2 style={{ color: 'var(--text-main)', fontSize: '1.5rem', marginTop: '0.5rem' }}>Punto de Venta</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Gravity Denim</p>
         </div>
 

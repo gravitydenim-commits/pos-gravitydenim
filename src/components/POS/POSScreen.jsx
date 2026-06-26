@@ -210,6 +210,7 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
       <body>
         <div class="ticket-container">
           <div class="text-center mb-2">
+            <img src="/logo.jpg" alt="Logo" style="width: 120px; margin-bottom: 5px; filter: grayscale(100%);" />
             <h2 style="margin:0; font-size: 16px;">${issuerData.name.toUpperCase()}</h2>
             <div class="mt-2">RUC: ${issuerData.ruc}</div>
             <div>DIR: ${issuerData.direccionMatriz || 'N/A'}</div>

@@ -230,7 +230,7 @@ function App() {
       <nav className="sidebar glass-panel">
         <div className="sidebar-main-nav">
           <div className="sidebar-logo">
-            <h2>GD</h2>
+            <img src="/logo.jpg" alt="GD" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }} />
           </div>
           
           <button 

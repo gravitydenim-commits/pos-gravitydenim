@@ -151,7 +151,9 @@ export const generarFacturaA4 = (venta, issuerData) => {
         <div class="header-section">
           <!-- IZQUIERDA -->
           <div class="left-box">
-            <div class="logo-placeholder">GRAVITY DENIM</div>
+            <div style="text-align: center; margin-bottom: 15px;">
+              <img src="/logo.jpg" alt="Gravity Denim Logo" style="max-width: 220px; max-height: 120px; border-radius: 8px;" />
+            </div>
             <div class="box">
               <h3>${issuerData.name}</h3>
               <p><b>GRAVITY DENIM</b></p>
