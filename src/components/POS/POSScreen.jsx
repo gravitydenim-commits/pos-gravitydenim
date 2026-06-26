@@ -215,6 +215,7 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
             <div>DIR: ${issuerData.direccionMatriz || 'N/A'}</div>
             <div>OBLIGADO CONTABILIDAD: ${issuerData.obligadoContabilidad ? 'SI' : 'NO'}</div>
             <div class="font-bold mt-2">GRAVITY DENIM POS</div>
+            ${claveAcceso.startsWith('NV-') ? `<div style="margin-top: 10px; border: 1px dashed black; padding: 4px;"><div class="font-bold" style="font-size: 14px;">NOTA DE VENTA</div><div class="font-bold" style="font-size: 12px; margin-top: 2px;">SIN VALIDEZ TRIBUTARIA</div></div>` : ''}
           </div>
           
           <div class="divider"></div>
