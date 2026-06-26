@@ -664,17 +664,28 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
               </label>
             </div>
 
-            {/* NOTA DE VENTA SWITCH */}
-            <div className="vat-switch-container" style={{ marginTop: '0.5rem', background: 'rgba(255, 152, 0, 0.1)', borderColor: 'rgba(255, 152, 0, 0.3)' }}>
-              <span style={{ color: 'var(--warning)' }}>Nota de Venta (Sin SRI)</span>
-              <label className="switch">
-                <input 
-                  type="checkbox" 
-                  checked={isNotaVenta} 
-                  onChange={(e) => setIsNotaVenta(e.target.checked)}
-                />
-                <span className="slider" style={{ backgroundColor: isNotaVenta ? 'var(--warning)' : '#ccc' }}></span>
-              </label>
+            {/* NOTA DE VENTA BOTON */}
+            <div style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+              <button 
+                onClick={() => setIsNotaVenta(!isNotaVenta)}
+                style={{ 
+                  width: '100%',
+                  padding: '10px', 
+                  borderRadius: '8px', 
+                  border: `2px solid ${isNotaVenta ? 'var(--warning)' : 'var(--panel-border)'}`,
+                  background: isNotaVenta ? 'rgba(255, 152, 0, 0.2)' : 'transparent',
+                  color: isNotaVenta ? 'var(--warning)' : 'var(--text-muted)',
+                  fontWeight: isNotaVenta ? 'bold' : 'normal',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  transition: 'all 0.2s'
+                }}
+              >
+                📝 {isNotaVenta ? 'MODO NOTA DE VENTA (Activo)' : 'Emitir como Nota de Venta (Inactivo)'}
+              </button>
             </div>
 
             {/* MÉTODO DE PAGO */}
