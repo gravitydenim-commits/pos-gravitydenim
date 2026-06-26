@@ -46,12 +46,11 @@ export default function DailyReport({ issuers, sales }) {
         <span style={{color: 'var(--text-muted)'}}>{new Date().toLocaleDateString()}</span>
       </div>
 
+      {/* SECCIÓN SRI */}
+      <h3 style={{ marginTop: '1rem', marginBottom: '1rem', color: 'var(--text-main)', borderBottom: '1px solid var(--panel-border)', paddingBottom: '0.5rem' }}>Facturación Electrónica (SRI)</h3>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-        
         {reportData.map(data => (
-          <React.Fragment key={data.id}>
-            {/* TARJETA FACTURAS (SRI) */}
-            <div className="glass-panel" style={{ padding: '1.5rem', borderTop: '4px solid var(--accent)' }}>
+            <div key={`sri-${data.id}`} className="glass-panel" style={{ padding: '1.5rem', borderTop: '4px solid var(--accent)' }}>
               <h3 style={{ color: 'var(--accent)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Wallet size={20} /> {data.name} <span style={{ fontSize: '0.8rem', padding: '2px 6px', background: 'var(--accent)', color: 'white', borderRadius: '4px' }}>SRI</span>
               </h3>
@@ -77,9 +76,14 @@ export default function DailyReport({ issuers, sales }) {
                 <span style={{ fontWeight: 'bold', color: 'var(--success)' }}>${data.totalSRI.toFixed(2)}</span>
               </div>
             </div>
+        ))}
+      </div>
 
-            {/* TARJETA NOTAS DE VENTA */}
-            <div className="glass-panel" style={{ padding: '1.5rem', borderTop: '4px solid var(--warning)' }}>
+      {/* SECCIÓN NOTAS DE VENTA */}
+      <h3 style={{ marginTop: '3rem', marginBottom: '1rem', color: 'var(--text-main)', borderBottom: '1px solid var(--panel-border)', paddingBottom: '0.5rem' }}>Control Interno (Notas de Venta)</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+        {reportData.map(data => (
+            <div key={`nv-${data.id}`} className="glass-panel" style={{ padding: '1.5rem', borderTop: '4px solid var(--warning)' }}>
               <h3 style={{ color: 'var(--warning)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Wallet size={20} /> {data.name} <span style={{ fontSize: '0.8rem', padding: '2px 6px', background: 'var(--warning)', color: 'white', borderRadius: '4px' }}>Interno</span>
               </h3>
@@ -105,9 +109,7 @@ export default function DailyReport({ issuers, sales }) {
                 <span style={{ fontWeight: 'bold', color: 'var(--warning)' }}>${data.totalNV.toFixed(2)}</span>
               </div>
             </div>
-          </React.Fragment>
         ))}
-
       </div>
 
       {/* Global Summary */}
