@@ -432,7 +432,7 @@ button {
   border-top: 1px solid var(--panel-border);
   border-radius: 0 0 16px 16px;
   overflow-y: auto;
-  max-height: 55vh;
+  max-height: 40vh;
 }
 
 .summary-row {
