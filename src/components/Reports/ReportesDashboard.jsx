@@ -256,7 +256,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                 </tr>
               </thead>
               <tbody>
-                {sales.sort((a,b) => new Date(b.date?.toDate ? b.date.toDate() : b.date) - new Date(a.date?.toDate ? a.date.toDate() : a.date)).map((sale, idx) => {
+                {sales.filter(s => s.status !== 'NOTA_DE_VENTA').sort((a,b) => new Date(b.date?.toDate ? b.date.toDate() : b.date) - new Date(a.date?.toDate ? a.date.toDate() : a.date)).map((sale, idx) => {
                   const saleDate = sale.date?.toDate ? sale.date.toDate() : new Date(sale.date);
                   const isAutorizado = sale.status === 'AUTORIZADO';
                   const issuer = issuers?.find(i => i.id === sale.issuerId) || {};
@@ -295,6 +295,70 @@ export default function ReportesDashboard({ sales, issuers }) {
                               title="Descargar XML"
                             >
                               <FileCode2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        {/* Reporte de Notas de Venta */}
+        <div className="glass-panel" style={{ padding: '1.5rem', overflowX: 'auto', borderTop: '4px solid var(--warning)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '2px solid var(--warning)', paddingBottom: '10px' }}>
+            <h3 style={{ color: 'var(--warning)', margin: 0, fontSize: '1.2rem' }}>Control Interno (Notas de Venta)</h3>
+          </div>
+          
+          <div style={{ minWidth: '1000px' }}>
+            <table className="pos-table" style={{ fontSize: '0.85rem' }}>
+              <thead>
+                <tr style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)' }}>
+                  <th>EMISION</th>
+                  <th>EST</th>
+                  <th>PEM</th>
+                  <th>NUM</th>
+                  <th>CLIENTE</th>
+                  <th>DOC</th>
+                  <th>ST 0</th>
+                  <th>TOTAL</th>
+                  <th>ESTADO</th>
+                  <th>REFERENCIA INTERNA</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sales.filter(s => s.status === 'NOTA_DE_VENTA').sort((a,b) => new Date(b.date?.toDate ? b.date.toDate() : b.date) - new Date(a.date?.toDate ? a.date.toDate() : a.date)).map((sale, idx) => {
+                  const saleDate = sale.date?.toDate ? sale.date.toDate() : new Date(sale.date);
+                  const issuer = issuers?.find(i => i.id === sale.issuerId) || {};
+                  
+                  return (
+                    <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td>{saleDate.toLocaleDateString('sv-SE')}</td>
+                      <td>{issuer.establecimiento || '001'}</td>
+                      <td>{issuer.puntoEmision || '100'}</td>
+                      <td style={{ background: 'var(--warning)', color: 'white', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', margin: '4px' }}>
+                        {sale.numeroComprobante || 'S/N'}
+                      </td>
+                      <td>{sale.customer?.nombre || 'CONSUMIDOR FINAL'}</td>
+                      <td>{sale.customer?.numeroIdentificacion || '9999999999999'}</td>
+                      <td className="text-right">{(sale.totals?.baseImponible || 0).toFixed(2)}</td>
+                      <td className="text-right font-bold" style={{ color: 'var(--warning)' }}>{(sale.totals?.total || 0).toFixed(2)}</td>
+                      <td style={{ color: 'var(--warning)', fontWeight: 'bold' }}>
+                        {sale.status}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '0.7rem' }}>{sale.claveAcceso || sale.id}</span>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button 
+                              onClick={() => generarFacturaA4(sale, issuer)}
+                              style={{ background: '#10b981', border: 'none', padding: '4px', borderRadius: '4px', color: 'white', cursor: 'pointer' }}
+                              title="Descargar Comprobante A4"
+                            >
+                              <FileText size={14} />
                             </button>
                           </div>
                         </div>
