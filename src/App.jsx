@@ -135,6 +135,19 @@ function App() {
     }
   };
 
+  const toggleTheme = () => {
+    setIsLightTheme(prev => {
+      const newValue = !prev;
+      localStorage.setItem('isLightTheme', newValue);
+      if (newValue) {
+        document.body.classList.add('light-theme');
+      } else {
+        document.body.classList.remove('light-theme');
+      }
+      return newValue;
+    });
+  };
+
   const recordSale = async (saleData) => {
     try {
       await addDoc(collection(db, 'ventas'), saleData);
