@@ -7,12 +7,13 @@ export const generarFacturaA4 = (venta, issuerData) => {
     return;
   }
 
+  const isNotaVenta = venta.status === 'NOTA_DE_VENTA';
   const isAutorizado = venta.status === 'AUTORIZADO';
   const ambiente = "1"; // 1: Pruebas, 2: Produccion
   const tipoEmision = "1"; // 1: Normal
 
   const claveAcceso = venta.claveAcceso || "0000000000000000000000000000000000000000000000000";
-  const numComprobante = venta.numeroComprobante || `${issuerData.establecimiento || '001'}-${issuerData.puntoEmision || '100'}-${venta.secuencial || '000000000'}`;
+  const numComprobante = venta.numeroComprobante || (isNotaVenta ? claveAcceso.split('-')[1] || claveAcceso : `${issuerData.establecimiento || '001'}-${issuerData.puntoEmision || '100'}-${venta.secuencial || '000000000'}`);
 
   // Formateo de fechas
   const dateObj = venta.date?.seconds ? new Date(venta.date.seconds * 1000) : new Date(venta.date);
@@ -166,22 +167,31 @@ export const generarFacturaA4 = (venta, issuerData) => {
           <!-- DERECHA -->
           <div class="box right-box">
             <h3>R.U.C.: ${issuerData.ruc}</h3>
-            <h2>FACTURA</h2>
+            <h2>${isNotaVenta ? 'NOTA DE VENTA' : 'FACTURA'}</h2>
             <p><b>No.</b> ${numComprobante}</p>
             <br/>
-            <p><b>NUMERO DE AUTORIZACION</b></p>
-            <p>${claveAcceso}</p>
-            <br/>
-            <p><b>FECHA Y HORA DE AUTORIZACION</b></p>
-            <p>${isAutorizado ? autorizacionDate : 'PENDIENTE'}</p>
-            <br/>
-            <p><b>AMBIENTE:</b> ${ambiente === '1' ? 'PRUEBAS' : 'PRODUCCIÓN'}</p>
-            <p><b>EMISION:</b> ${tipoEmision === '1' ? 'NORMAL' : 'NORMAL'}</p>
             
-            <div class="barcode-container">
-              <p><b>CLAVE DE ACCESO</b></p>
-              <div class="barcode">${claveAcceso}</div>
-            </div>
+            ${isNotaVenta ? `
+              <div style="margin-top: 20px; font-size: 14px; text-align: center; border: 1px dashed #666; padding: 10px; border-radius: 8px;">
+                <b>COMPROBANTE SIN VALIDEZ TRIBUTARIA</b>
+                <br/><br/>
+                Documento de control interno
+              </div>
+            ` : `
+              <p><b>NUMERO DE AUTORIZACION</b></p>
+              <p>${claveAcceso}</p>
+              <br/>
+              <p><b>FECHA Y HORA DE AUTORIZACION</b></p>
+              <p>${isAutorizado ? autorizacionDate : 'PENDIENTE'}</p>
+              <br/>
+              <p><b>AMBIENTE:</b> ${ambiente === '1' ? 'PRUEBAS' : 'PRODUCCIÓN'}</p>
+              <p><b>EMISION:</b> ${tipoEmision === '1' ? 'NORMAL' : 'NORMAL'}</p>
+              
+              <div class="barcode-container">
+                <p><b>CLAVE DE ACCESO</b></p>
+                <div class="barcode">${claveAcceso}</div>
+              </div>
+            `}
           </div>
         </div>
 

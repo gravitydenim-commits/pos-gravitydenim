@@ -7,17 +7,26 @@ export default function DailyReport({ issuers, sales }) {
   const reportData = useMemo(() => {
     return issuers.map(issuer => {
       const issuerSales = sales.filter(s => s.issuerId === issuer.id);
+      const sriSales = issuerSales.filter(s => s.status !== 'NOTA_DE_VENTA');
+      const notaVentaSales = issuerSales.filter(s => s.status === 'NOTA_DE_VENTA');
+
       const totalAmount = issuerSales.reduce((acc, sale) => acc + sale.totals.total, 0);
-      const totalIVA = issuerSales.reduce((acc, sale) => acc + sale.totals.ivaAmount, 0);
+      const totalSRI = sriSales.reduce((acc, sale) => acc + sale.totals.total, 0);
+      const totalNV = notaVentaSales.reduce((acc, sale) => acc + sale.totals.total, 0);
+
+      const totalIVA = sriSales.reduce((acc, sale) => acc + sale.totals.ivaAmount, 0);
       const itemsCount = issuerSales.reduce((acc, sale) => {
         return acc + sale.items.reduce((sum, item) => sum + item.qty, 0);
       }, 0);
 
       return {
         ...issuer,
-        salesCount: issuerSales.length,
+        salesCount: sriSales.length,
+        nvCount: notaVentaSales.length,
         itemsCount,
         totalAmount,
+        totalSRI,
+        totalNV,
         totalIVA
       };
     });
@@ -42,22 +51,34 @@ export default function DailyReport({ issuers, sales }) {
             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>RUC: {data.ruc}</p>
             
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span>Ventas (Facturas):</span>
+              <span>Facturas (SRI):</span>
               <span style={{ fontWeight: 'bold' }}>{data.salesCount}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+              <span>Notas de Venta:</span>
+              <span style={{ fontWeight: 'bold' }}>{data.nvCount}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
               <span>Prendas Vendidas:</span>
               <span style={{ fontWeight: 'bold' }}>{data.itemsCount}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span>IVA Recaudado:</span>
+              <span>IVA Recaudado (Solo Facturas):</span>
               <span style={{ fontWeight: 'bold', color: 'var(--text-muted)' }}>${data.totalIVA.toFixed(2)}</span>
             </div>
             
             <hr style={{ borderColor: 'var(--panel-border)', margin: '1rem 0' }} />
             
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem' }}>
-              <span>Total Facturado:</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.05rem', marginBottom: '0.5rem' }}>
+              <span>Ingresos Facturas:</span>
+              <span style={{ fontWeight: 'bold', color: 'var(--text-main)' }}>${data.totalSRI.toFixed(2)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.05rem', marginBottom: '0.5rem' }}>
+              <span>Ingresos Notas de Venta:</span>
+              <span style={{ fontWeight: 'bold', color: 'var(--warning)' }}>${data.totalNV.toFixed(2)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', marginTop: '1rem', borderTop: '1px dashed var(--panel-border)', paddingTop: '0.5rem' }}>
+              <span>Total Global:</span>
               <span style={{ fontWeight: 'bold', color: 'var(--success)' }}>${data.totalAmount.toFixed(2)}</span>
             </div>
           </div>

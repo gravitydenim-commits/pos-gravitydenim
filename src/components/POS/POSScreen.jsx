@@ -12,6 +12,7 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [checkoutWithPrint, setCheckoutWithPrint] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('EFECTIVO');
+  const [isNotaVenta, setIsNotaVenta] = useState(false);
 
   // --- DATOS DEL CLIENTE ---
   const [customer, setCustomer] = useState({
@@ -174,7 +175,7 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Ticket RIDE - ${claveAcceso}</title>
+        <title>${claveAcceso.startsWith('NV-') ? 'Nota de Venta' : 'Ticket RIDE'} - ${claveAcceso}</title>
         <style>
           @page { margin: 0; }
           body { 
@@ -265,8 +266,14 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
           <div class="solid-divider"></div>
           
           <div class="text-center mt-2">
-            <div><b>CLAVE DE ACCESO:</b></div>
-            <div style="word-break: break-all; margin-top: 4px; font-size: 11px;">${claveAcceso}</div>
+            ${claveAcceso.startsWith('NV-') ? 
+               `<div class="font-bold">** NOTA DE VENTA **</div>
+                <div>(Comprobante sin validez tributaria)</div>
+                <div style="margin-top: 4px; font-size: 11px;">Ref: ${claveAcceso}</div>` 
+               : 
+               `<div><b>CLAVE DE ACCESO:</b></div>
+                <div style="word-break: break-all; margin-top: 4px; font-size: 11px;">${claveAcceso}</div>`
+            }
             <div class="mt-2 font-bold">¡Gracias por preferir Gravity Denim!</div>
           </div>
         </div>
@@ -336,31 +343,41 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
       }
 
       // 1. Emitir factura al SRI a través de nuestro backend Next.js
-      console.log("🚀 [SRI] Enviando petición a nuestro backend interno...");
-      const response = await fetch('/api/sri/emitir', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cart, customer, vatIncluded, emisorId: issuerData.id })
-      });
-      
-      let sriData;
-      try {
-        sriData = await response.json();
-      } catch (e) {
-        throw new Error('El servidor no respondió correctamente.');
-      }
-      
-      const claveAcceso = sriData.claveAcceso;
-      const estadoFactura = sriData.estado || (sriData.success ? 'AUTORIZADO' : 'RECHAZADO');
-      
-      if (!claveAcceso) {
-        throw new Error(sriData.message || 'El backend no generó una Clave de Acceso válida');
-      }
+      let claveAcceso;
+      let estadoFactura;
+      let sriData = {};
 
-      if (estadoFactura === 'CONTINGENCIA_LOCAL') {
-        alert(`⚠️ Sin conexión con el SRI. La factura se guardó internamente y se emitirá automáticamente cuando regrese el internet.\nClave temporal: ${claveAcceso}`);
-      } else if (estadoFactura === 'RECHAZADO') {
-        throw new Error(sriData.message || 'La factura fue rechazada por el servidor.');
+      if (isNotaVenta) {
+        console.log("📝 [Nota de Venta] Omitiendo SRI...");
+        claveAcceso = 'NV-' + Date.now();
+        estadoFactura = 'NOTA_DE_VENTA';
+        sriData = { success: true, numeroComprobante: 'S/N', secuencialAsignado: null };
+      } else {
+        console.log("🚀 [SRI] Enviando petición a nuestro backend interno...");
+        const response = await fetch('/api/sri/emitir', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cart, customer, vatIncluded, emisorId: issuerData.id })
+        });
+        
+        try {
+          sriData = await response.json();
+        } catch (e) {
+          throw new Error('El servidor no respondió correctamente.');
+        }
+        
+        claveAcceso = sriData.claveAcceso;
+        estadoFactura = sriData.estado || (sriData.success ? 'AUTORIZADO' : 'RECHAZADO');
+        
+        if (!claveAcceso) {
+          throw new Error(sriData.message || 'El backend no generó una Clave de Acceso válida');
+        }
+
+        if (estadoFactura === 'CONTINGENCIA_LOCAL') {
+          alert(`⚠️ Sin conexión con el SRI. La factura se guardó internamente y se emitirá automáticamente cuando regrese el internet.\nClave temporal: ${claveAcceso}`);
+        } else if (estadoFactura === 'RECHAZADO') {
+          throw new Error(sriData.message || 'La factura fue rechazada por el servidor.');
+        }
       }
 
       // 2. Descontar Stock en Firebase
@@ -639,6 +656,19 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
                   onChange={(e) => setVatIncluded(e.target.checked)}
                 />
                 <span className="slider"></span>
+              </label>
+            </div>
+
+            {/* NOTA DE VENTA SWITCH */}
+            <div className="vat-switch-container" style={{ marginTop: '0.5rem', background: 'rgba(255, 152, 0, 0.1)', borderColor: 'rgba(255, 152, 0, 0.3)' }}>
+              <span style={{ color: 'var(--warning)' }}>Nota de Venta (Sin SRI)</span>
+              <label className="switch">
+                <input 
+                  type="checkbox" 
+                  checked={isNotaVenta} 
+                  onChange={(e) => setIsNotaVenta(e.target.checked)}
+                />
+                <span className="slider" style={{ backgroundColor: isNotaVenta ? 'var(--warning)' : '#ccc' }}></span>
               </label>
             </div>
 

@@ -145,7 +145,7 @@ export default function ReportesDashboard({ sales, issuers }) {
       // Envolver en comillas para evitar problemas con las comas en los textos
       finalRows.push([
         `"${fechaFormat}"`,
-        `"18"`, 
+        `"${sale.status === 'NOTA_DE_VENTA' ? 'Nota Venta' : 'Factura'}"`, 
         `"${rucEmisor}"`,
         `"${emisorNombre}"`,
         `"${idCliente}"`,
