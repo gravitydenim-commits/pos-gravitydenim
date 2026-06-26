@@ -144,7 +144,11 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
     let iva = 0;
     let finalTotal = 0;
 
-    if (vatIncluded) {
+    if (isNotaVenta) {
+      base = sum;
+      iva = 0;
+      finalTotal = sum;
+    } else if (vatIncluded) {
       finalTotal = sum;
       base = sum / 1.15;
       iva = finalTotal - base;
@@ -155,7 +159,7 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
     }
 
     return { subtotal: sum, baseImponible: base, ivaAmount: iva, total: finalTotal };
-  }, [cart, vatIncluded]);
+  }, [cart, vatIncluded, isNotaVenta]);
 
 
   const imprimirTicketRIDE = (issuerData, cartData, totalsData, customerData, claveAcceso, paymentMet) => {
