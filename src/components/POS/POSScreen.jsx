@@ -5,7 +5,7 @@ import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, setD
 
 // Los productos ahora vienen de Firebase/App.js como productsDB
 
-export default function POSScreen({ issuers, productsDB, recordSale, customersDB, recordCustomer }) {
+export default function POSScreen({ issuers, productsDB, salesDB = [], recordSale, customersDB, recordCustomer }) {
   const [cart, setCart] = useState([]);
   const [vatIncluded, setVatIncluded] = useState(true);
   const [selectedIssuer, setSelectedIssuer] = useState(''); 
@@ -13,6 +13,23 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
   const [checkoutWithPrint, setCheckoutWithPrint] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('EFECTIVO');
   const [isNotaVenta, setIsNotaVenta] = useState(false);
+
+  // Calcular los productos más vendidos
+  const sortedProducts = useMemo(() => {
+    const productSales = {};
+    salesDB.forEach(sale => {
+      (sale.items || []).forEach(item => {
+        if (!productSales[item.id]) productSales[item.id] = 0;
+        productSales[item.id] += item.qty;
+      });
+    });
+
+    return [...productsDB].sort((a, b) => {
+      const salesA = productSales[a.id] || 0;
+      const salesB = productSales[b.id] || 0;
+      return salesB - salesA;
+    });
+  }, [productsDB, salesDB]);
 
   // --- DATOS DEL CLIENTE ---
   const [customer, setCustomer] = useState({
@@ -488,7 +505,7 @@ export default function POSScreen({ issuers, productsDB, recordSale, customersDB
           </div>
         </div>
         <div className="products-grid">
-          {productsDB.map((prod) => (
+          {sortedProducts.map((prod) => (
             <div key={prod.id} className="product-card" onClick={() => addToCart(prod)}>
               <div className="product-icon">
                 {(() => {

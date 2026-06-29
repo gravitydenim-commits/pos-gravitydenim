@@ -350,6 +350,7 @@ function App() {
           <POSScreen 
             issuers={issuers} 
             productsDB={productsDB}
+            salesDB={salesDB}
             recordSale={recordSale} 
             customersDB={customersDB}
             recordCustomer={recordCustomer}
