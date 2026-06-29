@@ -1,16 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { PackagePlus, Edit, X, Save, Loader2, Shirt, ShoppingBag, Tag, Scissors, Package, Briefcase, Glasses, Watch, Gem } from 'lucide-react';
+import { PackagePlus, Edit, X, Save, Loader2 } from 'lucide-react';
 
 const ICON_OPTIONS = [
-  { name: 'Shirt', component: Shirt, label: 'Camisa/Pantalón' },
-  { name: 'ShoppingBag', component: ShoppingBag, label: 'Bolso/Chaqueta' },
-  { name: 'Tag', component: Tag, label: 'Etiqueta' },
-  { name: 'Scissors', component: Scissors, label: 'Sastrería' },
-  { name: 'Package', component: Package, label: 'Caja' },
-  { name: 'Briefcase', component: Briefcase, label: 'Maletín' },
-  { name: 'Glasses', component: Glasses, label: 'Gafas' },
-  { name: 'Watch', component: Watch, label: 'Reloj' },
-  { name: 'Gem', component: Gem, label: 'Joya' }
+  { name: '👕', label: 'Camiseta' },
+  { name: '👔', label: 'Camisa/Corbata' },
+  { name: '👚', label: 'Blusa' },
+  { name: '👖', label: 'Pantalón/Jeans' },
+  { name: '🩳', label: 'Bermuda/Short' },
+  { name: '👗', label: 'Vestido' },
+  { name: '🧥', label: 'Chaqueta/Abrigo' },
+  { name: '🦺', label: 'Chaleco' },
+  { name: '🥼', label: 'Sudadera/Bata' },
+  { name: '🩲', label: 'Ropa Interior' },
+  { name: '👙', label: 'Traje de Baño' },
+  { name: '🧢', label: 'Gorra' },
+  { name: '👟', label: 'Zapatos/Tenis' },
+  { name: '👢', label: 'Botas' },
+  { name: '🧦', label: 'Medias/Calcetines' },
+  { name: '📦', label: 'Paquete/Varios' }
 ];
 
 export default function AgregarProductoModal({ onClose, onSave, initialData }) {
@@ -23,7 +30,7 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
     precioBase: '',
     stock: '',
     urlImagen: '',
-    icono: 'Package'
+    icono: '👕'
   });
 
   const [hiddenIcons, setHiddenIcons] = useState(() => {
@@ -163,7 +170,6 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
                 <label>Icono Representativo (Elige uno)</label>
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '5px' }}>
                   {ICON_OPTIONS.filter(opt => !hiddenIcons.includes(opt.name)).map(opt => {
-                    const IconComponent = opt.component;
                     const isSelected = formData.icono === opt.name;
                     return (
                       <div 
@@ -173,18 +179,18 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
                           position: 'relative',
                           border: isSelected ? '2px solid var(--accent)' : '1px solid var(--panel-border)',
                           backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.2)' : 'rgba(0,0,0,0.2)',
-                          padding: '10px',
+                          padding: '8px',
                           borderRadius: '8px',
                           cursor: 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
-                          gap: '5px',
+                          gap: '2px',
                           width: '70px',
                           transition: 'all 0.2s'
                         }}
                       >
-                        <IconComponent size={24} color={isSelected ? 'var(--accent)' : 'var(--text-muted)'} />
+                        <span style={{ fontSize: '24px' }}>{opt.name}</span>
                         <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textAlign: 'center' }}>{opt.label}</span>
                         <button 
                           onClick={(e) => handleHideIcon(opt.name, e)}

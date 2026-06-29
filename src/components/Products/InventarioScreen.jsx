@@ -54,6 +54,7 @@ export default function InventarioScreen({ productsDB, onEdit, onDelete, onAdd }
                         if (prod.icono === 'Glasses') return <Glasses size={18} color="var(--accent)"/>;
                         if (prod.icono === 'Watch') return <Watch size={18} color="var(--accent)"/>;
                         if (prod.icono === 'Gem') return <Gem size={18} color="var(--accent)"/>;
+                        return <span style={{ fontSize: '18px', lineHeight: 1 }}>{prod.icono}</span>;
                       }
                       
                       const cat = (prod.categoria || '').toLowerCase();

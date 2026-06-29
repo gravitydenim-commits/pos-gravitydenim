@@ -519,6 +519,8 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                     if (prod.icono === 'Glasses') return <Glasses size={32}/>;
                     if (prod.icono === 'Watch') return <Watch size={32}/>;
                     if (prod.icono === 'Gem') return <Gem size={32}/>;
+                    // Si no es ninguno de los anteriores, asumimos que es un emoji
+                    return <span style={{ fontSize: '32px', lineHeight: 1 }}>{prod.icono}</span>;
                   }
                   
                   // Fallback para productos antiguos
