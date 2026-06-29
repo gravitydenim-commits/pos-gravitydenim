@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, Edit2, Trash2, PlusCircle, AlertTriangle } from 'lucide-react';
+import { Package, Edit2, Trash2, PlusCircle, AlertTriangle, Shirt, ShoppingBag, Tag, Scissors, Briefcase, Glasses, Watch, Gem } from 'lucide-react';
 
 export default function InventarioScreen({ productsDB, onEdit, onDelete, onAdd }) {
   return (
@@ -42,7 +42,30 @@ export default function InventarioScreen({ productsDB, onEdit, onDelete, onAdd }
                   <td style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
                     {prod.codigoBarras || `#${prod.id.slice(-4)}`}
                   </td>
-                  <td style={{ padding: '1rem', fontWeight: 'bold' }}>{prod.nombre || prod.name}</td>
+                  <td style={{ padding: '1rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {(() => {
+                      if (prod.icono) {
+                        if (prod.icono === 'Shirt') return <Shirt size={18} color="var(--accent)"/>;
+                        if (prod.icono === 'ShoppingBag') return <ShoppingBag size={18} color="var(--accent)"/>;
+                        if (prod.icono === 'Tag') return <Tag size={18} color="var(--accent)"/>;
+                        if (prod.icono === 'Scissors') return <Scissors size={18} color="var(--accent)"/>;
+                        if (prod.icono === 'Package') return <Package size={18} color="var(--accent)"/>;
+                        if (prod.icono === 'Briefcase') return <Briefcase size={18} color="var(--accent)"/>;
+                        if (prod.icono === 'Glasses') return <Glasses size={18} color="var(--accent)"/>;
+                        if (prod.icono === 'Watch') return <Watch size={18} color="var(--accent)"/>;
+                        if (prod.icono === 'Gem') return <Gem size={18} color="var(--accent)"/>;
+                      }
+                      
+                      const cat = (prod.categoria || '').toLowerCase();
+                      if (cat.includes('jeans')) return <Shirt size={18} color="var(--accent)"/>;
+                      if (cat.includes('chaqueta')) return <ShoppingBag size={18} color="var(--accent)"/>;
+                      if (cat.includes('camisa')) return <Shirt size={18} color="var(--accent)"/>;
+                      if (cat.includes('accesorio')) return <Tag size={18} color="var(--accent)"/>;
+                      if (cat.includes('sastreria') || cat.includes('costura')) return <Scissors size={18} color="var(--accent)"/>;
+                      return <Package size={18} color="var(--accent)"/>;
+                    })()}
+                    {prod.nombre || prod.name}
+                  </td>
                   <td style={{ padding: '1rem' }}>
                     <span style={{ background: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '12px', fontSize: '0.8rem' }}>
                       {prod.categoria || 'General'}

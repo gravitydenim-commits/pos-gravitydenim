@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { PackagePlus, Edit, X, Save, Loader2 } from 'lucide-react';
+import { PackagePlus, Edit, X, Save, Loader2, Shirt, ShoppingBag, Tag, Scissors, Package, Briefcase, Glasses, Watch, Gem } from 'lucide-react';
+
+const ICON_OPTIONS = [
+  { name: 'Shirt', component: Shirt, label: 'Camisa/Pantalón' },
+  { name: 'ShoppingBag', component: ShoppingBag, label: 'Bolso/Chaqueta' },
+  { name: 'Tag', component: Tag, label: 'Etiqueta' },
+  { name: 'Scissors', component: Scissors, label: 'Sastrería' },
+  { name: 'Package', component: Package, label: 'Caja' },
+  { name: 'Briefcase', component: Briefcase, label: 'Maletín' },
+  { name: 'Glasses', component: Glasses, label: 'Gafas' },
+  { name: 'Watch', component: Watch, label: 'Reloj' },
+  { name: 'Gem', component: Gem, label: 'Joya' }
+];
 
 export default function AgregarProductoModal({ onClose, onSave, initialData }) {
   const isEditing = !!initialData;
@@ -10,8 +22,25 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
     categoria: 'Jeans',
     precioBase: '',
     stock: '',
-    urlImagen: ''
+    urlImagen: '',
+    icono: 'Package'
   });
+
+  const [hiddenIcons, setHiddenIcons] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('hiddenIcons') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
+  const handleHideIcon = (iconName, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const updated = [...hiddenIcons, iconName];
+    setHiddenIcons(updated);
+    localStorage.setItem('hiddenIcons', JSON.stringify(updated));
+  };
 
   useEffect(() => {
     if (initialData) {
@@ -130,15 +159,68 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
                 </select>
               </div>
 
-              <div className="form-group">
-                <label>URL Imagen (Opcional)</label>
-                <input 
-                  type="text" 
-                  name="urlImagen" 
-                  placeholder="https://..." 
-                  value={formData.urlImagen} 
-                  onChange={handleChange} 
-                />
+              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                <label>Icono Representativo (Elige uno)</label>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '5px' }}>
+                  {ICON_OPTIONS.filter(opt => !hiddenIcons.includes(opt.name)).map(opt => {
+                    const IconComponent = opt.component;
+                    const isSelected = formData.icono === opt.name;
+                    return (
+                      <div 
+                        key={opt.name} 
+                        onClick={() => setFormData(prev => ({...prev, icono: opt.name}))}
+                        style={{
+                          position: 'relative',
+                          border: isSelected ? '2px solid var(--accent)' : '1px solid var(--panel-border)',
+                          backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.2)' : 'rgba(0,0,0,0.2)',
+                          padding: '10px',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '5px',
+                          width: '70px',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <IconComponent size={24} color={isSelected ? 'var(--accent)' : 'var(--text-muted)'} />
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textAlign: 'center' }}>{opt.label}</span>
+                        <button 
+                          onClick={(e) => handleHideIcon(opt.name, e)}
+                          title="Ocultar este icono"
+                          style={{
+                            position: 'absolute',
+                            top: '-5px',
+                            right: '-5px',
+                            background: 'var(--danger)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '16px',
+                            height: '16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            fontSize: '10px'
+                          }}
+                        >
+                          <X size={10} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+                {hiddenIcons.length > 0 && (
+                  <button 
+                    type="button"
+                    onClick={() => { setHiddenIcons([]); localStorage.removeItem('hiddenIcons'); }}
+                    style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: '0.75rem', marginTop: '10px', cursor: 'pointer' }}
+                  >
+                    Restaurar iconos ocultos
+                  </button>
+                )}
               </div>
             </div>
 

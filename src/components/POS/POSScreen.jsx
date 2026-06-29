@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ShoppingCart, Plus, Minus, Trash2, Tag, Shirt, UserCircle, Printer, CreditCard, User, Search, Loader2, ShoppingBag, Scissors, Package } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, Tag, Shirt, UserCircle, Printer, CreditCard, User, Search, Loader2, ShoppingBag, Scissors, Package, Briefcase, Glasses, Watch, Gem } from 'lucide-react';
 import { db } from '../../firebase/config';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, setDoc } from 'firebase/firestore';
 
@@ -509,6 +509,19 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
             <div key={prod.id} className="product-card" onClick={() => addToCart(prod)}>
               <div className="product-icon">
                 {(() => {
+                  if (prod.icono) {
+                    if (prod.icono === 'Shirt') return <Shirt size={32}/>;
+                    if (prod.icono === 'ShoppingBag') return <ShoppingBag size={32}/>;
+                    if (prod.icono === 'Tag') return <Tag size={32}/>;
+                    if (prod.icono === 'Scissors') return <Scissors size={32}/>;
+                    if (prod.icono === 'Package') return <Package size={32}/>;
+                    if (prod.icono === 'Briefcase') return <Briefcase size={32}/>;
+                    if (prod.icono === 'Glasses') return <Glasses size={32}/>;
+                    if (prod.icono === 'Watch') return <Watch size={32}/>;
+                    if (prod.icono === 'Gem') return <Gem size={32}/>;
+                  }
+                  
+                  // Fallback para productos antiguos
                   const cat = (prod.categoria || '').toLowerCase();
                   if (cat.includes('jeans')) return <Shirt size={32}/>;
                   if (cat.includes('chaqueta')) return <ShoppingBag size={32}/>;
