@@ -3,21 +3,18 @@ import { PackagePlus, Edit, X, Save, Loader2 } from 'lucide-react';
 
 const ICON_OPTIONS = [
   { name: '👕', label: 'Camiseta' },
-  { name: '👔', label: 'Camisa/Corbata' },
+  { name: '👔', label: 'Camisa' },
   { name: '👚', label: 'Blusa' },
-  { name: '👖', label: 'Pantalón/Jeans' },
-  { name: '🩳', label: 'Bermuda/Short' },
+  { name: '👖', label: 'Pantalón' },
+  { name: '🩳', label: 'Bermudas' },
+  { name: '🩳\u200B', label: 'Short' },
   { name: '👗', label: 'Vestido' },
-  { name: '🧥', label: 'Chaqueta/Abrigo' },
-  { name: '🦺', label: 'Chaleco' },
-  { name: '🥼', label: 'Sudadera/Bata' },
-  { name: '🩲', label: 'Ropa Interior' },
-  { name: '👙', label: 'Traje de Baño' },
-  { name: '🧢', label: 'Gorra' },
-  { name: '👟', label: 'Zapatos/Tenis' },
-  { name: '👢', label: 'Botas' },
-  { name: '🧦', label: 'Medias/Calcetines' },
-  { name: '📦', label: 'Paquete/Varios' }
+  { name: '🥼', label: 'Sudadera' },
+  { name: '🧥', label: 'Leva' },
+  { name: '👖\u200B', label: 'Pantalón de Dama' },
+  { name: '🏷️', label: 'Etiquetas' },
+  { name: '🧥\u200B', label: 'Busos' },
+  { name: '🧥\u200B\u200B', label: 'Chompas' }
 ];
 
 export default function AgregarProductoModal({ onClose, onSave, initialData }) {
