@@ -10,7 +10,9 @@ import ConfiguracionGeneral from './components/Settings/ConfiguracionGeneral';
 import LoginScreen from './components/Auth/LoginScreen';
 import FacturasSRI from './components/Contingencia/FacturasSRI';
 import GuiasScreen from './components/GuiasRemision/GuiasScreen';
-import { LayoutDashboard, Receipt, PackagePlus, Settings, LogOut, Loader2, Package, Users, AlertTriangle, Truck, Moon, Sun } from 'lucide-react';
+import AdminScreen from './components/Admin/AdminScreen';
+import { usePermissions } from './hooks/usePermissions';
+import { LayoutDashboard, Receipt, PackagePlus, Settings, LogOut, Loader2, Package, Users, AlertTriangle, Truck, Moon, Sun, Shield } from 'lucide-react';
 import { auth, db } from './firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, onSnapshot, addDoc, doc, setDoc, deleteDoc } from 'firebase/firestore';
@@ -204,11 +206,19 @@ function App() {
     }
   };
 
-  const handleSaveCustomer = async (clienteData) => {
+  const handleSaveCustomer = async (clienteData, isEditing = false) => {
     try {
+      if (!isEditing) {
+        // Prevent duplicates on creation
+        const exists = customersDB.some(c => c.numeroIdentificacion === clienteData.numeroIdentificacion);
+        if (exists) {
+          throw new Error("Ya existe un cliente registrado con esta Identificación.");
+        }
+      }
       await setDoc(doc(db, 'clientes', clienteData.numeroIdentificacion), clienteData);
     } catch (error) {
       console.error("Error guardando cliente", error);
+      throw error;
     }
   };
 
@@ -221,8 +231,11 @@ function App() {
     setIssuers(prev => prev.map(i => i.id === issuerId ? { ...i, ...newData } : i));
   };
 
-  // Pantalla de carga mientras Firebase verifica sesión
-  if (authLoading) {
+  // 🔴 INYECTAR HOOK DE PERMISOS
+  const { permissions, isAdmin, loading: permissionsLoading, modulesConfig, hasPermission } = usePermissions(currentUser);
+
+  // Pantalla de carga mientras Firebase verifica sesión o permisos
+  if (authLoading || (currentUser && permissionsLoading)) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--bg-color)', color: 'var(--accent)' }}>
         <Loader2 size={48} className="animate-spin" />
@@ -235,8 +248,6 @@ function App() {
     return <LoginScreen />;
   }
 
-  const isAdmin = userRole === 'admin';
-
   return (
     <div className="app-layout">
       {/* Sidebar Navigation */}
@@ -246,17 +257,17 @@ function App() {
             <img src="/logo.jpg" alt="GD" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }} />
           </div>
           
-          <button 
-            className={`nav-btn ${currentView === 'pos' ? 'active' : ''}`}
-            onClick={() => setCurrentView('pos')}
-          >
-            <Receipt size={24} />
-            <span className="nav-btn-text">Caja</span>
-          </button>
+          {hasPermission('caja', 'ver') && (
+            <button 
+              className={`nav-btn ${currentView === 'pos' ? 'active' : ''}`}
+              onClick={() => setCurrentView('pos')}
+            >
+              <Receipt size={24} />
+              <span className="nav-btn-text">Caja</span>
+            </button>
+          )}
           
-          {/* Solo visible para Administradores */}
-          {isAdmin && (
-            <>
+          {hasPermission('inventario', 'ver') && (
               <button 
                 className={`nav-btn ${currentView === 'inventory' ? 'active' : ''}`}
                 onClick={() => setCurrentView('inventory')}
@@ -264,7 +275,9 @@ function App() {
                 <Package size={24} />
                 <span className="nav-btn-text">Inventario</span>
               </button>
+          )}
 
+          {hasPermission('clientes', 'ver') && (
               <button 
                 className={`nav-btn ${currentView === 'customers' ? 'active' : ''}`}
                 onClick={() => setCurrentView('customers')}
@@ -272,7 +285,9 @@ function App() {
                 <Users size={24} />
                 <span className="nav-btn-text">Clientes</span>
               </button>
+          )}
 
+          {hasPermission('reportes', 'ver_ventas') && (
               <button 
                 className={`nav-btn ${currentView === 'report' ? 'active' : ''}`}
                 onClick={() => setCurrentView('report')}
@@ -280,6 +295,7 @@ function App() {
                 <LayoutDashboard size={24} />
                 <span className="nav-btn-text">Reportes</span>
               </button>
+          )}
 
               <button 
                 className={`nav-btn ${currentView === 'sri' ? 'active' : ''}`}
@@ -297,6 +313,18 @@ function App() {
                 <span className="nav-btn-text">Guías de Remisión</span>
               </button>
 
+          {isAdmin && (
+            <button 
+              className={`nav-btn ${currentView === 'admin' ? 'active' : ''}`}
+              onClick={() => setCurrentView('admin')}
+            >
+              <Shield size={24} />
+              <span className="nav-btn-text">Admin</span>
+            </button>
+          )}
+
+          {hasPermission('configuracion', 'ver') && (
+            <>
               <button 
                 className={`nav-btn ${currentView === 'settings' ? 'active' : ''}`}
                 onClick={() => setCurrentView('settings')}
@@ -304,7 +332,11 @@ function App() {
                 <Settings size={24} />
                 <span className="nav-btn-text">Ajustes</span>
               </button>
+            </>
+          )}
 
+          {hasPermission('inventario', 'crear') && (
+            <>
               <hr className="sidebar-divider" />
 
               <button 
@@ -356,7 +388,10 @@ function App() {
             recordCustomer={recordCustomer}
           />
         )}
-        {(currentView === 'report' && isAdmin) && (
+        {currentView === 'admin' && isAdmin && (
+          <AdminScreen permissions={permissions} modulesConfig={modulesConfig} isSuperAdmin={isAdmin} />
+        )}
+        {(currentView === 'report' && hasPermission('reportes', 'ver_ventas')) && (
           <ReportesDashboard issuers={issuers} sales={salesDB} />
         )}
         {(currentView === 'sri' && isAdmin) && (
@@ -373,7 +408,7 @@ function App() {
             updateIssuer={updateIssuer} 
           />
         )}
-        {(currentView === 'inventory' && isAdmin) && (
+        {(currentView === 'inventory' && hasPermission('inventario', 'ver')) && (
           <InventarioScreen 
             productsDB={productsDB}
             onEdit={(prod) => { setProductToEdit(prod); setIsModalOpen(true); }}
@@ -381,7 +416,7 @@ function App() {
             onAdd={() => { setProductToEdit(null); setIsModalOpen(true); }}
           />
         )}
-        {(currentView === 'customers' && isAdmin) && (
+        {(currentView === 'customers' && hasPermission('clientes', 'ver')) && (
           <ClientesScreen 
             customersDB={customersDB}
             onAdd={() => { setCustomerToEdit(null); setIsCustomerModalOpen(true); }}

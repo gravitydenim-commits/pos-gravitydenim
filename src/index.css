@@ -170,12 +170,28 @@ h1, h2, h3 {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1.5rem 0;
-  gap: 1.5rem;
+  padding: 1rem 0;
+  gap: 0.5rem;
   border-radius: 0;
   border-left: none;
   border-top: none;
   border-bottom: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Scrollbar delgado y elegante para la sidebar */
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) transparent;
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar::-webkit-scrollbar-thumb {
+  background-color: var(--accent);
+  border-radius: 4px;
 }
 
 .sidebar-logo h2 {
@@ -191,8 +207,8 @@ h1, h2, h3 {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  padding: 1rem;
+  gap: 0.25rem;
+  padding: 0.5rem;
   width: 80%;
   border-radius: 12px;
   transition: all 0.2s;
@@ -548,10 +564,6 @@ input:checked + .slider:before {
   align-items: center;
   gap: 1.5rem;
   width: 100%;
-  overflow-y: auto;
-}
-.sidebar-main-nav::-webkit-scrollbar {
-  display: none;
 }
 .nav-btn-text {
   font-size: 0.8rem;

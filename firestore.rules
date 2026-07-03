@@ -1,0 +1,99 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // El usuario es dueño original o superadmin (salvavidas)
+    function isSuperAdmin() {
+      return isAuthenticated() && request.auth.uid == 'AHo5ztrPExZndYJPIr1aByebMsN2';
+    }
+
+    // Lee el documento del usuario
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Lee los permisos del usuario (si tiene custom, los usa. Si no, lee su rol)
+    function getPermissions() {
+      let user = getUserData();
+      return user.customPermissions != null ? user.customPermissions : get(/databases/$(database)/documents/roles/$(user.roleId)).data.permissions;
+    }
+
+    // Comprueba permiso dinámico
+    // ej: hasPermission('inventario', 'ver')
+    function hasPermission(module, action) {
+      let perms = getPermissions();
+      return (module in perms) && (action in perms[module]) && (perms[module][action] == true);
+    }
+
+    // Por defecto, nada
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // USUARIOS (Gestión de RBAC)
+    match /users/{userId} {
+      allow read: if isAuthenticated(); // Necesario para cargar info en el cliente
+      // Solo super admin o alguien con permiso de editar usuarios puede tocar /users
+      allow write: if isSuperAdmin() || hasPermission('usuarios', 'editar');
+    }
+
+    // ROLES
+    match /roles/{roleId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin() || hasPermission('roles', 'editar');
+    }
+
+    // CONFIGURACIÓN DE MODULOS DINÁMICOS
+    match /settings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin() || hasPermission('configuracion', 'editar');
+    }
+
+    // PRODUCTOS (Inventario)
+    match /productos/{productId} {
+      allow read: if isAuthenticated() && hasPermission('inventario', 'ver');
+      allow create: if isSuperAdmin() || hasPermission('inventario', 'crear');
+      allow update: if isSuperAdmin() || hasPermission('inventario', 'editar');
+      allow delete: if isSuperAdmin() || hasPermission('inventario', 'eliminar');
+    }
+
+    // CLIENTES
+    match /clientes/{clientId} {
+      allow read: if isAuthenticated() && hasPermission('clientes', 'ver');
+      allow create: if isSuperAdmin() || hasPermission('clientes', 'crear');
+      allow update: if isSuperAdmin() || hasPermission('clientes', 'editar');
+      allow delete: if isSuperAdmin() || hasPermission('clientes', 'eliminar');
+    }
+
+    // VENTAS
+    match /ventas/{saleId} {
+      allow read: if isAuthenticated() && hasPermission('caja', 'ver');
+      allow create: if isSuperAdmin() || hasPermission('caja', 'cobrar');
+      // La edición de ventas normalmente se hace anulando
+      allow update: if isSuperAdmin() || hasPermission('caja', 'anular');
+      allow delete: if isSuperAdmin(); // Borrar histórico es muy peligroso
+    }
+    
+    // AUDITORÍA
+    match /audit_logs/{logId} {
+      allow read: if isSuperAdmin() || hasPermission('auditoria', 'ver');
+      allow create: if false; 
+    }
+
+    // EMISORES (Público para lectura en POS)
+    match /issuers/{issuerId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin() || hasPermission('configuracion', 'editar');
+    }
+
+    // BÓVEDA SECRETA DE EMISORES (Firma .p12 y contraseñas)
+    match /issuers_secrets/{secretId} {
+      // TOTALMENTE BLOQUEADO AL FRONTEND. Solo Firebase Admin SDK (Backend) puede acceder.
+      allow read, write: if false;
+    }
+  }
+}

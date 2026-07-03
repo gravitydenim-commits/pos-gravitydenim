@@ -13,6 +13,7 @@ export default function AgregarClienteModal({ initialData, onClose, onSave }) {
   });
   
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -22,9 +23,14 @@ export default function AgregarClienteModal({ initialData, onClose, onSave }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
-    await onSave(formData);
+    setError('');
+    try {
+      await onSave(formData, isEditing);
+      onClose();
+    } catch (err) {
+      setError(err.message || 'Error al guardar el cliente');
+    }
     setIsSaving(false);
-    onClose();
   };
 
   const inputStyle = {
@@ -51,6 +57,8 @@ export default function AgregarClienteModal({ initialData, onClose, onSave }) {
         <h3 style={{ color: 'var(--accent)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <UserPlus size={24} /> {isEditing ? 'Editar Cliente' : 'Registrar Nuevo Cliente'}
         </h3>
+
+        {error && <div style={{ color: '#ff4d4f', marginBottom: '1rem', fontSize: '0.85rem' }}>{error}</div>}
 
         <form onSubmit={handleSubmit}>
           

@@ -13,6 +13,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
   const [checkoutWithPrint, setCheckoutWithPrint] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('EFECTIVO');
   const [isNotaVenta, setIsNotaVenta] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false); // Previene doble clic
 
   // Calcular los productos más vendidos
   const sortedProducts = useMemo(() => {
@@ -343,10 +344,19 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
 
   // --- CONFIRMAR PAGO REAL (SRI Y FIREBASE) ---
   const confirmCheckout = async () => {
+    if (isProcessing) return; // Bloqueo anti doble clic
+    setIsProcessing(true);
     setShowPreviewModal(false);
+    
     const withPrint = checkoutWithPrint;
     const issuerData = issuers.find(i => i.id === selectedIssuer);
-    if (!issuerData) return;
+    if (!issuerData) {
+      setIsProcessing(false);
+      return;
+    }
+
+    // Generar Llave de Idempotencia única para esta transacción
+    const transactionId = crypto.randomUUID ? crypto.randomUUID() : `tx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     try {
       const totalsData = { subtotal, baseImponible, ivaAmount, total };
@@ -377,10 +387,23 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         sriData = { success: true, numeroComprobante: 'S/N', secuencialAsignado: null };
       } else {
         console.log("🚀 [SRI] Enviando petición a nuestro backend interno...");
+        const { getAuth } = await import('firebase/auth');
+        const auth = getAuth();
+        const idToken = await auth.currentUser.getIdToken();
+
         const response = await fetch('/api/sri/emitir', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cart, customer, vatIncluded, emisorId: issuerData.id })
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({ 
+            productos: cart, 
+            cliente: customer, 
+            emisorId: issuerData.id,
+            formaPago: paymentMethod === 'EFECTIVO' ? '01' : '20', // 01=Efectivo, 20=Otros con sistema financiero
+            transactionId: transactionId
+          })
         });
         
         try {
@@ -390,57 +413,33 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         }
         
         claveAcceso = sriData.claveAcceso;
-        estadoFactura = sriData.estado || (sriData.success ? 'AUTORIZADO' : 'RECHAZADO');
+        estadoFactura = sriData.estado; // Eliminado el fallback simulado (sriData.success ? 'AUTORIZADO' : ...)
         
+        if (!response.ok) {
+           throw new Error(sriData.error || sriData.message || 'Error en el servidor al procesar la factura.');
+        }
+
         if (!claveAcceso) {
-          throw new Error(sriData.message || 'El backend no generó una Clave de Acceso válida');
+          throw new Error(sriData.error || sriData.message || 'El backend no generó una Clave de Acceso válida');
         }
 
         if (estadoFactura === 'CONTINGENCIA_LOCAL') {
           alert(`⚠️ Sin conexión con el SRI. La factura se guardó internamente y se emitirá automáticamente cuando regrese el internet.\nClave temporal: ${claveAcceso}`);
         } else if (estadoFactura === 'RECHAZADO') {
-          throw new Error(sriData.message || 'La factura fue rechazada por el servidor.');
-        }
-      }
-
-      // 2. Descontar Stock en Firebase
-      console.log("📦 [Inventario] Descontando stock en Firebase...");
-      for (const item of cart) {
-        const dbProduct = productsDB.find(p => p.id === item.id);
-        if (dbProduct && dbProduct.stock !== undefined) {
-          const newStock = Math.max(0, dbProduct.stock - item.qty);
-          await updateDoc(doc(db, 'productos', item.id), { stock: newStock });
-          console.log(`   - ${item.name}: -${item.qty} unidades. Nuevo stock: ${newStock}`);
+          throw new Error(sriData.error || sriData.message || 'La factura fue rechazada por el servidor.');
         }
       }
 
       // (La lógica de guardado de cliente fue trasladada al paso 0, al inicio de confirmCheckout)
+      // La lógica de Stock y Guardado de Venta fue movida al Backend (emitir.js) 
+      // para evitar duplicaciones y ser parte del commit atómico del SRI.
+
       // 3. Imprimir si corresponde
       if (withPrint) {
         imprimirTicketRIDE(issuerData, cart, totalsData, customer, claveAcceso, paymentMethod);
       } else {
         console.log("🖨️ [RIDE] Impresión física omitida por el operador.");
       }
-
-      // 4. Guardar Cliente y Venta
-      recordCustomer(customer);
-      console.log(`💾 [Clientes] Cliente ${customer.nombre} guardado/actualizado en base de datos.`);
-
-      const saleRecord = {
-        id: claveAcceso, // Usamos la Clave de Acceso del SRI como identificador único
-        issuerId: selectedIssuer,
-        issuerName: issuerData.name,
-        date: new Date(),
-        customer: customer,
-        items: cart,
-        totals: totalsData,
-        claveAcceso,
-        status: estadoFactura,
-        numeroComprobante: sriData.numeroComprobante || 'N/A',
-        secuencial: sriData.secuencialAsignado || null,
-        paymentMethod: paymentMethod
-      };
-      await recordSale(saleRecord);
 
       alert(`Venta guardada exitosamente por ${issuerData.name}\n${withPrint ? 'Ticket enviado a la impresora.' : 'Sin impresión física.'}`);
       
@@ -459,6 +458,8 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       }, 500);
     } catch (error) {
       alert(`⚠️ Ocurrió un error en el pago: ${error.message}`);
+    } finally {
+      setIsProcessing(false);
     }
   };
 

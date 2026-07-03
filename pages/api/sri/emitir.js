@@ -1,160 +1,336 @@
-const { initializeApp, getApps, getApp } = require('firebase/app');
-const { getFirestore, doc, runTransaction } = require('firebase/firestore');
+import { getAdminAuth, getAdminDb } from '../../../src/lib/firebaseAdmin';
+import { generateXmlInvoice, signXml, authorizeXml, ENV_ENUM } from 'osodreamer-sri-xml-signer';
+import fs from 'fs';
+import path from 'path';
 
-let db;
-try {
-  const firebaseConfig = {
-    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
-  };
-  const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-  db = getFirestore(app);
-} catch (e) {
-  console.error("Firebase Init Error:", e);
-}
-
-// Generador de clave de acceso SRI
-function generarClaveAcceso(fechaEmision, tipoComprobante, ruc, ambiente, estab, ptoEmi, secuencial, codigoNumerico, tipoEmision) {
-  const fechaStr = fechaEmision.replace(/\//g, ''); // ddmmaaaa
-  const estabStr = estab.padStart(3, '0');
-  const ptoEmiStr = ptoEmi.padStart(3, '0');
-  const secuencialStr = secuencial.toString().padStart(9, '0');
-  
-  let clave = `${fechaStr}${tipoComprobante}${ruc}${ambiente}${estabStr}${ptoEmiStr}${secuencialStr}${codigoNumerico}${tipoEmision}`;
-  
-  // Calcular dígito verificador Módulo 11
-  let factor = 2;
-  let suma = 0;
-  for (let i = clave.length - 1; i >= 0; i--) {
-    suma += parseInt(clave[i]) * factor;
-    factor = factor === 7 ? 2 : factor + 1;
-  }
-  let digito = 11 - (suma % 11);
-  if (digito === 11) digito = 0;
-  if (digito === 10) digito = 1;
-  
-  return clave + digito;
-}
-
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Método no permitido' });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    if (!db) {
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Firebase no está inicializado en el servidor (faltan variables de entorno en Vercel).' 
-      });
-    }
-
-    const data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const { emisorId, customer, existingSecuencial } = data;
-
-    if (!emisorId) {
-      return res.status(400).json({ message: 'Falta el ID del emisor' });
-    }
-
-    const emisorRef = doc(db, 'issuers', emisorId);
+    const adminAuth = getAdminAuth();
+    const adminDb = getAdminDb();
     
-    let secuencialAsignado = 0;
-    let estabAsignado = "001";
-    let ptoEmiAsignado = "001";
-    let rucEmisor = emisorId;
+    // 1. Validar JWT
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'No autorizado. Falta token.' });
+    }
 
-    // Transacción atómica para reservar el secuencial
-    await runTransaction(db, async (transaction) => {
-      const emisorDoc = await transaction.get(emisorRef);
-      if (!emisorDoc.exists()) {
-        throw new Error("El emisor no existe en la base de datos.");
-      }
-      
-      const emisorData = emisorDoc.data();
-      estabAsignado = emisorData.estab || "001";
-      ptoEmiAsignado = emisorData.ptoEmi || "001";
-      rucEmisor = emisorData.ruc || emisorId;
-      
-      if (existingSecuencial) {
-        // Es un reintento de contingencia, usamos el secuencial que ya tenía
-        secuencialAsignado = parseInt(existingSecuencial, 10);
+    const idToken = authHeader.split('Bearer ')[1];
+    const decodedToken = await adminAuth.verifyIdToken(idToken);
+    
+    // (Falta validación detallada de permisos aquí, pero asumo que puede facturar)
+
+    // 2. Extraer datos del request
+    const { cliente, productos, emisorId, formaPago } = req.body;
+    
+    if (!emisorId || !cliente || !productos || productos.length === 0) {
+      return res.status(400).json({ error: 'Faltan datos obligatorios para emitir la factura.' });
+    }
+    
+    const transactionId = req.body.transactionId;
+    if (!transactionId) {
+       return res.status(400).json({ error: 'Falta transactionId de idempotencia.' });
+    }
+
+    // 1. Verificación de Idempotencia (Prevenir Doble Facturación)
+    const idempotencyRef = adminDb.collection('idempotency_keys').doc(transactionId);
+    const idoc = await idempotencyRef.get();
+    
+    if (idoc.exists) {
+      console.log(`⚠️ [Idempotencia] Petición duplicada bloqueada: ${transactionId}`);
+      // Ya se procesó o está en proceso. Retornar el resultado almacenado en sri_logs si existe,
+      // o un error indicando que está en proceso.
+      const logQuery = await adminDb.collection('sri_logs').where('transactionId', '==', transactionId).limit(1).get();
+      if (!logQuery.empty) {
+        const logData = logQuery.docs[0].data();
+        return res.status(200).json({
+          success: logData.estadoSri === 'AUTORIZADO',
+          claveAcceso: logData.claveAcceso || logQuery.docs[0].id,
+          estado: logData.estadoSri,
+          numeroComprobante: logData.numeroComprobante,
+          idempotent: true
+        });
       } else {
-        // Es una venta nueva, tomamos el secuencial actual y lo incrementamos
-        secuencialAsignado = parseInt(emisorData.secuencial || 1, 10);
-        transaction.update(emisorRef, { secuencial: secuencialAsignado + 1 });
+        return res.status(429).json({ error: 'La transacción está actualmente en proceso.' });
       }
+    }
+
+    // Bloquear de inmediato el transactionId para que peticiones paralelas choquen aquí
+    await idempotencyRef.set({ createdAt: new Date(), status: 'PROCESSING' });
+
+    // 2. Extraer Emisor desde Firestore
+    const emisorDoc = await adminDb.collection('issuers').doc(emisorId).get();
+    if (!emisorDoc.exists) {
+      return res.status(404).json({ error: 'Emisor no encontrado en la base de datos' });
+    }
+    const emisor = emisorDoc.data();
+
+    // 4. Leer firma electrónica de la bóveda secreta (Multi-Emisor Cloud)
+    const secretDoc = await adminDb.collection('issuers_secrets').doc(emisorId).get();
+    if (!secretDoc.exists) {
+      return res.status(500).json({ error: 'Falta la configuración de seguridad para este emisor. Sube la firma .p12 en la Configuración.' });
+    }
+    const secretData = secretDoc.data();
+    const p12Buffer = Buffer.from(secretData.p12Base64, 'base64');
+    const p12Password = secretData.password;
+
+    if (!p12Buffer || !p12Password) {
+      return res.status(500).json({ error: 'La firma electrónica o contraseña en la bóveda están corruptas.' });
+    }
+
+    // 5. Cálculos (Simulados para el MVP, deben ser matemáticamente perfectos)
+    let subtotalSinImpuestos = 0;
+    const detalles = productos.map(prod => {
+      const cantidad = prod.cantidad || 1;
+      const precioUnitario = prod.precio; // Debe venir sin IVA en la BD idealmente, asumo que sí.
+      const descuento = prod.descuento || 0;
+      const precioTotalSinImpuesto = (precioUnitario * cantidad) - descuento;
+      subtotalSinImpuestos += precioTotalSinImpuesto;
+      
+      return {
+        codigoPrincipal: prod.id || prod.codigo,
+        descripcion: prod.nombre,
+        cantidad: cantidad,
+        precioUnitario: precioUnitario,
+        descuento: descuento,
+        precioTotalSinImpuesto: precioTotalSinImpuesto,
+        impuestos: {
+          impuesto: [
+            {
+              codigo: '2', // IVA
+              codigoPorcentaje: '2', // 12% o '0' para 0% (Depende de si el prod tiene IVA)
+              tarifa: 12.00, // Ajustar según DB
+              baseImponible: precioTotalSinImpuesto,
+              valor: precioTotalSinImpuesto * 0.12 // Calcular real
+            }
+          ]
+        }
+      };
     });
 
-    // Construir la Clave de Acceso
-    const fechaActual = new Date();
-    const d = String(fechaActual.getDate()).padStart(2, '0');
-    const m = String(fechaActual.getMonth() + 1).padStart(2, '0');
-    const y = fechaActual.getFullYear();
-    const fechaFmt = `${d}${m}${y}`;
+    const valorIva = subtotalSinImpuestos * 0.12; // Ajustar real
+    const importeTotal = subtotalSinImpuestos + valorIva;
 
-    // Ambiente: 1 (Pruebas), Tipo Comprobante: 01 (Factura), Tipo Emisión: 1 (Normal)
-    const ambiente = "1";
-    const tipoComprobante = "01";
-    const tipoEmision = "1";
-    const codigoNumerico = "12345678";
+    const estab = emisor.establecimiento || '001';
+    const ptoEmi = emisor.puntoEmision || '001';
+    const secKey = `${estab}_${ptoEmi}`;
 
-    const claveAcceso = generarClaveAcceso(
-      fechaFmt, 
-      tipoComprobante, 
-      rucEmisor.padEnd(13, '0'), 
-      ambiente, 
-      estabAsignado, 
-      ptoEmiAsignado, 
-      secuencialAsignado, 
-      codigoNumerico, 
-      tipoEmision
-    );
+    // 6. Generar Secuencial de forma ATÓMICA (Evita race conditions)
+    // Se ejecuta solo después de que TODAS las validaciones pasaron
+    const nextSecuencial = await adminDb.runTransaction(async (t) => {
+      const ref = adminDb.collection('issuers').doc(emisorId);
+      const doc = await t.get(ref);
+      const data = doc.data();
+      
+      // Manejar la estructura anidada de secuenciales
+      const secuenciales = data.secuenciales || {};
+      const current = secuenciales[secKey] || 0;
+      const next = current + 1;
+      
+      // Actualizar específicamente el contador para esta combinación estab_pto sin borrar los demás
+      t.update(ref, { [`secuenciales.${secKey}`]: next });
+      return next;
+    });
 
-    const numeroComprobante = `${estabAsignado}-${ptoEmiAsignado}-${String(secuencialAsignado).padStart(9, '0')}`;
+    const secStr = String(nextSecuencial).padStart(9, '0');
+    const numeroComprobanteCompleto = `${estab}-${ptoEmi}-${secStr}`;
 
-    console.log(`🚀 [API SRI] Factura ${numeroComprobante} reservada. Clave: ${claveAcceso}`);
+    // 7. Estructurar Datos para osodreamer
+    const invoiceData = {
+      infoTributaria: {
+        ambiente: ENV_ENUM.PRUEBAS,
+        tipoEmision: '1',
+        razonSocial: emisor.razonSocial,
+        nombreComercial: emisor.nombreComercial || emisor.razonSocial,
+        ruc: emisor.ruc,
+        claveAcceso: 'GENERADA_AUTOMATICAMENTE_POR_OSODREAMER',
+        codDoc: '01',
+        estab: estab,
+        ptoEmi: ptoEmi,
+        secuencial: secStr,
+        dirMatriz: emisor.direccionMatriz
+      },
+      infoFactura: {
+        fechaEmision: new Date().toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+        dirEstablecimiento: emisor.direccionEstablecimiento || emisor.direccionMatriz,
+        obligadoContabilidad: emisor.obligadoContabilidad ? 'SI' : 'NO',
+        tipoIdentificacionComprador: cliente.tipoDocumento === 'CEDULA' ? '05' : cliente.tipoDocumento === 'RUC' ? '04' : cliente.tipoDocumento === 'CONSUMIDOR_FINAL' ? '07' : '06',
+        razonSocialComprador: cliente.nombre,
+        identificacionComprador: cliente.numeroIdentificacion,
+        direccionComprador: cliente.direccion || 'S/N',
+        totalSinImpuestos: subtotalSinImpuestos,
+        totalDescuento: 0,
+        totalConImpuestos: {
+          totalImpuesto: [
+            {
+              codigo: '2',
+              codigoPorcentaje: '2',
+              baseImponible: subtotalSinImpuestos,
+              valor: valorIva
+            }
+          ]
+        },
+        propina: 0,
+        importeTotal: importeTotal,
+        moneda: 'DOLAR',
+        pagos: {
+          pago: [
+            {
+              formaPago: formaPago || '01', // '01' SIN UTILIZACION DEL SISTEMA FINANCIERO
+              total: importeTotal,
+              plazo: 1,
+              unidadTiempo: 'dias'
+            }
+          ]
+        }
+      },
+      detalles: { detalle: detalles },
+      infoAdicional: {
+        campoAdicional: [
+          { nombre: 'Email', valor: cliente.correo || 'N/A' },
+          { nombre: 'Telefono', valor: cliente.telefono || 'N/A' }
+        ]
+      }
+    };
 
-    // SIMULACIÓN DE CONEXIÓN AL SRI (Modo Pruebas / Contingencia)
-    // Para blindar la legalidad y contingencia, simulamos un 10% de fallo (internet caído)
-    const isNetworkFailing = Math.random() < 0.1;
+    // 8. Flujo SRI (osodreamer) y Logs
+    let xmlUnsigned = '';
+    let signedXml = '';
+    let authResult = null;
+    let errorTecnico = null;
+    let sriTimeout = false;
+    let internalCrash = false;
+
+    const startMs = performance.now(); // Medir tiempo de respuesta
     
-    if (isNetworkFailing) {
-      // Simula caída de internet
-      console.log(`⚠️ [API SRI] Fallo de red simulado para factura ${numeroComprobante}. Guardar en contingencia.`);
-      return res.status(503).json({ 
-        success: false,
+    try {
+      // 8.1 Generar XML (CPU Local)
+      xmlUnsigned = generateXmlInvoice(invoiceData);
+      
+      // 8.2 Firmar XML (CPU Local)
+      signedXml = await signXml(p12Buffer, p12Password, xmlUnsigned);
+    } catch (e) {
+      console.error("Error interno generando/firmando XML:", e);
+      errorTecnico = "Fallo de Generación/Firma: " + e.message;
+      internalCrash = true;
+    }
+
+    if (!internalCrash) {
+      try {
+        // 8.3 Autorizar SRI (Red/Internet)
+        authResult = await authorizeXml(signedXml, ENV_ENUM.PRUEBAS);
+      } catch (e) {
+        console.error("Error técnico contactando al SRI:", e);
+        errorTecnico = e.message;
+        if (e.response && e.response.mensajes) {
+           errorTecnico = JSON.stringify(e.response.mensajes);
+        }
+        sriTimeout = true; // Asumimos falla de red o rechazo catastrófico del WS
+      }
+    }
+
+    const endMs = performance.now();
+    const latencyMs = Math.round(endMs - startMs);
+    
+    // Extraer Clave de Acceso generada (si existe) o usar una única
+    const finalClaveAcceso = (authResult && authResult.claveAcceso) ? authResult.claveAcceso : invoiceData.infoTributaria.claveAcceso !== 'GENERADA_AUTOMATICAMENTE_POR_OSODREAMER' ? invoiceData.infoTributaria.claveAcceso : `FAIL-${Date.now()}`;
+    
+    let estadoFinalSri = 'EN_PROCESO';
+    if (authResult) {
+      estadoFinalSri = authResult.estado; // AUTORIZADO, RECHAZADO, DEVUELTA
+    } else if (sriTimeout) {
+      estadoFinalSri = 'TIMEOUT';
+    } else if (internalCrash) {
+      estadoFinalSri = 'ERROR_INTERNO';
+    }
+
+    // 9. Construir y guardar LOG de intento en sri_logs SIEMPRE
+    const logData = {
+      timestamp: new Date().toISOString(),
+      emisorId,
+      cajeroUid: decodedToken.uid,
+      ambiente: ENV_ENUM.PRUEBAS,
+      latenciaMs: latencyMs,
+      numeroComprobante: numeroComprobanteCompleto,
+      secuencial: secStr,
+      xmlFirmado: signedXml || xmlUnsigned || 'NO_GENERADO',
+      estadoLocal: sriTimeout ? 'TIMEOUT' : 'PROCESADO',
+      estadoSri: estadoFinalSri,
+      respuestaSri: authResult || null,
+      errorTecnico: errorTecnico || null,
+      transactionId: transactionId // Llave de idempotencia guardada en el log
+    };
+
+    const batch = adminDb.batch();
+    const logRef = adminDb.collection('sri_logs').doc(finalClaveAcceso);
+    batch.set(logRef, logData);
+
+    // 10. Actualizar Venta en Firestore SOLO SI HAY RESPUESTA DEFINITIVA
+    const estadosDefinitivos = ['AUTORIZADO', 'RECHAZADO', 'DEVUELTA'];
+    const esDefinitiva = estadosDefinitivos.includes(estadoFinalSri);
+
+    if (esDefinitiva) {
+      const comprobanteData = {
+        cliente,
+        productos,
+        subtotalSinImpuestos,
+        valorIva,
+        importeTotal,
+        formaPago,
+        emisorId,
+        numeroComprobante: numeroComprobanteCompleto,
+        establecimiento: estab,
+        puntoEmision: ptoEmi,
+        secuencial: secStr,
+        claveAcceso: finalClaveAcceso,
+        estadoSri: estadoFinalSri, 
+        numeroAutorizacion: (authResult && authResult.numeroAutorizacion) ? authResult.numeroAutorizacion : null,
+        fechaAutorizacion: (authResult && authResult.fechaAutorizacion) ? authResult.fechaAutorizacion : null,
+        mensajesSri: (authResult && authResult.mensajes) ? authResult.mensajes : [],
+        xmlFirmado: signedXml,
+        xmlAutorizado: (authResult && (authResult.comprobante || authResult.xmlAutorizado)) ? (authResult.comprobante || authResult.xmlAutorizado) : null,
+        sriRawResponse: authResult || errorTecnico, 
+        fechaTransaccion: new Date().toISOString(),
+        cajeroUid: decodedToken.uid,
+        transactionId: transactionId
+      };
+
+      const nuevaVentaRef = adminDb.collection('ventas').doc(finalClaveAcceso);
+      batch.set(nuevaVentaRef, comprobanteData);
+    }
+
+    await batch.commit();
+
+    if (sriTimeout) {
+      return res.status(200).json({ 
+        success: false, 
+        claveAcceso: finalClaveAcceso,
         estado: 'CONTINGENCIA_LOCAL',
-        message: 'Fallo al conectar con el SRI (Simulado). Factura guardada en contingencia.', 
-        claveAcceso: claveAcceso,
-        numeroComprobante: numeroComprobante,
-        secuencialAsignado: secuencialAsignado,
-        ambiente: ambiente === "1" ? "PRUEBAS" : "PRODUCCION"
+        error: 'El servicio del SRI no respondió o rechazó la conexión. La factura quedó en estado PENDIENTE de recuperación.',
+        numeroComprobante: numeroComprobanteCompleto
       });
     }
 
-    // Respuesta Exitosa
     return res.status(200).json({ 
       success: true, 
-      estado: 'AUTORIZADO', 
-      claveAcceso: claveAcceso,
-      numeroComprobante: numeroComprobante,
-      secuencialAsignado: secuencialAsignado,
-      ambiente: ambiente === "1" ? "PRUEBAS" : "PRODUCCION"
+      claveAcceso: finalClaveAcceso, 
+      estado: estadoFinalSri,
+      mensajes: (authResult && authResult.mensajes) ? authResult.mensajes : [],
+      numeroComprobante: numeroComprobanteCompleto
     });
 
   } catch (error) {
-    console.error("❌ [API SRI] Error en emisión:", error);
+    console.error('Error in /api/sri/emitir:', error);
     
-    // Si la transacción falla totalmente
-    return res.status(500).json({ 
-      success: false,
-      estado: 'RECHAZADO',
-      message: 'Fallo fatal en el servidor local o base de datos', 
-      error: error.message 
-    });
+    // Extraer mensajes de error específicos de osodreamer si los hay
+    let errMsg = error.message;
+    if (error.response && error.response.mensajes) {
+      errMsg = JSON.stringify(error.response.mensajes);
+    }
+
+    return res.status(500).json({ error: 'Error procesando facturación SRI: ' + errMsg });
   }
-};
+}

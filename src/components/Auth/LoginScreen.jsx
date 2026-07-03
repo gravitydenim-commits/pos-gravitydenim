@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { LogIn, Lock, Mail, Loader2 } from 'lucide-react';
-import { auth } from '../../firebase/config';
+import { auth, db } from '../../firebase/config';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { collection, addDoc } from 'firebase/firestore';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -14,10 +15,27 @@ export default function LoginScreen() {
     setLoading(true);
     setError(null);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCreds = await signInWithEmailAndPassword(auth, email, password);
+      // Registrar acceso exitoso
+      await addDoc(collection(db, 'access_logs'), {
+        uid: userCreds.user.uid,
+        email: userCreds.user.email,
+        timestamp: new Date().toISOString(),
+        action: 'LOGIN_SUCCESS',
+        userAgent: navigator.userAgent
+      });
     } catch (err) {
       setError("Credenciales incorrectas o error de conexión.");
       console.error(err);
+      // Registrar intento fallido
+      try {
+        await addDoc(collection(db, 'access_logs'), {
+          email: email,
+          timestamp: new Date().toISOString(),
+          action: 'LOGIN_FAILED',
+          userAgent: navigator.userAgent
+        });
+      } catch(e) {}
     } finally {
       setLoading(false);
     }

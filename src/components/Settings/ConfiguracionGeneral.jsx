@@ -112,18 +112,41 @@ export default function ConfiguracionGeneral() {
     }
   };
 
-  // --- SIMULACIÓN DE UPLOAD A FIREBASE STORAGE ---
-  const simulateFirebaseStorageUpload = async (file) => {
-    return new Promise((resolve) => {
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += 20;
-        setUploadProgress(progress);
-        if (progress >= 100) {
-          clearInterval(interval);
-          resolve(`https://firebasestorage.googleapis.com/v0/b/gravity-denim.appspot.com/o/firmas%2F${file.name}?alt=media`);
+  // --- UPLOAD A LA BÓVEDA EN EL BACKEND ---
+  const uploadToVault = async (file, password) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = async () => {
+        try {
+          const base64Data = reader.result.split(',')[1];
+          const { getAuth } = await import('firebase/auth');
+          const auth = getAuth();
+          const idToken = await auth.currentUser.getIdToken();
+
+          const response = await fetch('/api/admin/issuers/save-secret', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({
+              issuerId: selectedIssuer,
+              p12Base64: base64Data,
+              password: password
+            })
+          });
+
+          if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || 'Error al guardar el secreto.');
+          }
+          resolve(true);
+        } catch (error) {
+          reject(error);
         }
-      }, 400);
+      };
+      reader.onerror = error => reject(error);
     });
   };
 
@@ -140,11 +163,14 @@ export default function ConfiguracionGeneral() {
     try {
       let p12DownloadUrl = "";
 
-      // 1. Subir archivo .p12 a Firebase Storage (si se seleccionó uno nuevo)
+      // 1. Subir archivo .p12 a la bóveda (si se seleccionó uno nuevo)
       if (formData.file) {
-        console.log(`📤 [Firebase Storage] Subiendo firma ${formData.fileName}...`);
-        p12DownloadUrl = await simulateFirebaseStorageUpload(formData.file);
-        console.log(`✅ [Firebase Storage] URL generada: ${p12DownloadUrl}`);
+        console.log(`📤 [Seguridad] Guardando firma ${formData.fileName} en la Bóveda...`);
+        // Simular progreso rápido para el UI
+        setUploadProgress(50);
+        await uploadToVault(formData.file, formData.passwordP12);
+        setUploadProgress(100);
+        console.log(`✅ [Seguridad] Firma cifrada en la bóveda correctamente.`);
       }
 
       // 2. Guardar/Actualizar en Firestore en la colección 'issuers'
