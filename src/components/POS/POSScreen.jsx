@@ -82,8 +82,8 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     console.log(`🔍 Buscando cliente con CI/RUC: ${numeroIdentificacion}...`);
 
     try {
-      // Búsqueda directa en la colección 'clients' usando el ID del documento
-      const docRef = doc(db, 'clients', numeroIdentificacion);
+      // Búsqueda directa en la colección 'clientes' usando el ID del documento
+      const docRef = doc(db, 'clientes', numeroIdentificacion);
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
@@ -365,11 +365,11 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       if (customer.tipoDocumento !== 'CONSUMIDOR_FINAL' && customer.numeroIdentificacion) {
         console.log("👤 [Cliente] Guardando/Actualizando cliente en Firebase inmediatamente...");
         try {
-          await setDoc(doc(db, "clients", customer.numeroIdentificacion), {
+          await setDoc(doc(db, "clientes", customer.numeroIdentificacion), {
             ...customer,
             fechaTransaccion: new Date().toISOString()
           }, { merge: true });
-          console.log("✅ Cliente guardado/actualizado con éxito en la colección 'clients'.");
+          console.log("✅ Cliente guardado/actualizado con éxito en la colección 'clientes'.");
         } catch (err) {
           console.error("❌ Error guardando cliente:", err);
         }
