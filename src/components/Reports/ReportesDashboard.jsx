@@ -4,7 +4,7 @@ import { generarFacturaA4 } from '../../utils/generadorA4';
 
 export default function ReportesDashboard({ sales, issuers }) {
   // Procesar datos para el mes actual y el día de hoy
-  const { currentMonthTotal, currentMonthIVA, salesByIssuer, topProducts, todayTotal, todayEfectivo, todayTransferencia, monthEfectivo, monthTransferencia } = useMemo(() => {
+  const { currentMonthTotal, currentMonthIVA, salesByIssuer, topProducts, todayTotal, todayEfectivo, todayTransferencia, monthEfectivo, monthTransferencia, todayTransferDetails, monthTransferDetails } = useMemo(() => {
     let currentMonthTotal = 0;
     let currentMonthIVA = 0;
     let todayTotal = 0;
