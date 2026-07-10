@@ -765,7 +765,7 @@ export default function ConfiguracionGeneral() {
                 style={{ width: '100%', padding: '12px', background: 'var(--input-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', borderRadius: '8px' }}
               >
                 <option value="sistema">Impresión de Sistema (HTML/Dialog)</option>
-                <option value="bluetooth" disabled>Impresión Bluetooth BLE (Próximamente)</option>
+                <option value="bluetooth">Impresión Bluetooth BLE</option>
               </select>
             </div>
 
