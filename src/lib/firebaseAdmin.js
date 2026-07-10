@@ -1,33 +1,29 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
-import fs from 'fs';
-import path from 'path';
 
 // 1. Inicializar la aplicación solo si no existe
 if (!getApps().length) {
   try {
-    const serviceAccountPath = path.resolve(process.cwd(), 'serviceAccountKey.json');
     let credential;
 
-    if (fs.existsSync(serviceAccountPath)) {
-      // 1. Usar el archivo JSON local (Desarrollo)
-      const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-      credential = cert(serviceAccount);
-      console.log('Firebase Admin: Inicializado con serviceAccountKey.json');
-    } else {
-      // 2. Fallback a variables de entorno (Producción/Vercel)
+    // Verificar si estamos en Vercel (o si existe la variable de entorno)
+    if (process.env.FIREBASE_PRIVATE_KEY) {
+      // Producción / Vercel
       credential = cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
       });
       console.log('Firebase Admin: Inicializado con Variables de Entorno');
+    } else {
+      // Desarrollo local (requerirá que pongas un path directo o uses require si quieres)
+      // Como no queremos que Next.js trace esto y falle en Vercel, lo importaremos dinámicamente o ignoraremos fs
+      console.log('Firebase Admin: Usando credenciales por defecto (solo funciona si GOOGLE_APPLICATION_CREDENTIALS está seteado)');
+      credential = undefined; // Esto hará que intente usar las credenciales por defecto del sistema
     }
 
-    initializeApp({
-      credential
-    });
+    initializeApp(credential ? { credential } : undefined);
   } catch (error) {
     console.error('Firebase admin initialization error:', error.message);
   }
