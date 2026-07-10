@@ -44,10 +44,10 @@ export default function LoginScreen() {
   const inputStyle = {
     width: '100%', 
     padding: '12px 12px 12px 40px', 
-    background: 'rgba(0,0,0,0.2)', 
+    background: 'var(--input-bg)', 
     border: '1px solid var(--panel-border)', 
     borderRadius: '8px', 
-    color: 'white',
+    color: 'var(--text-main)',
     fontSize: '1rem',
     outline: 'none',
     fontFamily: 'Inter'

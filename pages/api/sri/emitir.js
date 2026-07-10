@@ -1,5 +1,5 @@
 import { getAdminAuth, getAdminDb } from '../../../src/lib/firebaseAdmin';
-import { generateXmlInvoice, signXml, authorizeXml, ENV_ENUM } from 'osodreamer-sri-xml-signer';
+import { generateXmlInvoice, signXml, authorizeXml } from 'osodreamer-sri-xml-signer';
 import fs from 'fs';
 import path from 'path';
 
@@ -68,17 +68,24 @@ export default async function handler(req, res) {
     }
     const emisor = emisorDoc.data();
 
-    // 4. Leer firma electrónica de la bóveda secreta (Multi-Emisor Cloud)
-    const secretDoc = await adminDb.collection('issuers_secrets').doc(emisorId).get();
-    if (!secretDoc.exists) {
-      return res.status(500).json({ error: 'Falta la configuración de seguridad para este emisor. Sube la firma .p12 en la Configuración.' });
-    }
-    const secretData = secretDoc.data();
-    const p12Buffer = Buffer.from(secretData.p12Base64, 'base64');
-    const p12Password = secretData.password;
+    const isNotaVenta = req.body.isNotaVenta === true;
 
-    if (!p12Buffer || !p12Password) {
-      return res.status(500).json({ error: 'La firma electrónica o contraseña en la bóveda están corruptas.' });
+    // 4. Leer firma electrónica de la bóveda secreta (Multi-Emisor Cloud)
+    let p12Buffer = null;
+    let p12Password = null;
+
+    if (!isNotaVenta) {
+      const secretDoc = await adminDb.collection('issuers_secrets').doc(emisorId).get();
+      if (!secretDoc.exists) {
+        return res.status(500).json({ error: 'Falta la configuración de seguridad para este emisor. Sube la firma .p12 en la Configuración para emitir Facturas SRI.' });
+      }
+      const secretData = secretDoc.data();
+      p12Buffer = Buffer.from(secretData.p12Base64, 'base64');
+      p12Password = secretData.password;
+
+      if (!p12Buffer || !p12Password) {
+        return res.status(500).json({ error: 'La firma electrónica o contraseña en la bóveda están corruptas.' });
+      }
     }
 
     // 5. Cálculos (Simulados para el MVP, deben ser matemáticamente perfectos)
@@ -141,7 +148,7 @@ export default async function handler(req, res) {
     // 7. Estructurar Datos para osodreamer
     const invoiceData = {
       infoTributaria: {
-        ambiente: ENV_ENUM.PRUEBAS,
+        ambiente: '1',
         tipoEmision: '1',
         razonSocial: emisor.razonSocial,
         nombreComercial: emisor.nombreComercial || emisor.razonSocial,
@@ -203,56 +210,60 @@ export default async function handler(req, res) {
     let errorTecnico = null;
     let sriTimeout = false;
     let internalCrash = false;
+    let finalClaveAcceso = `NV-${Date.now()}`;
+    let estadoFinalSri = 'NOTA_DE_VENTA';
 
     const startMs = performance.now(); // Medir tiempo de respuesta
     
-    try {
-      // 8.1 Generar XML (CPU Local)
-      xmlUnsigned = generateXmlInvoice(invoiceData);
-      
-      // 8.2 Firmar XML (CPU Local)
-      signedXml = await signXml(p12Buffer, p12Password, xmlUnsigned);
-    } catch (e) {
-      console.error("Error interno generando/firmando XML:", e);
-      errorTecnico = "Fallo de Generación/Firma: " + e.message;
-      internalCrash = true;
-    }
-
-    if (!internalCrash) {
+    if (!isNotaVenta) {
       try {
-        // 8.3 Autorizar SRI (Red/Internet)
-        authResult = await authorizeXml(signedXml, ENV_ENUM.PRUEBAS);
+        // 8.1 Generar XML (CPU Local)
+        xmlUnsigned = generateXmlInvoice(invoiceData);
+        
+        // 8.2 Firmar XML (CPU Local)
+        signedXml = await signXml(p12Buffer, p12Password, xmlUnsigned);
       } catch (e) {
-        console.error("Error técnico contactando al SRI:", e);
-        errorTecnico = e.message;
-        if (e.response && e.response.mensajes) {
-           errorTecnico = JSON.stringify(e.response.mensajes);
+        console.error("Error interno generando/firmando XML:", e);
+        errorTecnico = "Fallo de Generación/Firma: " + e.message;
+        internalCrash = true;
+      }
+
+      if (!internalCrash) {
+        try {
+          // 8.3 Autorizar SRI (Red/Internet)
+          authResult = await authorizeXml(signedXml, '1');
+        } catch (e) {
+          console.error("Error técnico contactando al SRI:", e);
+          errorTecnico = e.message;
+          if (e.response && e.response.mensajes) {
+             errorTecnico = JSON.stringify(e.response.mensajes);
+          }
+          sriTimeout = true; // Asumimos falla de red o rechazo catastrófico del WS
         }
-        sriTimeout = true; // Asumimos falla de red o rechazo catastrófico del WS
+      }
+
+      // Extraer Clave de Acceso generada (si existe) o usar una única
+      finalClaveAcceso = (authResult && authResult.claveAcceso) ? authResult.claveAcceso : invoiceData.infoTributaria.claveAcceso !== 'GENERADA_AUTOMATICAMENTE_POR_OSODREAMER' ? invoiceData.infoTributaria.claveAcceso : `FAIL-${Date.now()}`;
+      
+      estadoFinalSri = 'EN_PROCESO';
+      if (authResult) {
+        estadoFinalSri = authResult.estado; // AUTORIZADO, RECHAZADO, DEVUELTA
+      } else if (sriTimeout) {
+        estadoFinalSri = 'TIMEOUT';
+      } else if (internalCrash) {
+        estadoFinalSri = 'ERROR_INTERNO';
       }
     }
 
     const endMs = performance.now();
     const latencyMs = Math.round(endMs - startMs);
     
-    // Extraer Clave de Acceso generada (si existe) o usar una única
-    const finalClaveAcceso = (authResult && authResult.claveAcceso) ? authResult.claveAcceso : invoiceData.infoTributaria.claveAcceso !== 'GENERADA_AUTOMATICAMENTE_POR_OSODREAMER' ? invoiceData.infoTributaria.claveAcceso : `FAIL-${Date.now()}`;
-    
-    let estadoFinalSri = 'EN_PROCESO';
-    if (authResult) {
-      estadoFinalSri = authResult.estado; // AUTORIZADO, RECHAZADO, DEVUELTA
-    } else if (sriTimeout) {
-      estadoFinalSri = 'TIMEOUT';
-    } else if (internalCrash) {
-      estadoFinalSri = 'ERROR_INTERNO';
-    }
-
-    // 9. Construir y guardar LOG de intento en sri_logs SIEMPRE
+    // 9. Construir y guardar LOG de intento en sri_logs SIEMPRE (incluso para Notas de Venta)
     const logData = {
       timestamp: new Date().toISOString(),
       emisorId,
       cajeroUid: decodedToken.uid,
-      ambiente: ENV_ENUM.PRUEBAS,
+      ambiente: '1',
       latenciaMs: latencyMs,
       numeroComprobante: numeroComprobanteCompleto,
       secuencial: secStr,
@@ -268,8 +279,8 @@ export default async function handler(req, res) {
     const logRef = adminDb.collection('sri_logs').doc(finalClaveAcceso);
     batch.set(logRef, logData);
 
-    // 10. Actualizar Venta en Firestore SOLO SI HAY RESPUESTA DEFINITIVA
-    const estadosDefinitivos = ['AUTORIZADO', 'RECHAZADO', 'DEVUELTA'];
+    // 10. Actualizar Venta y Stock en Firestore SOLO SI HAY RESPUESTA DEFINITIVA O ES NOTA DE VENTA
+    const estadosDefinitivos = ['AUTORIZADO', 'RECHAZADO', 'DEVUELTA', 'NOTA_DE_VENTA'];
     const esDefinitiva = estadosDefinitivos.includes(estadoFinalSri);
 
     if (esDefinitiva) {
@@ -280,11 +291,18 @@ export default async function handler(req, res) {
         valorIva,
         importeTotal,
         formaPago,
+        paymentMethod: req.body.transferRecipient ? 'TRANSFERENCIA' : 'EFECTIVO',
+        transferRecipient: req.body.transferRecipient || null,
+        totals: {
+          subtotal: subtotalSinImpuestos,
+          ivaAmount: valorIva,
+          total: importeTotal
+        },
         emisorId,
-        numeroComprobante: numeroComprobanteCompleto,
+        numeroComprobante: isNotaVenta ? 'S/N' : numeroComprobanteCompleto,
         establecimiento: estab,
         puntoEmision: ptoEmi,
-        secuencial: secStr,
+        secuencial: isNotaVenta ? 'S/N' : secStr,
         claveAcceso: finalClaveAcceso,
         estadoSri: estadoFinalSri, 
         numeroAutorizacion: (authResult && authResult.numeroAutorizacion) ? authResult.numeroAutorizacion : null,
@@ -295,11 +313,27 @@ export default async function handler(req, res) {
         sriRawResponse: authResult || errorTecnico, 
         fechaTransaccion: new Date().toISOString(),
         cajeroUid: decodedToken.uid,
-        transactionId: transactionId
+        transactionId: transactionId,
+        isNotaVenta: isNotaVenta
       };
 
       const nuevaVentaRef = adminDb.collection('ventas').doc(finalClaveAcceso);
       batch.set(nuevaVentaRef, comprobanteData);
+
+      // REDUCCIÓN DE STOCK
+      for (const prod of productos) {
+        const prodId = prod.id || prod.codigo;
+        if (prodId && prodId !== 'CUSTOM_PRODUCT') {
+          const prodRef = adminDb.collection('productos').doc(prodId);
+          // Get the current stock first
+          const pDoc = await prodRef.get();
+          if (pDoc.exists) {
+            const currentStock = pDoc.data().stock || 0;
+            const newStock = Math.max(0, currentStock - (prod.cantidad || 1));
+            batch.update(prodRef, { stock: newStock });
+          }
+        }
+      }
     }
 
     await batch.commit();
@@ -319,7 +353,7 @@ export default async function handler(req, res) {
       claveAcceso: finalClaveAcceso, 
       estado: estadoFinalSri,
       mensajes: (authResult && authResult.mensajes) ? authResult.mensajes : [],
-      numeroComprobante: numeroComprobanteCompleto
+      numeroComprobante: isNotaVenta ? 'S/N' : numeroComprobanteCompleto
     });
 
   } catch (error) {

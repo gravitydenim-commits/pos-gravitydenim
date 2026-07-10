@@ -9,7 +9,6 @@ import AgregarClienteModal from './components/Customers/AgregarClienteModal';
 import ConfiguracionGeneral from './components/Settings/ConfiguracionGeneral';
 import LoginScreen from './components/Auth/LoginScreen';
 import FacturasSRI from './components/Contingencia/FacturasSRI';
-import GuiasScreen from './components/GuiasRemision/GuiasScreen';
 import AdminScreen from './components/Admin/AdminScreen';
 import { usePermissions } from './hooks/usePermissions';
 import { LayoutDashboard, Receipt, PackagePlus, Settings, LogOut, Loader2, Package, Users, AlertTriangle, Truck, Moon, Sun, Shield } from 'lucide-react';
@@ -43,7 +42,6 @@ function App() {
 
   const [currentView, setCurrentView] = useState('pos'); // 'pos', 'report', 'settings', 'inventory'
   const [salesDB, setSalesDB] = useState([]); 
-  const [guiasDB, setGuiasDB] = useState([]); 
   
   const [customersDB, setCustomersDB] = useState([]);
   const [productsDB, setProductsDB] = useState([]);
@@ -64,69 +62,77 @@ function App() {
       document.body.classList.add('light-theme');
     }
 
-    let unsubClientes;
-    let unsubProductos;
-    let unsubVentas;
-    let unsubIssuers;
-
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
         setCurrentUser(user);
         setUserRole(user.uid === ADMIN_UID ? 'admin' : 'ventas');
-        
-        // Iniciar suscripciones a Firestore
-        unsubClientes = onSnapshot(collection(db, 'clientes'), (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-          setCustomersDB(data);
-        });
-
-        unsubProductos = onSnapshot(collection(db, 'productos'), (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-          setProductsDB(data);
-        });
-
-        unsubVentas = onSnapshot(collection(db, 'ventas'), (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-          setSalesDB(data);
-        });
-
-        const unsubGuias = onSnapshot(collection(db, 'guias_remision'), (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-          setGuiasDB(data);
-        });
-
-        unsubIssuers = onSnapshot(collection(db, 'issuers'), (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-          if (data.length > 0) {
-            setIssuers(data);
-          } else {
-            setIssuers(MOCK_ISSUERS);
-          }
-        });
-
       } else {
         setCurrentUser(null);
         setUserRole(null);
         setCustomersDB([]);
         setProductsDB([]);
         setSalesDB([]);
-        // Desuscribir si existen
-        if (unsubClientes) unsubClientes();
-        if (unsubProductos) unsubProductos();
-        if (unsubVentas) unsubVentas();
-        if (unsubIssuers) unsubIssuers();
       }
       setAuthLoading(false);
     });
 
+    return () => unsubscribeAuth();
+  }, []);
+
+  // 🔴 INYECTAR HOOK DE PERMISOS AQUI PARA USARLO EN LAS SUSCRIPCIONES
+  const { permissions, isAdmin, loading: permissionsLoading, modulesConfig, hasPermission } = usePermissions(currentUser);
+
+  // --- SUSCRIPCIONES A FIRESTORE BASADAS EN PERMISOS ---
+  useEffect(() => {
+    let unsubClientes;
+    let unsubProductos;
+    let unsubVentas;
+    let unsubIssuers;
+
+    if (currentUser && !permissionsLoading) {
+      if (isAdmin || hasPermission('clientes', 'ver')) {
+        unsubClientes = onSnapshot(collection(db, 'clientes'), (snapshot) => {
+          const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+          setCustomersDB(data);
+        }, (err) => console.error(`ERROR EN [clientes] (uid=${currentUser.uid}, rol=${userRole}):`, err));
+      }
+
+      if (isAdmin || hasPermission('inventario', 'ver')) {
+        unsubProductos = onSnapshot(collection(db, 'productos'), (snapshot) => {
+          const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+          setProductsDB(data);
+        }, (err) => console.error(`ERROR EN [productos] (uid=${currentUser.uid}, rol=${userRole}):`, err));
+      }
+
+      if (isAdmin || hasPermission('caja', 'ver')) {
+        unsubVentas = onSnapshot(collection(db, 'ventas'), (snapshot) => {
+          const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+          setSalesDB(data);
+        }, (err) => console.error(`ERROR EN [ventas] (uid=${currentUser.uid}, rol=${userRole}):`, err));
+      }
+
+
+
+      unsubIssuers = onSnapshot(collection(db, 'issuers'), (snapshot) => {
+        const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        if (data.length > 0) {
+          setIssuers(data);
+        } else {
+          setIssuers(MOCK_ISSUERS);
+        }
+      }, (err) => console.error(`ERROR EN [issuers] (uid=${currentUser.uid}, rol=${userRole}):`, err));
+
+    }
+
     return () => {
-      unsubscribeAuth();
       if (unsubClientes) unsubClientes();
       if (unsubProductos) unsubProductos();
       if (unsubVentas) unsubVentas();
       if (unsubIssuers) unsubIssuers();
     };
-  }, []);
+  }, [currentUser, permissionsLoading, isAdmin, permissions, hasPermission, userRole]);
+
+
 
   const handleLogout = async () => {
     try {
@@ -158,15 +164,7 @@ function App() {
     }
   };
 
-  const saveGuia = async (guiaData) => {
-    try {
-      await addDoc(collection(db, 'guias_remision'), guiaData);
-      alert('✅ Guía de Remisión guardada con éxito.');
-    } catch (error) {
-      console.error("Error al registrar guía", error);
-      alert('⚠️ Error al guardar la guía.');
-    };
-  };
+
 
   const recordCustomer = async (customerData) => {
     if (customerData.tipoDocumento === 'CONSUMIDOR_FINAL' || !customerData.numeroIdentificacion) return;
@@ -231,11 +229,9 @@ function App() {
     setIssuers(prev => prev.map(i => i.id === issuerId ? { ...i, ...newData } : i));
   };
 
-  // 🔴 INYECTAR HOOK DE PERMISOS
-  const { permissions, isAdmin, loading: permissionsLoading, modulesConfig, hasPermission } = usePermissions(currentUser);
-
+  // (Hook movido hacia arriba para que esté disponible en el useEffect de suscripciones)
   // Pantalla de carga mientras Firebase verifica sesión o permisos
-  if (authLoading || (currentUser && permissionsLoading)) {
+  if (authLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--bg-color)', color: 'var(--accent)' }}>
         <Loader2 size={48} className="animate-spin" />
@@ -257,17 +253,16 @@ function App() {
             <img src="/logo.jpg" alt="GD" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }} />
           </div>
           
-          {hasPermission('caja', 'ver') && (
-            <button 
-              className={`nav-btn ${currentView === 'pos' ? 'active' : ''}`}
-              onClick={() => setCurrentView('pos')}
-            >
-              <Receipt size={24} />
-              <span className="nav-btn-text">Caja</span>
-            </button>
-          )}
+          <button 
+            className={`nav-btn ${currentView === 'pos' ? 'active' : ''}`}
+            onClick={() => setCurrentView('pos')}
+          >
+            <Receipt size={24} />
+            <span className="nav-btn-text">Caja</span>
+          </button>
           
-          {hasPermission('inventario', 'ver') && (
+          {isAdmin && (
+            <>
               <button 
                 className={`nav-btn ${currentView === 'inventory' ? 'active' : ''}`}
                 onClick={() => setCurrentView('inventory')}
@@ -275,9 +270,7 @@ function App() {
                 <Package size={24} />
                 <span className="nav-btn-text">Inventario</span>
               </button>
-          )}
 
-          {hasPermission('clientes', 'ver') && (
               <button 
                 className={`nav-btn ${currentView === 'customers' ? 'active' : ''}`}
                 onClick={() => setCurrentView('customers')}
@@ -285,9 +278,7 @@ function App() {
                 <Users size={24} />
                 <span className="nav-btn-text">Clientes</span>
               </button>
-          )}
 
-          {hasPermission('reportes', 'ver_ventas') && (
               <button 
                 className={`nav-btn ${currentView === 'report' ? 'active' : ''}`}
                 onClick={() => setCurrentView('report')}
@@ -295,36 +286,29 @@ function App() {
                 <LayoutDashboard size={24} />
                 <span className="nav-btn-text">Reportes</span>
               </button>
+            </>
           )}
 
-              <button 
-                className={`nav-btn ${currentView === 'sri' ? 'active' : ''}`}
-                onClick={() => setCurrentView('sri')}
-              >
-                <AlertTriangle size={24} />
-                <span className="nav-btn-text">Facturas SRI</span>
-              </button>
+          <button 
+            className={`nav-btn ${currentView === 'sri' ? 'active' : ''}`}
+            onClick={() => setCurrentView('sri')}
+          >
+            <AlertTriangle size={24} />
+            <span className="nav-btn-text">Facturas SRI</span>
+          </button>
 
-              <button 
-                className={`nav-btn ${currentView === 'guias' ? 'active' : ''}`}
-                onClick={() => setCurrentView('guias')}
-              >
-                <Truck size={24} />
-                <span className="nav-btn-text">Guías de Remisión</span>
-              </button>
+
 
           {isAdmin && (
-            <button 
-              className={`nav-btn ${currentView === 'admin' ? 'active' : ''}`}
-              onClick={() => setCurrentView('admin')}
-            >
-              <Shield size={24} />
-              <span className="nav-btn-text">Admin</span>
-            </button>
-          )}
-
-          {hasPermission('configuracion', 'ver') && (
             <>
+              <button 
+                className={`nav-btn ${currentView === 'admin' ? 'active' : ''}`}
+                onClick={() => setCurrentView('admin')}
+              >
+                <Shield size={24} />
+                <span className="nav-btn-text">Admin</span>
+              </button>
+
               <button 
                 className={`nav-btn ${currentView === 'settings' ? 'active' : ''}`}
                 onClick={() => setCurrentView('settings')}
@@ -332,11 +316,7 @@ function App() {
                 <Settings size={24} />
                 <span className="nav-btn-text">Ajustes</span>
               </button>
-            </>
-          )}
 
-          {hasPermission('inventario', 'crear') && (
-            <>
               <hr className="sidebar-divider" />
 
               <button 
@@ -397,9 +377,7 @@ function App() {
         {(currentView === 'sri' && isAdmin) && (
           <FacturasSRI />
         )}
-        {(currentView === 'guias' && isAdmin) && (
-          <GuiasScreen guias={guiasDB} salesDB={salesDB} issuers={issuers} onSaveGuia={saveGuia} />
-        )}
+
         {(currentView === 'settings' && isAdmin) && (
           <ConfiguracionGeneral 
             companyData={companyData} 

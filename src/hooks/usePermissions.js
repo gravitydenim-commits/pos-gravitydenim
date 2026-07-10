@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { doc, onSnapshot, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
@@ -9,12 +9,19 @@ export function usePermissions(user) {
   const [modulesConfig, setModulesConfig] = useState(null);
 
   useEffect(() => {
+
+    if (!user) {
+      setPermissions(null);
+      setIsAdmin(false);
+      setLoading(false);
+      return;
+    }
+
     // 1. Cargar la configuración dinámica de módulos
     const unsubModules = onSnapshot(doc(db, 'settings', 'modulesConfig'), (docSnap) => {
       if (docSnap.exists()) {
         setModulesConfig(docSnap.data().modules);
       } else {
-        // Fallback por defecto si no existe en BD aún
         setModulesConfig([
           { id: 'caja', label: 'Caja', actions: ['ver', 'cobrar', 'anular', 'reimprimir', 'descuentos'] },
           { id: 'inventario', label: 'Inventario', actions: ['ver', 'crear', 'editar', 'eliminar', 'ajustar', 'exportar'] },
@@ -26,14 +33,9 @@ export function usePermissions(user) {
           { id: 'usuarios', label: 'Usuarios', actions: ['ver', 'editar'] },
         ]);
       }
+    }, (error) => {
+      console.error("ERROR EN [settings/modulesConfig]:", error);
     });
-
-    if (!user) {
-      setPermissions(null);
-      setIsAdmin(false);
-      setLoading(false);
-      return () => unsubModules();
-    }
 
     // El super admin fallback
     const SUPER_ADMIN_UID = 'AHo5ztrPExZndYJPIr1aByebMsN2';
@@ -69,6 +71,13 @@ export function usePermissions(user) {
       setPermissions(finalPerms);
       setIsAdmin(isAd);
       setLoading(false);
+    }, (error) => {
+      console.error("ERROR EN [users]:", error);
+      // Fallback en caso de error de permisos en Firebase
+      let isAd = user.uid === SUPER_ADMIN_UID;
+      setPermissions({});
+      setIsAdmin(isAd);
+      setLoading(false);
     });
 
     return () => {
@@ -78,11 +87,11 @@ export function usePermissions(user) {
   }, [user]);
 
   // Función helper para chequear permiso rápido
-  const hasPermission = (module, action) => {
-    if (isAdmin) return true; // Admin todo lo puede en UI
+  const hasPermission = useCallback((module, action) => {
+    if (isAdmin) return true;
     if (!permissions) return false;
     return permissions[module]?.[action] === true;
-  };
+  }, [isAdmin, permissions]);
 
   return { permissions, isAdmin, loading, modulesConfig, hasPermission };
 }

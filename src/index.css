@@ -14,22 +14,24 @@
   --warning: #f59e0b;
   --card-bg: rgba(255, 255, 255, 0.05);
   --card-hover: rgba(255, 255, 255, 0.1);
+  --input-bg: rgba(0, 0, 0, 0.2);
 }
 
 .light-theme {
-  --bg-color: #f8fafc;
-  --bg-gradient: radial-gradient(circle at top right, #e2e8f0, #f8fafc);
-  --panel-bg: rgba(255, 255, 255, 0.85);
-  --panel-border: rgba(0, 0, 0, 0.1);
-  --text-main: #0f172a;
-  --text-muted: #475569;
+  --bg-color: #f1f5f9;
+  --bg-gradient: radial-gradient(circle at top right, #ffffff, #f1f5f9);
+  --panel-bg: rgba(255, 255, 255, 0.95);
+  --panel-border: rgba(0, 0, 0, 0.08);
+  --text-main: #1e293b;
+  --text-muted: #64748b;
   --accent: #2563eb;
   --accent-hover: #1d4ed8;
   --success: #059669;
   --danger: #dc2626;
   --warning: #d97706;
-  --card-bg: rgba(0, 0, 0, 0.03);
-  --card-hover: rgba(0, 0, 0, 0.08);
+  --card-bg: rgba(0, 0, 0, 0.02);
+  --card-hover: rgba(0, 0, 0, 0.05);
+  --input-bg: rgba(0, 0, 0, 0.03);
 }
 
 * {

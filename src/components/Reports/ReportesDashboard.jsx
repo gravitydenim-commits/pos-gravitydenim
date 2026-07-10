@@ -12,6 +12,8 @@ export default function ReportesDashboard({ sales, issuers }) {
     let todayTransferencia = 0;
     let monthEfectivo = 0;
     let monthTransferencia = 0;
+    const todayTransferDetails = { 'Edgar': 0, 'Amparito': 0, 'Junior': 0, 'Diana': 0, 'Otro': 0 };
+    const monthTransferDetails = { 'Edgar': 0, 'Amparito': 0, 'Junior': 0, 'Diana': 0, 'Otro': 0 };
     const issuerTotals = {};
     const productSales = {};
 
@@ -34,14 +36,32 @@ export default function ReportesDashboard({ sales, issuers }) {
       if (isCurrentMonth) {
         currentMonthTotal += total;
         currentMonthIVA += iva;
-        if (method === 'EFECTIVO') monthEfectivo += total;
-        else monthTransferencia += total;
+        if (method === 'EFECTIVO') {
+          monthEfectivo += total;
+        } else {
+          monthTransferencia += total;
+          const recipient = sale.transferRecipient;
+          if (recipient && monthTransferDetails[recipient] !== undefined) {
+            monthTransferDetails[recipient] += total;
+          } else {
+            monthTransferDetails['Otro'] += total;
+          }
+        }
       }
 
       if (isToday) {
         todayTotal += total;
-        if (method === 'EFECTIVO') todayEfectivo += total;
-        else todayTransferencia += total;
+        if (method === 'EFECTIVO') {
+          todayEfectivo += total;
+        } else {
+          todayTransferencia += total;
+          const recipient = sale.transferRecipient;
+          if (recipient && todayTransferDetails[recipient] !== undefined) {
+            todayTransferDetails[recipient] += total;
+          } else {
+            todayTransferDetails['Otro'] += total;
+          }
+        }
       }
 
       // Tabla multi-RUC (Acumulado general o mensual, lo haremos general)
@@ -76,6 +96,8 @@ export default function ReportesDashboard({ sales, issuers }) {
       todayTransferencia,
       monthEfectivo,
       monthTransferencia,
+      todayTransferDetails,
+      monthTransferDetails,
       salesByIssuer: Object.values(issuerTotals).sort((a, b) => b.total - a.total), 
       topProducts: Object.values(productSales).sort((a, b) => b.qty - a.qty).slice(0, 5)
     };
@@ -382,7 +404,7 @@ export default function ReportesDashboard({ sales, issuers }) {
           
           <div className="glass-panel" style={{ padding: '1.5rem', borderLeft: '4px solid #10b981' }}>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Ventas de Hoy</p>
-            <h3 style={{ fontSize: '2rem', margin: 0, color: 'white' }}>${todayTotal.toFixed(2)}</h3>
+            <h3 style={{ fontSize: '2rem', margin: 0, color: 'var(--text-main)' }}>${todayTotal.toFixed(2)}</h3>
             <div style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}>
               <span style={{ color: '#10b981' }}>💵 Efec: ${todayEfectivo.toFixed(2)}</span>
               <span style={{ color: '#3b82f6', marginLeft: '10px' }}>🏦 Transf: ${todayTransferencia.toFixed(2)}</span>
@@ -391,11 +413,42 @@ export default function ReportesDashboard({ sales, issuers }) {
 
           <div className="glass-panel" style={{ padding: '1.5rem', borderLeft: '4px solid #3b82f6' }}>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Ventas del Mes</p>
-            <h3 style={{ fontSize: '2rem', margin: 0, color: 'white' }}>${currentMonthTotal.toFixed(2)}</h3>
+            <h3 style={{ fontSize: '2rem', margin: 0, color: 'var(--text-main)' }}>${currentMonthTotal.toFixed(2)}</h3>
             <div style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}>
               <span style={{ color: '#10b981' }}>💵 Efec: ${monthEfectivo.toFixed(2)}</span>
               <span style={{ color: '#3b82f6', marginLeft: '10px' }}>🏦 Transf: ${monthTransferencia.toFixed(2)}</span>
             </div>
+          </div>
+
+        </div>
+
+        {/* Resumen Detallado de Transferencias */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+          
+          <div className="glass-panel" style={{ padding: '1.5rem' }}>
+            <h3 style={{ color: '#3b82f6', margin: '0 0 1rem 0', fontSize: '1.1rem' }}>Detalle Transferencias (Hoy)</h3>
+            {['Edgar', 'Amparito', 'Junior', 'Diana', 'Otro'].map(name => todayTransferDetails[name] > 0 && (
+              <div key={name} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', borderBottom: '1px solid var(--panel-border)', paddingBottom: '0.2rem' }}>
+                <span style={{ color: 'var(--text-main)' }}>{name}</span>
+                <span style={{ fontWeight: 'bold' }}>${todayTransferDetails[name].toFixed(2)}</span>
+              </div>
+            ))}
+            {Object.values(todayTransferDetails).every(v => v === 0) && (
+              <span style={{ color: 'var(--text-muted)' }}>No hay transferencias hoy</span>
+            )}
+          </div>
+
+          <div className="glass-panel" style={{ padding: '1.5rem' }}>
+            <h3 style={{ color: '#3b82f6', margin: '0 0 1rem 0', fontSize: '1.1rem' }}>Detalle Transferencias (Mes)</h3>
+            {['Edgar', 'Amparito', 'Junior', 'Diana', 'Otro'].map(name => monthTransferDetails[name] > 0 && (
+              <div key={name} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', borderBottom: '1px solid var(--panel-border)', paddingBottom: '0.2rem' }}>
+                <span style={{ color: 'var(--text-main)' }}>{name}</span>
+                <span style={{ fontWeight: 'bold' }}>${monthTransferDetails[name].toFixed(2)}</span>
+              </div>
+            ))}
+            {Object.values(monthTransferDetails).every(v => v === 0) && (
+              <span style={{ color: 'var(--text-muted)' }}>No hay transferencias este mes</span>
+            )}
           </div>
 
         </div>
