@@ -532,12 +532,12 @@ export default function ReportesDashboard({ sales, issuers }) {
                   const saleDate = (sale.date || sale.fechaTransaccion)?.toDate ? sale.date.toDate() : new Date((sale.date || sale.fechaTransaccion));
                   const itemsQty = (sale.productos || sale.items || []) ? (sale.productos || sale.items || []).reduce((acc, item) => acc + item.qty, 0) : 0;
                   return (
-                    <tr key={idx}>
+                    <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'middle' }}>
                       <td style={{ whiteSpace: 'nowrap' }}>{saleDate.toLocaleString('es-EC', { dateStyle: 'short', timeStyle: 'short' })}</td>
                       <td>
                         <span style={{ 
                           background: (sale.estadoSri || sale.status) === 'NOTA_DE_VENTA' ? 'var(--warning)' : '#3b82f6', 
-                          color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold' 
+                          color: 'white', padding: '4px 8px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 'bold' 
                         }}>
                           {(sale.estadoSri || sale.status) === 'NOTA_DE_VENTA' ? 'NOTA VENTA' : 'FACTURA SRI'}
                         </span>
@@ -545,15 +545,25 @@ export default function ReportesDashboard({ sales, issuers }) {
                       <td>{sale.issuerName || sale.issuerId}</td>
                       <td>{(sale.cliente || sale.customer)?.nombre || 'Consumidor Final'}</td>
                       <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{sale.id.substring(0, 8)}...</td>
-                      <td style={{ fontSize: '0.85rem' }}>
-                        <ul style={{ margin: 0, paddingLeft: '1rem', color: 'var(--text-main)' }}>
+                      <td style={{ minWidth: '220px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           {(sale.productos || sale.items || []).map((p, i) => (
-                            <li key={i}>{p.qty}x {p.name} <span style={{color: 'var(--text-muted)'}}>(${(p.price*p.qty).toFixed(2)})</span></li>
+                            <div key={i} style={{ background: 'rgba(255,255,255,0.03)', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', border: '1px solid rgba(255,255,255,0.05)' }}>
+                              <span style={{ color: 'var(--text-main)' }}><b>{p.qty}x</b> {p.name}</span>
+                              <span style={{ color: 'var(--text-muted)' }}>${(p.price*p.qty).toFixed(2)}</span>
+                            </div>
                           ))}
-                        </ul>
+                        </div>
                       </td>
-                      <td style={{ fontSize: '0.85rem', color: sale.paymentMethod === 'TRANSFERENCIA' ? '#3b82f6' : '#10b981' }}>
-                        {sale.paymentMethod || 'EFECTIVO'} {sale.transferRecipient ? `(${sale.transferRecipient})` : ''}
+                      <td>
+                        <span style={{ 
+                          display: 'inline-block',
+                          background: sale.paymentMethod === 'TRANSFERENCIA' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                          color: sale.paymentMethod === 'TRANSFERENCIA' ? '#3b82f6' : '#10b981',
+                          padding: '4px 8px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold'
+                        }}>
+                          {sale.paymentMethod || 'EFECTIVO'} {sale.transferRecipient ? `(${sale.transferRecipient})` : ''}
+                        </span>
                       </td>
                       <td>${(sale.totals?.subtotal || 0).toFixed(2)}</td>
                       <td style={{ color: 'var(--success)', fontWeight: 'bold', fontSize: '1.1rem' }}>${(sale.totals?.total || 0).toFixed(2)}</td>
