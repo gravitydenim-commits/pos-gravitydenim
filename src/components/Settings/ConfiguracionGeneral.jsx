@@ -612,6 +612,75 @@ export default function ConfiguracionGeneral() {
           </div>
         </div>
 
+        {/* --- OPCIONES DE IMPRESIÓN --- */}
+        <div className="glass-panel" style={{ padding: '2rem', marginTop: '2rem' }}>
+          <h3 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            🖨️ Opciones de Impresión de Tickets
+          </h3>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+            Configura cómo deseas imprimir los comprobantes en este dispositivo.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Método de Impresión</label>
+              <select 
+                value={printMethod}
+                onChange={(e) => handlePrintPreferenceChange('method', e.target.value)}
+                style={{ width: '100%', padding: '12px', background: 'var(--input-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', borderRadius: '8px', marginBottom: '1.5rem' }}
+              >
+                <option value="sistema">Sistema / Navegador (Por defecto)</option>
+                <option value="bluetooth">Impresora Bluetooth Externa (Solo Chrome)</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Formato del Ticket</label>
+              <select 
+                value={printFormat}
+                onChange={(e) => handlePrintPreferenceChange('format', e.target.value)}
+                style={{ width: '100%', padding: '12px', background: 'var(--input-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', borderRadius: '8px', marginBottom: '1.5rem' }}
+              >
+                <option value="80mm">80 mm (Estándar)</option>
+                <option value="58mm">58 mm (Compacto)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+            <button 
+              onClick={() => {
+                import('../../utils/printTicket').then(({ printTestTicket }) => {
+                  printTestTicket('80mm');
+                });
+              }}
+              style={{ padding: '10px 16px', background: 'transparent', border: '1px solid var(--panel-border)', color: 'var(--text-main)', borderRadius: '8px', cursor: 'pointer' }}
+            >
+              Imprimir Prueba 80mm (Sistema)
+            </button>
+
+            <button 
+              onClick={async () => {
+                try {
+                  const { imprimirTicketBluetooth58mm } = await import('../../utils/escposPrinter');
+                  await imprimirTicketBluetooth58mm(
+                    { razonSocial: "Gravity Denim Prueba", ruc: "0000000000001", direccionMatriz: "Local" },
+                    { nombre: "Consumidor", numeroIdentificacion: "9999999999" },
+                    [{ nombre: "Producto Test", cantidad: 1, precio: 10.00 }],
+                    10.00, 0, 10.00,
+                    { numeroComprobante: "001-001-000000001", claveAcceso: "1234567890" }
+                  );
+                } catch (e) {
+                  alert("Error en prueba Bluetooth: " + e.message);
+                }
+              }}
+              style={{ padding: '10px 16px', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid #3b82f6', color: '#3b82f6', borderRadius: '8px', cursor: 'pointer' }}
+            >
+              Imprimir Prueba 58mm (Bluetooth)
+            </button>
+          </div>
+        </div>
+
         {/* --- CÓDIGOS QR DE TRANSFERENCIAS --- */}
         <div className="glass-panel" style={{ padding: '2rem', marginTop: '2rem' }}>
           <h3 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

@@ -127,23 +127,27 @@ export default async function handler(req, res) {
 
     // 6. Generar Secuencial de forma ATÓMICA (Evita race conditions)
     // Se ejecuta solo después de que TODAS las validaciones pasaron
-    const nextSecuencial = await adminDb.runTransaction(async (t) => {
-      const ref = adminDb.collection('issuers').doc(emisorId);
-      const doc = await t.get(ref);
-      const data = doc.data();
-      
-      // Manejar la estructura anidada de secuenciales
-      const secuenciales = data.secuenciales || {};
-      const current = secuenciales[secKey] || 0;
-      const next = current + 1;
-      
-      // Actualizar específicamente el contador para esta combinación estab_pto sin borrar los demás
-      t.update(ref, { [`secuenciales.${secKey}`]: next });
-      return next;
-    });
+    let nextSecuencial = 0;
+    
+    if (!isNotaVenta) {
+      nextSecuencial = await adminDb.runTransaction(async (t) => {
+        const ref = adminDb.collection('issuers').doc(emisorId);
+        const doc = await t.get(ref);
+        const data = doc.data();
+        
+        // Manejar la estructura anidada de secuenciales
+        const secuenciales = data.secuenciales || {};
+        const current = secuenciales[secKey] || 0;
+        const next = current + 1;
+        
+        // Actualizar específicamente el contador para esta combinación estab_pto sin borrar los demás
+        t.update(ref, { [`secuenciales.${secKey}`]: next });
+        return next;
+      });
+    }
 
     const secStr = String(nextSecuencial).padStart(9, '0');
-    const numeroComprobanteCompleto = `${estab}-${ptoEmi}-${secStr}`;
+    const numeroComprobanteCompleto = isNotaVenta ? 'S/N' : `${estab}-${ptoEmi}-${secStr}`;
 
     // 7. Estructurar Datos para osodreamer
     const invoiceData = {
