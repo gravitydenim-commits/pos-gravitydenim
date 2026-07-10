@@ -915,7 +915,6 @@ export default function ConfiguracionGeneral() {
           </div>
         </div>
 
-      </div>
     </div>
   );
 }
