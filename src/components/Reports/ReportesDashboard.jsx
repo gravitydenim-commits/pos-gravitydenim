@@ -124,7 +124,8 @@ export default function ReportesDashboard({ sales, issuers }) {
       "Monto IVA 15%",
       "Valor Total",
       "Clave de Acceso",
-      "Método de Pago"
+      "Método de Pago",
+      "A Quien (Transf)"
     ];
 
     // 2. Ordenar las ventas por nombre de emisor (para agruparlas)
@@ -143,7 +144,7 @@ export default function ReportesDashboard({ sales, issuers }) {
 
       // Inyectar fila separadora visual en el CSV si cambiamos de hermano/emisor
       if (currentEmisor !== emisorNombre) {
-        finalRows.push(`"--- VENTAS DE: ${emisorNombre.toUpperCase()} ---",,,,,,,,,,,,,`);
+        finalRows.push(`"--- VENTAS DE: ${emisorNombre.toUpperCase()} ---",,,,,,,,,,,,,,,`);
         currentEmisor = emisorNombre;
       }
 
@@ -165,11 +166,12 @@ export default function ReportesDashboard({ sales, issuers }) {
       
       const claveAcceso = sale.id || 'N/A';
       const metodoPago = sale.paymentMethod || 'EFECTIVO';
+      const aQuien = sale.transferRecipient || '';
 
       // Envolver en comillas para evitar problemas con las comas en los textos
       finalRows.push([
         `"${fechaFormat}"`,
-        `"${sale.status === 'NOTA_DE_VENTA' ? 'Nota Venta' : 'Factura'}"`, 
+        `"${(sale.estadoSri || sale.status) === 'NOTA_DE_VENTA' ? 'Nota Venta' : 'Factura'}"`, 
         `"${rucEmisor}"`,
         `"${emisorNombre}"`,
         `"${idCliente}"`,
@@ -182,7 +184,8 @@ export default function ReportesDashboard({ sales, issuers }) {
         `"${iva}"`,
         `"${total}"`,
         `"${claveAcceso}"`,
-        `"${metodoPago}"`
+        `"${metodoPago}"`,
+        `"${aQuien}"`
       ].join(","));
     });
 
@@ -275,6 +278,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                   <th>ST IVA</th>
                   <th>IVA</th>
                   <th>TOTAL</th>
+                  <th>PAGO / TRANSF</th>
                   <th>ESTADO</th>
                   <th>CLAVE ACCESO/AUTORIZACION</th>
                 </tr>
@@ -282,7 +286,7 @@ export default function ReportesDashboard({ sales, issuers }) {
               <tbody>
                 {sales.filter(s => s.status !== 'NOTA_DE_VENTA').sort((a,b) => new Date(b.date?.toDate ? b.date.toDate() : b.date) - new Date(a.date?.toDate ? a.date.toDate() : a.date)).map((sale, idx) => {
                   const saleDate = sale.date?.toDate ? sale.date.toDate() : new Date(sale.date);
-                  const isAutorizado = sale.status === 'AUTORIZADO';
+                  const isAutorizado = (sale.estadoSri || sale.status) === 'AUTORIZADO';
                   const issuer = issuers?.find(i => i.id === sale.issuerId) || {};
                   
                   return (
@@ -299,9 +303,14 @@ export default function ReportesDashboard({ sales, issuers }) {
                       <td className="text-right">0.00</td>
                       <td className="text-right">{(sale.totals?.baseImponible || 0).toFixed(2)}</td>
                       <td className="text-right">{(sale.totals?.ivaAmount || 0).toFixed(2)}</td>
-                      <td className="text-right font-bold">{(sale.totals?.total || 0).toFixed(2)}</td>
-                      <td style={{ color: isAutorizado ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>
-                        {sale.status}
+                      <td className="text-right font-bold" style={{ color: 'var(--accent)' }}>{(sale.totals?.total || 0).toFixed(2)}</td>
+                      <td>
+                        <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.1)', padding: '2px 4px', borderRadius: '4px' }}>
+                          {sale.paymentMethod || 'EFECTIVO'} {sale.transferRecipient ? `(${sale.transferRecipient})` : ''}
+                        </span>
+                      </td>
+                      <td style={{ color: isAutorizado ? '#10b981' : 'var(--text-muted)', fontWeight: 'bold' }}>
+                        {(sale.estadoSri || sale.status)}
                       </td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -349,6 +358,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                   <th>DOC</th>
                   <th>ST 0</th>
                   <th>TOTAL</th>
+                  <th>PAGO / TRANSF</th>
                   <th>ESTADO</th>
                   <th>REFERENCIA INTERNA</th>
                 </tr>
@@ -370,8 +380,13 @@ export default function ReportesDashboard({ sales, issuers }) {
                       <td>{(sale.cliente || sale.customer)?.numeroIdentificacion || '9999999999999'}</td>
                       <td className="text-right">{(sale.totals?.baseImponible || 0).toFixed(2)}</td>
                       <td className="text-right font-bold" style={{ color: 'var(--warning)' }}>{(sale.totals?.total || 0).toFixed(2)}</td>
+                      <td>
+                        <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.1)', padding: '2px 4px', borderRadius: '4px' }}>
+                          {sale.paymentMethod || 'EFECTIVO'} {sale.transferRecipient ? `(${sale.transferRecipient})` : ''}
+                        </span>
+                      </td>
                       <td style={{ color: 'var(--warning)', fontWeight: 'bold' }}>
-                        {sale.status}
+                        {(sale.estadoSri || sale.status)}
                       </td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
