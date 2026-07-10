@@ -9,16 +9,25 @@ export async function imprimirTicketBluetooth58mm(issuerData, clientData, cartIt
   try {
     console.log("Iniciando conexión Bluetooth...");
     
+    // UUIDs comunes para impresoras térmicas genéricas (CRM-03, PT-210, etc.)
+    const commonServices = [
+      '000018f0-0000-1000-8000-00805f9b34fb', 
+      'e7810a71-73ae-499d-8c15-faa9aef0c3f2', 
+      '0000fee7-0000-1000-8000-00805f9b34fb',
+      '49535343-fe7d-4ae5-8fa9-9fafd205e455', // Frecuente en CRM-03
+      '0000ff00-0000-1000-8000-00805f9b34fb'
+    ];
+
     // 1. Solicitar dispositivo Bluetooth
     const device = await navigator.bluetooth.requestDevice({
       filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }],
-      optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000180a-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2', '0000fee7-0000-1000-8000-00805f9b34fb'] 
+      optionalServices: [...commonServices, '0000180a-0000-1000-8000-00805f9b34fb'] 
     }).catch(err => {
       // Si falla con filtros, probar modo libre (algunas genéricas no anuncian el servicio 18f0 bien)
       console.warn("Fallo con filtros, intentando sin filtros de servicio...", err);
       return navigator.bluetooth.requestDevice({
         acceptAllDevices: true,
-        optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2', '0000fee7-0000-1000-8000-00805f9b34fb']
+        optionalServices: commonServices
       });
     });
 
@@ -35,8 +44,7 @@ export async function imprimirTicketBluetooth58mm(issuerData, clientData, cartIt
     }
     
     // Buscar un servicio conocido de impresión
-    const knownServices = ['000018f0-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2', '0000fee7-0000-1000-8000-00805f9b34fb'];
-    service = services.find(s => knownServices.includes(s.uuid)) || services[0];
+    service = services.find(s => commonServices.includes(s.uuid)) || services[0];
 
     console.log("Servicio usado:", service.uuid);
 
