@@ -18,11 +18,11 @@ if (!getApps().length) {
       console.log('Firebase Admin: Inicializado con Variables de Entorno');
     } else if (process.env.NODE_ENV !== 'production') {
       try {
-        // En Desarrollo, usamos un require dinámico para que Next.js/Vercel no intente 
-        // empaquetar estáticamente el archivo (lo que causaba el error 500 en build)
-        const path = require('path');
+        // En Desarrollo, evitamos que Turbopack/Vercel analice estáticamente "fs" o "require"
+        const fs = eval('require("fs")');
+        const path = eval('require("path")');
         const serviceAccountPath = path.resolve(process.cwd(), 'serviceAccountKey.json');
-        const serviceAccount = require(serviceAccountPath);
+        const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
         credential = cert(serviceAccount);
         console.log('Firebase Admin: Inicializado con serviceAccountKey.json local');
       } catch (err) {
