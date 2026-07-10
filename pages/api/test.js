@@ -1,9 +1,14 @@
-import { getApps } from 'firebase-admin/app';
-
-export default function handler(req, res) {
+export default async function handler(req, res) {
   try {
-    res.status(200).json({ success: true, apps: getApps().length });
+    const firebaseAdmin = await import('../../src/lib/firebaseAdmin');
+    const auth = firebaseAdmin.getAdminAuth();
+    res.status(200).json({ success: true, hasAuth: !!auth });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      error: 'Dynamic import failed', 
+      message: error.message, 
+      stack: error.stack 
+    });
   }
 }
+
