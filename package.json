@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "firebase": "^12.14.0",
-    "firebase-admin": "^14.1.0",
+    "firebase-admin": "^11.11.1",
     "lucide-react": "^1.17.0",
     "next": "^16.2.9",
     "nodemailer": "^8.0.11",
