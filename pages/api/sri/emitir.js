@@ -100,18 +100,18 @@ export default async function handler(req, res) {
       return {
         codigoPrincipal: prod.id || prod.codigo || '0000',
         descripcion: prod.name || prod.nombre || 'Producto',
-        cantidad: cantidad.toFixed(2),
-        precioUnitario: precioUnitario.toFixed(2),
-        descuento: descuento.toFixed(2),
-        precioTotalSinImpuesto: precioTotalSinImpuesto.toFixed(2),
+        cantidad: cantidad,
+        precioUnitario: precioUnitario,
+        descuento: descuento,
+        precioTotalSinImpuesto: precioTotalSinImpuesto,
         impuestos: {
           impuesto: [
             {
-              codigo: '2', // IVA
-              codigoPorcentaje: '2', // 12% o '0' para 0% (Depende de si el prod tiene IVA)
-              tarifa: '12.00', // Ajustar según DB
-              baseImponible: precioTotalSinImpuesto.toFixed(2),
-              valor: (precioTotalSinImpuesto * 0.12).toFixed(2) // Calcular real
+              codigo: 2, // IVA
+              codigoPorcentaje: 2, // 12%
+              tarifa: 12.00,
+              baseImponible: precioTotalSinImpuesto,
+              valor: precioTotalSinImpuesto * 0.12
             }
           ]
         }
@@ -152,10 +152,10 @@ export default async function handler(req, res) {
     // 7. Estructurar Datos para osodreamer
     const invoiceData = {
       infoTributaria: {
-        ambiente: '1',
-        tipoEmision: '1',
-        razonSocial: emisor.razonSocial,
-        nombreComercial: emisor.nombreComercial || emisor.razonSocial,
+        ambiente: 1,
+        tipoEmision: 1,
+        razonSocial: emisor.razonSocial || emisor.name || 'Sin Razón Social',
+        nombreComercial: emisor.nombreComercial || emisor.razonSocial || emisor.name || 'Sin Nombre Comercial',
         ruc: emisor.ruc,
         claveAcceso: 'GENERADA_AUTOMATICAMENTE_POR_OSODREAMER',
         codDoc: '01',
@@ -172,26 +172,26 @@ export default async function handler(req, res) {
         razonSocialComprador: cliente.nombre,
         identificacionComprador: cliente.numeroIdentificacion,
         direccionComprador: cliente.direccion || 'S/N',
-        totalSinImpuestos: subtotalSinImpuestos.toFixed(2),
-        totalDescuento: '0.00',
+        totalSinImpuestos: subtotalSinImpuestos,
+        totalDescuento: 0,
         totalConImpuestos: {
           totalImpuesto: [
             {
-              codigo: '2',
-              codigoPorcentaje: '2',
-              baseImponible: subtotalSinImpuestos.toFixed(2),
-              valor: valorIva.toFixed(2)
+              codigo: 2,
+              codigoPorcentaje: 2,
+              baseImponible: subtotalSinImpuestos,
+              valor: valorIva
             }
           ]
         },
-        propina: '0.00',
-        importeTotal: importeTotal.toFixed(2),
+        propina: 0,
+        importeTotal: importeTotal,
         moneda: 'DOLAR',
         pagos: {
           pago: [
             {
               formaPago: formaPago || '01', // '01' SIN UTILIZACION DEL SISTEMA FINANCIERO
-              total: importeTotal.toFixed(2),
+              total: importeTotal,
               plazo: 1,
               unidadTiempo: 'dias'
             }
@@ -201,8 +201,8 @@ export default async function handler(req, res) {
       detalles: { detalle: detalles },
       infoAdicional: {
         campoAdicional: [
-          { nombre: 'Email', valor: cliente.correo || 'N/A' },
-          { nombre: 'Telefono', valor: cliente.telefono || 'N/A' }
+          { nombre: 'Email', value: cliente.correo || 'N/A' },
+          { nombre: 'Telefono', value: cliente.telefono || 'N/A' }
         ]
       }
     };
@@ -224,7 +224,7 @@ export default async function handler(req, res) {
         // 8.1 Generar XML (CPU Local)
         const invoiceResult = await generateXmlInvoice(invoiceData);
         xmlUnsigned = invoiceResult.generatedXml;
-        const claveAccesoGenerada = invoiceResult.invoiceJson.infoTributaria.claveAcceso;
+        const claveAccesoGenerada = invoiceResult.invoiceJson.factura.infoTributaria.claveAcceso;
         
         // Asignar clave generada para que no quede como FAIL-... si hay error después
         invoiceData.infoTributaria.claveAcceso = claveAccesoGenerada;
