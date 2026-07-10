@@ -850,6 +850,72 @@ export default function ConfiguracionGeneral() {
         </div>
 
       </div>
+
+        {/* Zona de Mantenimiento y Respaldo */}
+        <div style={{ marginTop: '2rem', padding: '1.5rem', background: '#3f1f1f', borderRadius: '12px', border: '1px solid #7f1d1d' }}>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#fca5a5', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <AlertTriangle size={20} />
+            Mantenimiento y Respaldo (Zona de Peligro)
+          </h3>
+          <p style={{ color: '#fecaca', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+            Utiliza estas herramientas para respaldar tu información antes de salir a producción, o para limpiar la base de datos de todas las pruebas realizadas.
+          </p>
+
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            <button 
+              onClick={async () => {
+                try {
+                  const token = await auth.currentUser.getIdToken();
+                  const res = await fetch('/api/admin/backup', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                  });
+                  if (!res.ok) throw new Error('Error al generar respaldo');
+                  
+                  const blob = await res.blob();
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `respaldo_gravitydenim_${new Date().toISOString().slice(0,10)}.json`;
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                } catch (error) {
+                  alert('Error al descargar respaldo: ' + error.message);
+                }
+              }}
+              style={{ padding: '10px 20px', background: '#059669', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
+            >
+              📥 Respaldar Toda la Información
+            </button>
+
+            <button 
+              onClick={async () => {
+                const conf = prompt('⚠️ PELIGRO ⚠️\nEsta acción eliminará todas las Ventas, Productos y Clientes de la base de datos (se conservarán las firmas electrónicas).\n\nEscribe la palabra BORRAR en mayúsculas para confirmar:');
+                if (conf === 'BORRAR') {
+                  try {
+                    const token = await auth.currentUser.getIdToken();
+                    const res = await fetch('/api/admin/reset', {
+                      method: 'POST',
+                      headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (!res.ok) throw new Error('Fallo al limpiar la base de datos');
+                    alert('Base de datos reiniciada con éxito. El sistema está limpio.');
+                    window.location.reload();
+                  } catch (error) {
+                    alert('Error al reiniciar: ' + error.message);
+                  }
+                } else if (conf !== null) {
+                  alert('Palabra de confirmación incorrecta. Acción cancelada.');
+                }
+              }}
+              style={{ padding: '10px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
+            >
+              🗑️ Reiniciar Sistema de Cero
+            </button>
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }

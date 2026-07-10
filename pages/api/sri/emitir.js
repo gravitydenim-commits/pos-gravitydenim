@@ -1,5 +1,5 @@
 import { getAdminAuth, getAdminDb } from '../../../src/lib/firebaseAdmin';
-import { generateXmlInvoice, signXml, authorizeXml } from 'osodreamer-sri-xml-signer';
+import { generateXmlInvoice, signXml, validateXml, authorizeXml } from 'osodreamer-sri-xml-signer';
 import fs from 'fs';
 import path from 'path';
 
@@ -222,10 +222,19 @@ export default async function handler(req, res) {
     if (!isNotaVenta) {
       try {
         // 8.1 Generar XML (CPU Local)
-        xmlUnsigned = generateXmlInvoice(invoiceData);
+        const invoiceResult = await generateXmlInvoice(invoiceData);
+        xmlUnsigned = invoiceResult.generatedXml;
+        const claveAccesoGenerada = invoiceResult.invoiceJson.infoTributaria.claveAcceso;
         
+        // Asignar clave generada para que no quede como FAIL-... si hay error después
+        invoiceData.infoTributaria.claveAcceso = claveAccesoGenerada;
+
         // 8.2 Firmar XML (CPU Local)
-        signedXml = await signXml(p12Buffer, p12Password, xmlUnsigned);
+        signedXml = await signXml({
+          p12Buffer: p12Buffer,
+          password: p12Password,
+          xmlBuffer: Buffer.from(xmlUnsigned, 'utf8')
+        });
       } catch (e) {
         console.error("Error interno generando/firmando XML:", e);
         errorTecnico = "Fallo de Generación/Firma: " + e.message;
@@ -234,20 +243,25 @@ export default async function handler(req, res) {
 
       if (!internalCrash) {
         try {
-          // 8.3 Autorizar SRI (Red/Internet)
-          authResult = await authorizeXml(signedXml, '1');
+          // 8.3 Enviar (validar) y Autorizar SRI (Red/Internet)
+          await validateXml({ env: '1', xml: Buffer.from(signedXml, 'utf8') });
+          authResult = await authorizeXml({ claveAcceso: invoiceData.infoTributaria.claveAcceso, env: '1' });
         } catch (e) {
           console.error("Error técnico contactando al SRI:", e);
           errorTecnico = e.message;
           if (e.response && e.response.mensajes) {
              errorTecnico = JSON.stringify(e.response.mensajes);
           }
-          sriTimeout = true; // Asumimos falla de red o rechazo catastrófico del WS
+          sriTimeout = true; // Asumimos falla de red o rechazo del WS
         }
       }
 
       // Extraer Clave de Acceso generada (si existe) o usar una única
-      finalClaveAcceso = (authResult && authResult.claveAcceso) ? authResult.claveAcceso : invoiceData.infoTributaria.claveAcceso !== 'GENERADA_AUTOMATICAMENTE_POR_OSODREAMER' ? invoiceData.infoTributaria.claveAcceso : `FAIL-${Date.now()}`;
+      if (isNotaVenta) {
+        finalClaveAcceso = `NV-${Date.now()}`;
+      } else {
+        finalClaveAcceso = (authResult && authResult.claveAcceso) ? authResult.claveAcceso : invoiceData.infoTributaria.claveAcceso !== 'GENERADA_AUTOMATICAMENTE_POR_OSODREAMER' ? invoiceData.infoTributaria.claveAcceso : `FAIL-${Date.now()}`;
+      }
       
       estadoFinalSri = 'EN_PROCESO';
       if (authResult) {

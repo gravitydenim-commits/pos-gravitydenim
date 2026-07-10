@@ -43,7 +43,7 @@ export default function FacturasSRI() {
 
       if (sriData.estado === 'AUTORIZADO') {
         // Actualizar en Firebase
-        await updateDoc(doc(db, 'sales', venta.id), {
+        await updateDoc(doc(db, 'ventas', venta.id), {
           status: 'AUTORIZADO',
           numeroComprobante: sriData.numeroComprobante
         });
