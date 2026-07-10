@@ -200,8 +200,8 @@ export const generarFacturaA4 = (venta, issuerData) => {
         <div class="box customer-info">
           <table>
             <tr>
-              <td style="width:60%"><b>Razón Social / Nombres y Apellidos:</b> ${venta.customer?.nombre || 'CONSUMIDOR FINAL'}</td>
-              <td style="width:40%"><b>Identificación:</b> ${venta.customer?.numeroIdentificacion || '9999999999999'}</td>
+              <td style="width:60%"><b>Razón Social / Nombres y Apellidos:</b> ${(venta.cliente || venta.customer)?.nombre || 'CONSUMIDOR FINAL'}</td>
+              <td style="width:40%"><b>Identificación:</b> ${(venta.cliente || venta.customer)?.numeroIdentificacion || '9999999999999'}</td>
             </tr>
             <tr>
               <td><b>Fecha Emisión:</b> ${fechaEmision}</td>
@@ -224,9 +224,9 @@ export const generarFacturaA4 = (venta, issuerData) => {
             </tr>
           </thead>
           <tbody>
-            ${venta.items.map(item => `
+            ${(venta.productos || venta.items || []).map(item => `
               <tr>
-                <td>${item.id.substring(0,8)}</td>
+                <td>${(item.id || '').substring(0,8)}</td>
                 <td></td>
                 <td class="text-right">${item.qty.toFixed(2)}</td>
                 <td>${item.name}</td>
@@ -246,9 +246,9 @@ export const generarFacturaA4 = (venta, issuerData) => {
               <p><b>Información Adicional</b></p>
               <br/>
               <table>
-                <tr><td width="100"><b>Dir:</b></td><td>${venta.customer?.direccion || 'N/A'}</td></tr>
-                <tr><td><b>Telf:</b></td><td>${venta.customer?.telefono || 'N/A'}</td></tr>
-                <tr><td><b>Email:</b></td><td>${venta.customer?.correo || 'N/A'}</td></tr>
+                <tr><td width="100"><b>Dir:</b></td><td>${(venta.cliente || venta.customer)?.direccion || 'N/A'}</td></tr>
+                <tr><td><b>Telf:</b></td><td>${(venta.cliente || venta.customer)?.telefono || 'N/A'}</td></tr>
+                <tr><td><b>Email:</b></td><td>${(venta.cliente || venta.customer)?.correo || 'N/A'}</td></tr>
                 <tr><td><b>Vendedor:</b></td><td>CAJA</td></tr>
               </table>
             </div>
