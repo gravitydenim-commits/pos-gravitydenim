@@ -264,7 +264,13 @@ function App() {
                 <span className="nav-btn-text">Clientes</span>
               </button>
 
-
+              <button 
+                className={`nav-btn ${currentView === 'report' ? 'active' : ''}`}
+                onClick={() => setCurrentView('report')}
+              >
+                <LayoutDashboard size={24} />
+                <span className="nav-btn-text">Reportes</span>
+              </button>
             </>
           )}
 
