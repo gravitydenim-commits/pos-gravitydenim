@@ -91,15 +91,15 @@ export default async function handler(req, res) {
     // 5. Cálculos (Simulados para el MVP, deben ser matemáticamente perfectos)
     let subtotalSinImpuestos = 0;
     const detalles = productos.map(prod => {
-      const cantidad = prod.cantidad || 1;
-      const precioUnitario = prod.precio; // Debe venir sin IVA en la BD idealmente, asumo que sí.
+      const cantidad = prod.qty || prod.cantidad || 1;
+      const precioUnitario = prod.price !== undefined ? prod.price : prod.precio; 
       const descuento = prod.descuento || 0;
       const precioTotalSinImpuesto = (precioUnitario * cantidad) - descuento;
       subtotalSinImpuestos += precioTotalSinImpuesto;
       
       return {
-        codigoPrincipal: prod.id || prod.codigo,
-        descripcion: prod.nombre,
+        codigoPrincipal: prod.id || prod.codigo || '0000',
+        descripcion: prod.name || prod.nombre || 'Producto',
         cantidad: cantidad,
         precioUnitario: precioUnitario,
         descuento: descuento,
