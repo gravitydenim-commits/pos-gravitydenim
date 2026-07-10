@@ -17,21 +17,6 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, onSnapshot, addDoc, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import './index.css';
 
-// --- MOCK DATABASE (Simulando Firebase) ---
-const MOCK_ISSUERS = [
-  { id: 'hermano_geovanny', ruc: '1803805405001', name: 'Edgar Geovanny Sanchez Ramirez', p12Name: '', correo: 'gravitydenim@gmail.com', direccionMatriz: 'Av. Maldonado y Quimiag', obligadoContabilidad: false },
-  { id: 'hermano_maria', ruc: '0900000002001', name: 'María Pérez', p12Name: '', correo: 'maria@gravitydenim.com', direccionMatriz: 'N/A', obligadoContabilidad: false },
-  { id: 'hermano_carlos', ruc: '0900000003001', name: 'Carlos Pérez', p12Name: '', correo: 'carlos@gravitydenim.com', direccionMatriz: 'N/A', obligadoContabilidad: false },
-];
-
-const INITIAL_COMPANY_DATA = {
-  razonSocial: 'Gravity Denim Cia. Ltda.',
-  ruc: '0999999999001',
-  direccionMatriz: 'Av. Principal y Secundaria, Guayaquil',
-  correo: 'info@gravitydenim.com',
-  obligadoContabilidad: true
-};
-
 const ADMIN_UID = 'AHo5ztrPExZndYJPIr1aByebMsN2';
 
 function App() {
@@ -46,8 +31,8 @@ function App() {
   const [customersDB, setCustomersDB] = useState([]);
   const [productsDB, setProductsDB] = useState([]);
 
-  const [companyData, setCompanyData] = useState(INITIAL_COMPANY_DATA);
-  const [issuers, setIssuers] = useState(MOCK_ISSUERS);
+  const [companyData, setCompanyData] = useState({});
+  const [issuers, setIssuers] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
