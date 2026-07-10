@@ -23,9 +23,11 @@ export default function ReportesDashboard({ sales, issuers }) {
     const currentDate = now.getDate();
 
     sales.forEach(sale => {
-      // Parsear fecha (Firestore Timestamp o Date)
-      const saleDate = sale.date?.toDate ? sale.date.toDate() : new Date(sale.date);
-      
+      // Parsear fecha (Firestore Timestamp o Date o String ISO)
+      const rawDate = sale.date || sale.fechaTransaccion;
+      if (!rawDate) return; // Saltar si no tiene ninguna de las dos
+
+      const saleDate = rawDate.toDate ? rawDate.toDate() : new Date(rawDate);
       const isCurrentMonth = saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
       const isToday = isCurrentMonth && saleDate.getDate() === currentDate;
 
