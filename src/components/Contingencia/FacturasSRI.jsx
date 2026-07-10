@@ -9,6 +9,7 @@ export default function FacturasSRI() {
   const [activeTab, setActiveTab] = useState('contingencia'); // 'contingencia' o 'historial'
   const [procesando, setProcesando] = useState(false);
 
+  useEffect(() => {
     // Usar 'ventas' en lugar de 'sales' y ordenar por fechaTransaccion
     const q = query(collection(db, 'ventas'), orderBy('fechaTransaccion', 'desc'));
     const unsub = onSnapshot(q, (snapshot) => {
