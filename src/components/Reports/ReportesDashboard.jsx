@@ -79,8 +79,8 @@ export default function ReportesDashboard({ sales, issuers }) {
       issuerTotals[issuerId].ventas += 1;
 
       // Ranking de productos (Solo para el mes actual)
-      if (isCurrentMonth && sale.items && Array.isArray(sale.items)) {
-        sale.items.forEach(item => {
+      if (isCurrentMonth && (sale.productos || sale.items || []) && Array.isArray((sale.productos || sale.items || []))) {
+        (sale.productos || sale.items || []).forEach(item => {
           if (!productSales[item.name]) {
             productSales[item.name] = { name: item.name, qty: 0, revenue: 0 };
           }
@@ -152,11 +152,11 @@ export default function ReportesDashboard({ sales, issuers }) {
       
       const rucEmisor = issuer.ruc || sale.issuerId;
       
-      const idCliente = sale.customer?.numeroIdentificacion || '9999999999999';
-      const nombreCliente = sale.customer?.nombre || 'CONSUMIDOR FINAL';
-      const emailCliente = sale.customer?.correo || 'N/A';
-      const telefonoCliente = sale.customer?.telefono || 'N/A';
-      const direccionCliente = sale.customer?.direccion || 'N/A';
+      const idCliente = (sale.cliente || sale.customer)?.numeroIdentificacion || '9999999999999';
+      const nombreCliente = (sale.cliente || sale.customer)?.nombre || 'CONSUMIDOR FINAL';
+      const emailCliente = (sale.cliente || sale.customer)?.correo || 'N/A';
+      const telefonoCliente = (sale.cliente || sale.customer)?.telefono || 'N/A';
+      const direccionCliente = (sale.cliente || sale.customer)?.direccion || 'N/A';
       
       const base15 = (sale.totals?.baseImponible || 0).toFixed(2);
       const base0 = "0.00"; // Gravity Denim solo vende ropa con IVA
@@ -294,8 +294,8 @@ export default function ReportesDashboard({ sales, issuers }) {
                       <td style={{ background: '#3b82f6', color: 'white', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', margin: '4px' }}>
                         {sale.numeroComprobante ? sale.numeroComprobante.split('-')[2] : (sale.secuencial || '000')}
                       </td>
-                      <td>{sale.customer?.nombre || 'CONSUMIDOR FINAL'}</td>
-                      <td>{sale.customer?.numeroIdentificacion || '9999999999999'}</td>
+                      <td>{(sale.cliente || sale.customer)?.nombre || 'CONSUMIDOR FINAL'}</td>
+                      <td>{(sale.cliente || sale.customer)?.numeroIdentificacion || '9999999999999'}</td>
                       <td className="text-right">0.00</td>
                       <td className="text-right">{(sale.totals?.baseImponible || 0).toFixed(2)}</td>
                       <td className="text-right">{(sale.totals?.ivaAmount || 0).toFixed(2)}</td>
@@ -366,8 +366,8 @@ export default function ReportesDashboard({ sales, issuers }) {
                       <td style={{ background: 'var(--warning)', color: 'white', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', margin: '4px' }}>
                         {sale.numeroComprobante || 'S/N'}
                       </td>
-                      <td>{sale.customer?.nombre || 'CONSUMIDOR FINAL'}</td>
-                      <td>{sale.customer?.numeroIdentificacion || '9999999999999'}</td>
+                      <td>{(sale.cliente || sale.customer)?.nombre || 'CONSUMIDOR FINAL'}</td>
+                      <td>{(sale.cliente || sale.customer)?.numeroIdentificacion || '9999999999999'}</td>
                       <td className="text-right">{(sale.totals?.baseImponible || 0).toFixed(2)}</td>
                       <td className="text-right font-bold" style={{ color: 'var(--warning)' }}>{(sale.totals?.total || 0).toFixed(2)}</td>
                       <td style={{ color: 'var(--warning)', fontWeight: 'bold' }}>
@@ -514,12 +514,12 @@ export default function ReportesDashboard({ sales, issuers }) {
               <tbody>
                 {sales.sort((a,b) => new Date(b.date?.toDate ? b.date.toDate() : b.date) - new Date(a.date?.toDate ? a.date.toDate() : a.date)).map((sale, idx) => {
                   const saleDate = sale.date?.toDate ? sale.date.toDate() : new Date(sale.date);
-                  const itemsQty = sale.items ? sale.items.reduce((acc, item) => acc + item.qty, 0) : 0;
+                  const itemsQty = (sale.productos || sale.items || []) ? (sale.productos || sale.items || []).reduce((acc, item) => acc + item.qty, 0) : 0;
                   return (
                     <tr key={idx}>
                       <td>{saleDate.toLocaleString()}</td>
                       <td>{sale.issuerName || sale.issuerId}</td>
-                      <td>{sale.customer?.nombre || 'Consumidor Final'}</td>
+                      <td>{(sale.cliente || sale.customer)?.nombre || 'Consumidor Final'}</td>
                       <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{sale.id}</td>
                       <td>{itemsQty}</td>
                       <td style={{ fontSize: '0.85rem', color: sale.paymentMethod === 'TRANSFERENCIA' ? '#3b82f6' : '#10b981' }}>
