@@ -284,7 +284,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                 </tr>
               </thead>
               <tbody>
-                {sales.filter(s => s.status !== 'NOTA_DE_VENTA').sort((a,b) => new Date(b.date?.toDate ? b.date.toDate() : b.date) - new Date(a.date?.toDate ? a.date.toDate() : a.date)).map((sale, idx) => {
+                {sales.filter(s => (s.estadoSri || s.status) !== 'NOTA_DE_VENTA').sort((a,b) => new Date(b.date?.toDate ? b.date.toDate() : b.date) - new Date(a.date?.toDate ? a.date.toDate() : a.date)).map((sale, idx) => {
                   const saleDate = sale.date?.toDate ? sale.date.toDate() : new Date(sale.date);
                   const isAutorizado = (sale.estadoSri || sale.status) === 'AUTORIZADO';
                   const issuer = issuers?.find(i => i.id === sale.issuerId) || {};
@@ -364,7 +364,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                 </tr>
               </thead>
               <tbody>
-                {sales.filter(s => s.status === 'NOTA_DE_VENTA').sort((a,b) => new Date(b.date?.toDate ? b.date.toDate() : b.date) - new Date(a.date?.toDate ? a.date.toDate() : a.date)).map((sale, idx) => {
+                {sales.filter(s => (s.estadoSri || s.status) === 'NOTA_DE_VENTA').sort((a,b) => new Date(b.date?.toDate ? b.date.toDate() : b.date) - new Date(a.date?.toDate ? a.date.toDate() : a.date)).map((sale, idx) => {
                   const saleDate = sale.date?.toDate ? sale.date.toDate() : new Date(sale.date);
                   const issuer = issuers?.find(i => i.id === sale.issuerId) || {};
                   
