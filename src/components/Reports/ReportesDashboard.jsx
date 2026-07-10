@@ -148,7 +148,7 @@ export default function ReportesDashboard({ sales, issuers }) {
         currentEmisor = emisorNombre;
       }
 
-      const saleDate = sale.date?.toDate ? sale.date.toDate() : new Date(sale.date);
+      const saleDate = (sale.date || sale.fechaTransaccion)?.toDate ? sale.date.toDate() : new Date((sale.date || sale.fechaTransaccion));
       const fechaFormat = saleDate.toLocaleDateString('es-EC'); // dd/mm/yyyy
       
       const rucEmisor = issuer.ruc || sale.issuerId;
@@ -284,8 +284,8 @@ export default function ReportesDashboard({ sales, issuers }) {
                 </tr>
               </thead>
               <tbody>
-                {sales.filter(s => (s.estadoSri || s.status) !== 'NOTA_DE_VENTA').sort((a,b) => new Date(b.date?.toDate ? b.date.toDate() : b.date) - new Date(a.date?.toDate ? a.date.toDate() : a.date)).map((sale, idx) => {
-                  const saleDate = sale.date?.toDate ? sale.date.toDate() : new Date(sale.date);
+                {sales.filter(s => (s.estadoSri || s.status) !== 'NOTA_DE_VENTA').sort((a,b) => new Date((b.date || b.fechaTransaccion)?.toDate ? b.date.toDate() : (b.date || b.fechaTransaccion)) - new Date((a.date || a.fechaTransaccion)?.toDate ? a.date.toDate() : (a.date || a.fechaTransaccion))).map((sale, idx) => {
+                  const saleDate = (sale.date || sale.fechaTransaccion)?.toDate ? sale.date.toDate() : new Date((sale.date || sale.fechaTransaccion));
                   const isAutorizado = (sale.estadoSri || sale.status) === 'AUTORIZADO';
                   const issuer = issuers?.find(i => i.id === sale.issuerId) || {};
                   
@@ -364,8 +364,8 @@ export default function ReportesDashboard({ sales, issuers }) {
                 </tr>
               </thead>
               <tbody>
-                {sales.filter(s => (s.estadoSri || s.status) === 'NOTA_DE_VENTA').sort((a,b) => new Date(b.date?.toDate ? b.date.toDate() : b.date) - new Date(a.date?.toDate ? a.date.toDate() : a.date)).map((sale, idx) => {
-                  const saleDate = sale.date?.toDate ? sale.date.toDate() : new Date(sale.date);
+                {sales.filter(s => (s.estadoSri || s.status) === 'NOTA_DE_VENTA').sort((a,b) => new Date((b.date || b.fechaTransaccion)?.toDate ? b.date.toDate() : (b.date || b.fechaTransaccion)) - new Date((a.date || a.fechaTransaccion)?.toDate ? a.date.toDate() : (a.date || a.fechaTransaccion))).map((sale, idx) => {
+                  const saleDate = (sale.date || sale.fechaTransaccion)?.toDate ? sale.date.toDate() : new Date((sale.date || sale.fechaTransaccion));
                   const issuer = issuers?.find(i => i.id === sale.issuerId) || {};
                   
                   return (
@@ -527,8 +527,8 @@ export default function ReportesDashboard({ sales, issuers }) {
                 </tr>
               </thead>
               <tbody>
-                {sales.sort((a,b) => new Date(b.date?.toDate ? b.date.toDate() : b.date) - new Date(a.date?.toDate ? a.date.toDate() : a.date)).map((sale, idx) => {
-                  const saleDate = sale.date?.toDate ? sale.date.toDate() : new Date(sale.date);
+                {sales.sort((a,b) => new Date((b.date || b.fechaTransaccion)?.toDate ? b.date.toDate() : (b.date || b.fechaTransaccion)) - new Date((a.date || a.fechaTransaccion)?.toDate ? a.date.toDate() : (a.date || a.fechaTransaccion))).map((sale, idx) => {
+                  const saleDate = (sale.date || sale.fechaTransaccion)?.toDate ? sale.date.toDate() : new Date((sale.date || sale.fechaTransaccion));
                   const itemsQty = (sale.productos || sale.items || []) ? (sale.productos || sale.items || []).reduce((acc, item) => acc + item.qty, 0) : 0;
                   return (
                     <tr key={idx}>
