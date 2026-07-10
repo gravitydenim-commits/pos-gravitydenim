@@ -369,6 +369,7 @@ export default async function handler(req, res) {
       errMsg = JSON.stringify(error.response.mensajes);
     }
 
-    return res.status(500).json({ error: 'Error procesando facturación SRI: ' + errMsg });
+    const contextType = req.body?.isNotaVenta ? 'nota de venta' : 'facturación SRI';
+    return res.status(500).json({ error: `Error procesando ${contextType}: ` + errMsg });
   }
 }
