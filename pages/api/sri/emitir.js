@@ -247,7 +247,7 @@ export default async function handler(req, res) {
           await validateXml({ env: '1', xml: Buffer.from(signedXml, 'utf8') });
           authResult = await authorizeXml({ claveAcceso: invoiceData.infoTributaria.claveAcceso, env: '1' });
         } catch (e) {
-          console.error("Error técnico contactando al SRI:", e);
+          console.error("Error técnico contactando al SRI o validando XML:", e);
           errorTecnico = e.message;
           if (e.response && e.response.mensajes) {
              errorTecnico = JSON.stringify(e.response.mensajes);
