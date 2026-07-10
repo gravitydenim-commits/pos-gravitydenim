@@ -100,18 +100,18 @@ export default async function handler(req, res) {
       return {
         codigoPrincipal: prod.id || prod.codigo || '0000',
         descripcion: prod.name || prod.nombre || 'Producto',
-        cantidad: cantidad,
-        precioUnitario: precioUnitario,
-        descuento: descuento,
-        precioTotalSinImpuesto: precioTotalSinImpuesto,
+        cantidad: cantidad.toFixed(2),
+        precioUnitario: precioUnitario.toFixed(2),
+        descuento: descuento.toFixed(2),
+        precioTotalSinImpuesto: precioTotalSinImpuesto.toFixed(2),
         impuestos: {
           impuesto: [
             {
               codigo: '2', // IVA
               codigoPorcentaje: '2', // 12% o '0' para 0% (Depende de si el prod tiene IVA)
-              tarifa: 12.00, // Ajustar según DB
-              baseImponible: precioTotalSinImpuesto,
-              valor: precioTotalSinImpuesto * 0.12 // Calcular real
+              tarifa: '12.00', // Ajustar según DB
+              baseImponible: precioTotalSinImpuesto.toFixed(2),
+              valor: (precioTotalSinImpuesto * 0.12).toFixed(2) // Calcular real
             }
           ]
         }
@@ -172,26 +172,26 @@ export default async function handler(req, res) {
         razonSocialComprador: cliente.nombre,
         identificacionComprador: cliente.numeroIdentificacion,
         direccionComprador: cliente.direccion || 'S/N',
-        totalSinImpuestos: subtotalSinImpuestos,
-        totalDescuento: 0,
+        totalSinImpuestos: subtotalSinImpuestos.toFixed(2),
+        totalDescuento: '0.00',
         totalConImpuestos: {
           totalImpuesto: [
             {
               codigo: '2',
               codigoPorcentaje: '2',
-              baseImponible: subtotalSinImpuestos,
-              valor: valorIva
+              baseImponible: subtotalSinImpuestos.toFixed(2),
+              valor: valorIva.toFixed(2)
             }
           ]
         },
-        propina: 0,
-        importeTotal: importeTotal,
+        propina: '0.00',
+        importeTotal: importeTotal.toFixed(2),
         moneda: 'DOLAR',
         pagos: {
           pago: [
             {
               formaPago: formaPago || '01', // '01' SIN UTILIZACION DEL SISTEMA FINANCIERO
-              total: importeTotal,
+              total: importeTotal.toFixed(2),
               plazo: 1,
               unidadTiempo: 'dias'
             }
