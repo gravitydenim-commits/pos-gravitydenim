@@ -16,9 +16,20 @@ if (!getApps().length) {
         privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
       });
       console.log('Firebase Admin: Inicializado con Variables de Entorno');
+    } else if (process.env.NODE_ENV !== 'production') {
+      try {
+        // En Desarrollo, usamos un require dinámico para que Next.js/Vercel no intente 
+        // empaquetar estáticamente el archivo (lo que causaba el error 500 en build)
+        const path = require('path');
+        const serviceAccountPath = path.resolve(process.cwd(), 'serviceAccountKey.json');
+        const serviceAccount = require(serviceAccountPath);
+        credential = cert(serviceAccount);
+        console.log('Firebase Admin: Inicializado con serviceAccountKey.json local');
+      } catch (err) {
+        console.log('Firebase Admin: No se encontró serviceAccountKey.json o falló carga. Usando por defecto.');
+        credential = undefined;
+      }
     } else {
-      // Desarrollo local (requerirá que pongas un path directo o uses require si quieres)
-      // Como no queremos que Next.js trace esto y falle en Vercel, lo importaremos dinámicamente o ignoraremos fs
       console.log('Firebase Admin: Usando credenciales por defecto (solo funciona si GOOGLE_APPLICATION_CREDENTIALS está seteado)');
       credential = undefined; // Esto hará que intente usar las credenciales por defecto del sistema
     }
