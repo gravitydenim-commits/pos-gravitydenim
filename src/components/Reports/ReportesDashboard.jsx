@@ -2,6 +2,28 @@ import React, { useMemo, useState } from 'react';
 import { BarChart3, TrendingUp, DollarSign, Percent, Package, Users, Activity, FileText, Download, FileType2, FileCode2 } from 'lucide-react';
 import { generarFacturaA4 } from '../../utils/generadorA4';
 
+const parseSaleDate = (sale) => {
+  const rawDate =
+    sale?.fechaTransaccion ??
+    sale?.fechaEmision ??
+    sale?.date ??
+    sale?.fecha ??
+    sale?.createdAt;
+
+  if (!rawDate) return null;
+
+  if (typeof rawDate?.toDate === 'function') {
+    return rawDate.toDate();
+  }
+
+  if (rawDate?.seconds) {
+    return new Date(rawDate.seconds * 1000);
+  }
+
+  const parsed = new Date(rawDate);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
 export default function ReportesDashboard({ sales, issuers }) {
   // Procesar datos para el mes actual y el día de hoy
   const { currentMonthTotal, currentMonthIVA, salesByIssuer, topProducts, todayTotal, todayEfectivo, todayTransferencia, monthEfectivo, monthTransferencia, todayTransferDetails, monthTransferDetails } = useMemo(() => {
@@ -23,11 +45,8 @@ export default function ReportesDashboard({ sales, issuers }) {
     const currentDate = now.getDate();
 
     sales.forEach(sale => {
-      // Parsear fecha (Firestore Timestamp o Date o String ISO)
-      const rawDate = sale.date || sale.fechaTransaccion;
-      if (!rawDate) return; // Saltar si no tiene ninguna de las dos
-
-      const saleDate = rawDate.toDate ? rawDate.toDate() : new Date(rawDate);
+      const saleDate = parseSaleDate(sale);
+      if (!saleDate) return; // Saltar si no tiene ninguna fecha válida
       const isCurrentMonth = saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
       const isToday = isCurrentMonth && saleDate.getDate() === currentDate;
 
@@ -148,8 +167,8 @@ export default function ReportesDashboard({ sales, issuers }) {
         currentEmisor = emisorNombre;
       }
 
-      const saleDate = (sale.date || sale.fechaTransaccion)?.toDate ? sale.date.toDate() : new Date((sale.date || sale.fechaTransaccion));
-      const fechaFormat = saleDate.toLocaleDateString('es-EC'); // dd/mm/yyyy
+      const saleDate = parseSaleDate(sale);
+      const fechaFormat = saleDate ? saleDate.toLocaleDateString('es-EC') : 'Sin fecha';
       
       const rucEmisor = issuer.ruc || sale.issuerId;
       
@@ -284,8 +303,16 @@ export default function ReportesDashboard({ sales, issuers }) {
                 </tr>
               </thead>
               <tbody>
-                {sales.filter(s => (s.estadoSri || s.status) !== 'NOTA_DE_VENTA').sort((a,b) => new Date((b.date || b.fechaTransaccion)?.toDate ? b.date.toDate() : (b.date || b.fechaTransaccion)) - new Date((a.date || a.fechaTransaccion)?.toDate ? a.date.toDate() : (a.date || a.fechaTransaccion))).map((sale, idx) => {
-                  const saleDate = (sale.date || sale.fechaTransaccion)?.toDate ? sale.date.toDate() : new Date((sale.date || sale.fechaTransaccion));
+                {sales.filter(s => (s.estadoSri || s.status) !== 'NOTA_DE_VENTA').sort((a, b) => {
+                  const dateA = parseSaleDate(a);
+                  const dateB = parseSaleDate(b);
+                  if (!dateA && !dateB) return 0;
+                  if (!dateA) return 1;
+                  if (!dateB) return -1;
+                  return dateB - dateA;
+                }).map((sale, idx) => {
+                  const saleDate = parseSaleDate(sale);
+                  if (!saleDate) return <tr key={idx}><td colSpan="15" style={{textAlign: 'center', color: 'var(--text-muted)'}}>Sin fecha</td></tr>;
                   const isAutorizado = (sale.estadoSri || sale.status) === 'AUTORIZADO';
                   const issuer = issuers?.find(i => i.id === sale.issuerId) || {};
                   
@@ -364,8 +391,16 @@ export default function ReportesDashboard({ sales, issuers }) {
                 </tr>
               </thead>
               <tbody>
-                {sales.filter(s => (s.estadoSri || s.status) === 'NOTA_DE_VENTA').sort((a,b) => new Date((b.date || b.fechaTransaccion)?.toDate ? b.date.toDate() : (b.date || b.fechaTransaccion)) - new Date((a.date || a.fechaTransaccion)?.toDate ? a.date.toDate() : (a.date || a.fechaTransaccion))).map((sale, idx) => {
-                  const saleDate = (sale.date || sale.fechaTransaccion)?.toDate ? sale.date.toDate() : new Date((sale.date || sale.fechaTransaccion));
+                {sales.filter(s => (s.estadoSri || s.status) === 'NOTA_DE_VENTA').sort((a, b) => {
+                  const dateA = parseSaleDate(a);
+                  const dateB = parseSaleDate(b);
+                  if (!dateA && !dateB) return 0;
+                  if (!dateA) return 1;
+                  if (!dateB) return -1;
+                  return dateB - dateA;
+                }).map((sale, idx) => {
+                  const saleDate = parseSaleDate(sale);
+                  if (!saleDate) return <tr key={idx}><td colSpan="15" style={{textAlign: 'center', color: 'var(--text-muted)'}}>Sin fecha</td></tr>;
                   const issuer = issuers?.find(i => i.id === sale.issuerId) || {};
                   
                   return (
@@ -528,8 +563,16 @@ export default function ReportesDashboard({ sales, issuers }) {
                 </tr>
               </thead>
               <tbody>
-                {sales.sort((a,b) => new Date((b.date || b.fechaTransaccion)?.toDate ? b.date.toDate() : (b.date || b.fechaTransaccion)) - new Date((a.date || a.fechaTransaccion)?.toDate ? a.date.toDate() : (a.date || a.fechaTransaccion))).map((sale, idx) => {
-                  const saleDate = (sale.date || sale.fechaTransaccion)?.toDate ? sale.date.toDate() : new Date((sale.date || sale.fechaTransaccion));
+                {sales.sort((a, b) => {
+                  const dateA = parseSaleDate(a);
+                  const dateB = parseSaleDate(b);
+                  if (!dateA && !dateB) return 0;
+                  if (!dateA) return 1;
+                  if (!dateB) return -1;
+                  return dateB - dateA;
+                }).map((sale, idx) => {
+                  const saleDate = parseSaleDate(sale);
+                  if (!saleDate) return <tr key={idx}><td colSpan="15" style={{textAlign: 'center', color: 'var(--text-muted)'}}>Sin fecha</td></tr>;
                   const itemsQty = (sale.productos || sale.items || []) ? (sale.productos || sale.items || []).reduce((acc, item) => acc + item.qty, 0) : 0;
                   return (
                     <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'middle' }}>
