@@ -78,12 +78,12 @@ export default function FacturasSRI() {
           <p>COMPROBANTE: ${venta.numeroComprobante || 'N/A'}</p>
         </div>
         <div class="divider"></div>
-        <p>CLIENTE: ${venta.customer?.nombre}</p>
-        <p>CI/RUC: ${venta.customer?.numeroIdentificacion}</p>
+        <p>CLIENTE: ${(venta.cliente || venta.customer)?.nombre}</p>
+        <p>CI/RUC: ${(venta.cliente || venta.customer)?.numeroIdentificacion}</p>
         <p>FECHA: ${new Date(venta.date?.seconds * 1000 || venta.date).toLocaleString()}</p>
         <div class="divider"></div>
         <table>
-          ${venta.items.map(i => `<tr><td>${i.qty}x ${i.name.substring(0, 15)}</td><td style="text-align:right">$${(i.price * i.qty).toFixed(2)}</td></tr>`).join('')}
+          ${(venta.productos || venta.items || []).map(i => `<tr><td>${i.qty}x ${i.name.substring(0, 15)}</td><td style="text-align:right">$${(i.price * i.qty).toFixed(2)}</td></tr>`).join('')}
         </table>
         <div class="divider"></div>
         <p style="margin: 2px 0;"><b>PAGO:</b> ${venta.paymentMethod || 'EFECTIVO'}</p>
