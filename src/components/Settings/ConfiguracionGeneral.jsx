@@ -765,9 +765,24 @@ export default function ConfiguracionGeneral() {
                 style={{ width: '100%', padding: '12px', background: 'var(--input-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', borderRadius: '8px' }}
               >
                 <option value="sistema">Impresión de Sistema (HTML/Dialog)</option>
-                <option value="bluetooth">Impresión Bluetooth BLE</option>
+                <option value="bluetooth">Bluetooth Clásico SPP (Vía RawBT)</option>
               </select>
             </div>
+
+            {printMethod === 'bluetooth' && (
+              <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid var(--accent)', padding: '1rem', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+                <strong style={{ color: 'var(--accent)', display: 'block', marginBottom: '0.5rem' }}>ℹ️ Requisito para Bluetooth Clásico (Impresoras 58mm genéricas)</strong>
+                Al ser una aplicación Web/PWA, no podemos acceder al Bluetooth Clásico (SPP) directamente por seguridad del navegador. 
+                Para imprimir en tu tablet, debes descargar la app gratuita <strong>RawBT</strong> desde la Play Store.
+                <br/><br/>
+                <strong>Pasos:</strong>
+                <ol style={{ paddingLeft: '1.2rem', marginTop: '0.5rem' }}>
+                  <li>Empareja tu impresora (ej. CRM-03) en los Ajustes de Bluetooth de Android.</li>
+                  <li>Abre la app RawBT y selecciona tu impresora.</li>
+                  <li>Usa el botón de abajo para imprimir. El POS se conectará automáticamente a RawBT para enviar el ticket.</li>
+                </ol>
+              </div>
+            )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center' }}>
               <button 
@@ -793,19 +808,37 @@ export default function ConfiguracionGeneral() {
 
               <button 
                 onClick={() => {
-                  import('../../utils/printTicket').then(module => {
-                    module.imprimirTicket(
-                      { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001' }, 
-                      [{ name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
-                      { subtotal: 25.00, ivaAmount: 0, total: 25.00 }, 
-                      { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
-                      '1234567890', 
-                      'EFECTIVO', 
-                      null, 
-                      false, 
-                      '58mm'
-                    );
-                  });
+                  if (printMethod === 'bluetooth') {
+                    import('../../utils/escposPrinter').then(module => {
+                      module.imprimirTicketBluetooth58mm(
+                        { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001' }, 
+                        { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
+                        [{ name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
+                        25.00, 
+                        0, 
+                        25.00, 
+                        null
+                      ).then(() => {
+                        alert("Comandos enviados a RawBT exitosamente.");
+                      }).catch(err => {
+                        alert("Error: " + err.message);
+                      });
+                    });
+                  } else {
+                    import('../../utils/printTicket').then(module => {
+                      module.imprimirTicket(
+                        { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001' }, 
+                        [{ name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
+                        { subtotal: 25.00, ivaAmount: 0, total: 25.00 }, 
+                        { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
+                        '1234567890', 
+                        'EFECTIVO', 
+                        null, 
+                        false, 
+                        '58mm'
+                      );
+                    });
+                  }
                 }}
                 className="btn-primary"
                 style={{ padding: '12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}

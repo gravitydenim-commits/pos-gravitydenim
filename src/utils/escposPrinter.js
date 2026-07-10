@@ -1,5 +1,6 @@
-// Bluetooth ESC/POS Printer Utility para 58mm
-// Usa la Web Bluetooth API (Solo funciona en Chrome/Edge en Android, Windows, Mac)
+// Bluetooth ESC/POS Printer Utility para 58mm usando puente RawBT (Classic Bluetooth SPP)
+// En lugar de usar navigator.bluetooth (que solo soporta BLE), usamos el estándar
+// de la industria para web POS: conectarnos al WebSocket de la app RawBT.
 
 // Comandos ESC/POS básicos
 const ESC = 0x1B;
@@ -7,67 +8,18 @@ const GS = 0x1D;
 
 export async function imprimirTicketBluetooth58mm(issuerData, clientData, cartItems, subtotal, ivaTotal, grandTotal, comprobante) {
   try {
-    console.log("Iniciando conexión Bluetooth...");
+    console.log("Iniciando conexión a RawBT (Classic Bluetooth)...");
     
-    // UUIDs comunes para impresoras térmicas genéricas (CRM-03, PT-210, etc.)
-    const commonServices = [
-      '000018f0-0000-1000-8000-00805f9b34fb', 
-      'e7810a71-73ae-499d-8c15-faa9aef0c3f2', 
-      '0000fee7-0000-1000-8000-00805f9b34fb',
-      '49535343-fe7d-4ae5-8fa9-9fafd205e455', // Frecuente en CRM-03
-      '0000ff00-0000-1000-8000-00805f9b34fb'
-    ];
-
-    // 1. Solicitar dispositivo Bluetooth
-    const device = await navigator.bluetooth.requestDevice({
-      filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }],
-      optionalServices: [...commonServices, '0000180a-0000-1000-8000-00805f9b34fb'] 
-    }).catch(err => {
-      // Si falla con filtros, probar modo libre (algunas genéricas no anuncian el servicio 18f0 bien)
-      console.warn("Fallo con filtros, intentando sin filtros de servicio...", err);
-      return navigator.bluetooth.requestDevice({
-        acceptAllDevices: true,
-        optionalServices: commonServices
-      });
-    });
-
-    console.log("Dispositivo seleccionado:", device.name);
-
-    // 2. Conectar al GATT Server
-    const server = await device.gatt.connect();
-    
-    // 3. Obtener el servicio primario (intentar genéricos)
-    let service;
-    const services = await server.getPrimaryServices();
-    if (services.length === 0) {
-      throw new Error("La impresora no expone servicios GATT.");
-    }
-    
-    // Buscar un servicio conocido de impresión
-    service = services.find(s => commonServices.includes(s.uuid)) || services[0];
-
-    console.log("Servicio usado:", service.uuid);
-
-    // 4. Obtener la característica de escritura
-    let characteristic;
-    const characteristics = await service.getCharacteristics();
-    for (const char of characteristics) {
-      if (char.properties.write || char.properties.writeWithoutResponse) {
-        characteristic = char;
-        break;
-      }
-    }
-
-    if (!characteristic) {
-      throw new Error("No se encontró una característica de escritura en la impresora Bluetooth.");
-    }
-
-    // 5. Construir comandos ESC/POS
+    // 1. Construir comandos ESC/POS
     let data = [];
     const encoder = new TextEncoder();
     
     const send = (bytes) => {
-      bytes.forEach(b => data.push(b));
+      if (Array.isArray(bytes)) {
+        bytes.forEach(b => data.push(b));
+      } else {
+        data.push(bytes);
+      }
     };
 
     const sendText = (str) => {
@@ -85,7 +37,7 @@ export async function imprimirTicketBluetooth58mm(issuerData, clientData, cartIt
     
     // Nombre Empresa (Grande)
     send([ESC, 0x21, 0x30]); // Doble alto y ancho
-    sendText(`${issuerData.razonSocial || 'Mi Empresa'}\n`);
+    sendText(`${issuerData.razonSocial || issuerData.name || 'Mi Empresa'}\n`);
     send([ESC, 0x21, 0x00]); // Normal
     
     if (issuerData.nombreComercial && issuerData.nombreComercial !== issuerData.razonSocial) {
@@ -93,7 +45,9 @@ export async function imprimirTicketBluetooth58mm(issuerData, clientData, cartIt
     }
 
     sendText(`RUC: ${issuerData.ruc}\n`);
-    sendText(`Dir: ${issuerData.direccionMatriz || 'S/N'}\n`);
+    if (issuerData.direccionMatriz || issuerData.address) {
+      sendText(`Dir: ${issuerData.direccionMatriz || issuerData.address}\n`);
+    }
     sendText(`--------------------------------\n`); // 32 chars max for 58mm
 
     // Alineación Izquierda
@@ -110,7 +64,7 @@ export async function imprimirTicketBluetooth58mm(issuerData, clientData, cartIt
       sendText(`Clave Acceso: ${comprobante.claveAcceso || 'S/N'}\n`);
     }
 
-    sendText(`Fecha: ${new Date().toLocaleString()}\n`);
+    sendText(`Fecha: ${new Date().toLocaleString('es-EC')}\n`);
     sendText(`--------------------------------\n`);
     sendText(`Cliente: ${clientData.nombre || 'Consumidor Final'}\n`);
     sendText(`RUC/CI: ${clientData.numeroIdentificacion || '9999999999999'}\n`);
@@ -149,23 +103,40 @@ export async function imprimirTicketBluetooth58mm(issuerData, clientData, cartIt
     // Cortar papel
     send([GS, 0x56, 0x41, 0x00]); 
 
-    // 6. Dividir en chunks de 100 bytes y enviar
-    const CHUNK_SIZE = 100;
-    for (let i = 0; i < data.length; i += CHUNK_SIZE) {
-      const chunk = new Uint8Array(data.slice(i, i + CHUNK_SIZE));
-      if (characteristic.properties.writeWithoutResponse) {
-        await characteristic.writeValueWithoutResponse(chunk);
-      } else {
-        await characteristic.writeValue(chunk);
-      }
-      await new Promise(r => setTimeout(r, 50)); 
-    }
+    // Convertir a ArrayBuffer
+    const payload = new Uint8Array(data).buffer;
 
-    console.log("Impresión finalizada con éxito.");
-    return true;
+    // 2. Enviar comandos a RawBT vía WebSocket
+    return new Promise((resolve, reject) => {
+      // RawBT expone un WebSocket local en el puerto 40213
+      const socket = new WebSocket('ws://127.0.0.1:40213/');
+      
+      const timeout = setTimeout(() => {
+        if (socket.readyState !== WebSocket.OPEN) {
+          socket.close();
+          reject(new Error("No se pudo conectar a RawBT. Asegúrate de tener la app abierta."));
+        }
+      }, 5000);
+
+      socket.onopen = () => {
+        clearTimeout(timeout);
+        console.log("WebSocket a RawBT abierto. Enviando comandos...");
+        socket.send(payload);
+        setTimeout(() => {
+          socket.close();
+          resolve(true);
+        }, 500); // Darle tiempo para enviar antes de cerrar
+      };
+
+      socket.onerror = (err) => {
+        clearTimeout(timeout);
+        console.error("Error WebSocket RawBT:", err);
+        reject(new Error("No se detecta la app RawBT en esta tablet. Por favor, instálala desde la Play Store para imprimir por Bluetooth Clásico."));
+      };
+    });
 
   } catch (error) {
-    console.error("Error en impresión Bluetooth:", error);
+    console.error("Error en impresión Bluetooth (RawBT):", error);
     throw error;
   }
 }
