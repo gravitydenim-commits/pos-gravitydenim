@@ -14,7 +14,7 @@ import { usePermissions } from './hooks/usePermissions';
 import { LayoutDashboard, Receipt, PackagePlus, Settings, LogOut, Loader2, Package, Users, AlertTriangle, Truck, Moon, Sun, Shield } from 'lucide-react';
 import { auth, db } from './firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { collection, onSnapshot, addDoc, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, doc, setDoc, deleteDoc, query, where } from 'firebase/firestore';
 import './index.css';
 
 const ADMIN_UID = 'AHo5ztrPExZndYJPIr1aByebMsN2';
@@ -90,7 +90,10 @@ function App() {
       }
 
       if (isAdmin || hasPermission('caja', 'ver')) {
-        unsubVentas = onSnapshot(collection(db, 'ventas'), (snapshot) => {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const qVentas = query(collection(db, 'ventas'), where('fechaTransaccion', '>=', thirtyDaysAgo.toISOString()));
+        unsubVentas = onSnapshot(qVentas, (snapshot) => {
           const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
           setSalesDB(data);
         }, (err) => console.error(`ERROR EN [ventas] (uid=${currentUser.uid}, rol=${userRole}):`, err));

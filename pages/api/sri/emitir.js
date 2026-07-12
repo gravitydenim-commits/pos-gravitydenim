@@ -358,6 +358,10 @@ export default async function handler(req, res) {
 
     await batch.commit();
 
+    if (internalCrash) {
+      return res.status(500).json({ error: errorTecnico || 'Error fatal en la generación de la factura.' });
+    }
+
     if (sriTimeout) {
       return res.status(200).json({ 
         success: false, 
