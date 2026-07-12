@@ -57,7 +57,24 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
 
   const handleCustomerChange = (e) => {
     const { name, value } = e.target;
-    setCustomer(prev => ({ ...prev, [name]: value }));
+    
+    let tipoDoc = customer.tipoDocumento;
+    if (name === 'numeroIdentificacion') {
+      const val = value.trim();
+      if (val === '9999999999999' || val === '9999999999') {
+         tipoDoc = 'CONSUMIDOR_FINAL';
+      } else if (val.length === 13 && val !== '9999999999999') {
+         tipoDoc = 'RUC';
+      } else if (val.length === 10 && val !== '9999999999') {
+         tipoDoc = 'CEDULA';
+      }
+    }
+
+    setCustomer(prev => ({ 
+      ...prev, 
+      [name]: value,
+      ...(name === 'numeroIdentificacion' ? { tipoDocumento: tipoDoc } : {})
+    }));
   };
 
   const handleDocumentTypeChange = (e) => {
@@ -237,6 +254,23 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       return;
     }
 
+    if (!isNotaVenta) {
+      const ci = customer.numeroIdentificacion.trim();
+      const tipo = customer.tipoDocumento;
+      if (tipo === 'CEDULA' && ci.length !== 10 && ci !== '9999999999') {
+        alert("⚠️ EL NÚMERO DE CÉDULA DEBE TENER EXACTAMENTE 10 DÍGITOS.\n\nPara RUCs (13 dígitos) cambia el tipo de documento a RUC.");
+        return;
+      }
+      if (tipo === 'RUC' && ci.length !== 13 && ci !== '9999999999999') {
+        alert("⚠️ EL RUC DEBE TENER EXACTAMENTE 13 DÍGITOS.");
+        return;
+      }
+      if (tipo === 'CONSUMIDOR_FINAL' && ci !== '9999999999999' && ci !== '9999999999') {
+        alert("⚠️ PARA CONSUMIDOR FINAL EL NÚMERO DEBE SER 9999999999999.");
+        return;
+      }
+    }
+
     setCheckoutWithPrint(withPrint);
     setShowPreviewModal(true);
   };
@@ -319,7 +353,9 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       const estadoFactura = sriData.estado;
       
       if (!response.ok) {
-         throw new Error(sriData.error || sriData.message || 'Error en el servidor al procesar la venta.');
+         const errorMsg = sriData.error || sriData.message || 'Error en el servidor al procesar la venta.';
+         alert(`❌ ERROR DE EMISIÓN:\n\n${errorMsg}\n\nPor favor, corrige el error e intenta cobrar nuevamente.`);
+         throw new Error(errorMsg);
       }
 
       if (estadoFactura === 'CONTINGENCIA_LOCAL') {

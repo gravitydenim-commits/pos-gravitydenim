@@ -149,19 +149,6 @@ export default async function handler(req, res) {
     const secStr = String(nextSecuencial).padStart(9, '0');
     const numeroComprobanteCompleto = isNotaVenta ? 'S/N' : `${estab}-${ptoEmi}-${secStr}`;
 
-    let tipoDocSaneado = cliente.tipoDocumento;
-    const docLength = (cliente.numeroIdentificacion || '').trim().length;
-    
-    if (cliente.numeroIdentificacion === '9999999999999' || cliente.numeroIdentificacion === '9999999999') {
-      tipoDocSaneado = 'CONSUMIDOR_FINAL';
-    } else if (docLength === 13) {
-      tipoDocSaneado = 'RUC';
-    } else if (docLength === 10) {
-      tipoDocSaneado = 'CEDULA';
-    }
-
-    const tipoIdentificacionSri = tipoDocSaneado === 'CEDULA' ? '05' : tipoDocSaneado === 'RUC' ? '04' : tipoDocSaneado === 'CONSUMIDOR_FINAL' ? '07' : '06';
-
     const invoiceData = {
       infoTributaria: {
         ambiente: 1,
@@ -180,7 +167,7 @@ export default async function handler(req, res) {
         fechaEmision: new Date().toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' }),
         dirEstablecimiento: emisor.direccionEstablecimiento || emisor.direccionMatriz,
         obligadoContabilidad: emisor.obligadoContabilidad ? 'SI' : 'NO',
-        tipoIdentificacionComprador: tipoIdentificacionSri,
+        tipoIdentificacionComprador: cliente.tipoDocumento === 'CEDULA' ? '05' : cliente.tipoDocumento === 'RUC' ? '04' : cliente.tipoDocumento === 'CONSUMIDOR_FINAL' ? '07' : '06',
         razonSocialComprador: cliente.nombre,
         identificacionComprador: cliente.numeroIdentificacion,
         direccionComprador: cliente.direccion || 'S/N',
