@@ -233,6 +233,33 @@ export default async function handler(req, res) {
         // Asignar clave generada para que no quede como FAIL-... si hay error después
         invoiceData.infoTributaria.claveAcceso = claveAccesoGenerada;
 
+        // --- DIAGNÓSTICO P12 SOLICITADO ---
+        console.log(`--- INICIO DIAGNÓSTICO P12 ---`);
+        console.log(`Tamaño del archivo P12 recibido: ${p12Buffer ? p12Buffer.length : 'UNDEFINED'} bytes`);
+        if (p12Buffer) {
+           try {
+              const forge = require('node-forge');
+              const p12Asn1 = forge.asn1.fromDer(p12Buffer.toString('binary'));
+              console.log('El archivo P12 se parseó correctamente como estructura ASN1 (binario válido).');
+              
+              const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, false, p12Password);
+              console.log('La contraseña ABRIÓ el certificado correctamente.');
+              
+              const safeBags = p12.safeContents.map(c => c.safeBags).flat();
+              console.log('Bolsas (Bags) de seguridad encontradas:', safeBags.length);
+              
+              const aliases = safeBags
+                  .map(bag => bag.attributes && bag.attributes.friendlyName ? bag.attributes.friendlyName[0] : null)
+                  .filter(Boolean);
+              console.log('Alias encontrados dentro del P12:', aliases);
+
+           } catch (diagErr) {
+              console.error('ERROR AL ABRIR EL CERTIFICADO DURANTE EL DIAGNÓSTICO (Posible clave incorrecta o archivo corrupto):', diagErr.message);
+              console.error('Stack trace del error de apertura del P12:', diagErr.stack);
+           }
+        }
+        console.log(`--- FIN DIAGNÓSTICO P12 ---`);
+
         // 8.2 Firmar XML (CPU Local)
         signedXml = await signXml({
           p12Buffer: p12Buffer,
