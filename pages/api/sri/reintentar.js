@@ -64,6 +64,8 @@ export default async function handler(req, res) {
 
     try {
       await validateXml({ env: sriEnv, xml: Buffer.from(ventaData.xmlFirmado, 'utf8') });
+      // El SRI a veces toma 1-2 segundos en procesar el XML encolado antes de autorizarlo.
+      await new Promise(r => setTimeout(r, 2500));
       authResult = await authorizeXml({ claveAcceso, env: sriEnv });
     } catch (e) {
       console.error("Error técnico contactando al SRI en REINTENTO:", e);
@@ -79,19 +81,22 @@ export default async function handler(req, res) {
 
     let estadoFinalSri = 'EN_PROCESO';
     if (authResult) {
-      estadoFinalSri = authResult.estado; 
+      estadoFinalSri = authResult.estado || 'PENDIENTE_ENVIO'; 
     } else if (sriTimeout) {
       estadoFinalSri = 'PENDIENTE_ENVIO'; // Se mantiene pendiente
     }
 
+    const safeAuthResult = authResult ? JSON.parse(JSON.stringify(authResult)) : null;
+    const safeErrorTecnico = errorTecnico ? JSON.parse(JSON.stringify(errorTecnico)) : null;
+
     // Actualizar el documento original
     await ventaRef.update({
-      estadoSri: estadoFinalSri,
-      numeroAutorizacion: (authResult && authResult.numeroAutorizacion) ? authResult.numeroAutorizacion : ventaData.numeroAutorizacion,
-      fechaAutorizacion: (authResult && authResult.fechaAutorizacion) ? authResult.fechaAutorizacion : ventaData.fechaAutorizacion,
-      mensajesSri: (authResult && authResult.mensajes) ? authResult.mensajes : ventaData.mensajesSri,
-      xmlAutorizado: (authResult && (authResult.comprobante || authResult.xmlAutorizado)) ? (authResult.comprobante || authResult.xmlAutorizado) : ventaData.xmlAutorizado,
-      sriRawResponse: authResult || errorTecnico,
+      estadoSri: estadoFinalSri || 'PENDIENTE_ENVIO',
+      numeroAutorizacion: (authResult && authResult.numeroAutorizacion) ? authResult.numeroAutorizacion : (ventaData.numeroAutorizacion || null),
+      fechaAutorizacion: (authResult && authResult.fechaAutorizacion) ? authResult.fechaAutorizacion : (ventaData.fechaAutorizacion || null),
+      mensajesSri: (authResult && authResult.mensajes) ? authResult.mensajes : (ventaData.mensajesSri || []),
+      xmlAutorizado: (authResult && (authResult.comprobante || authResult.xmlAutorizado)) ? (authResult.comprobante || authResult.xmlAutorizado) : (ventaData.xmlAutorizado || null),
+      sriRawResponse: safeAuthResult || safeErrorTecnico || {},
       ultimoReintento: new Date().toISOString()
     });
 
@@ -107,7 +112,7 @@ export default async function handler(req, res) {
       xmlFirmado: ventaData.xmlFirmado,
       estadoLocal: sriTimeout ? 'TIMEOUT_REINTENTO' : 'PROCESADO',
       estadoSri: estadoFinalSri,
-      respuestaSri: authResult || null,
+      respuestaSri: safeAuthResult,
       errorTecnico: errorTecnico || null,
       esReintento: true,
       claveOriginal: claveAcceso

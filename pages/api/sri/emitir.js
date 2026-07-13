@@ -112,10 +112,10 @@ export default async function handler(req, res) {
           impuesto: [
             {
               codigo: 2, // IVA
-              codigoPorcentaje: 2, // 12%
-              tarifa: 12.00,
+              codigoPorcentaje: 4, // 15%
+              tarifa: 15.00,
               baseImponible: precioTotalSinImpuesto,
-              valor: round2(precioTotalSinImpuesto * 0.12)
+              valor: round2(precioTotalSinImpuesto * 0.15)
             }
           ]
         }
@@ -123,7 +123,7 @@ export default async function handler(req, res) {
     });
 
     subtotalSinImpuestos = round2(subtotalSinImpuestos);
-    const valorIva = round2(subtotalSinImpuestos * 0.12);
+    const valorIva = round2(subtotalSinImpuestos * 0.15);
     const importeTotal = round2(subtotalSinImpuestos + valorIva);
 
     const estab = emisor.establecimiento || '001';
@@ -182,7 +182,7 @@ export default async function handler(req, res) {
           totalImpuesto: [
             {
               codigo: 2,
-              codigoPorcentaje: 2,
+              codigoPorcentaje: 4,
               baseImponible: subtotalSinImpuestos,
               valor: valorIva
             }
@@ -375,9 +375,9 @@ export default async function handler(req, res) {
       mensajesSri: (authResult && authResult.mensajes) ? authResult.mensajes : [],
       xmlFirmado: signedXml || xmlUnsigned,
       xmlAutorizado: (authResult && (authResult.comprobante || authResult.xmlAutorizado)) ? (authResult.comprobante || authResult.xmlAutorizado) : null,
-      sriRawResponse: authResult || errorTecnico, 
+      sriRawResponse: JSON.parse(JSON.stringify(authResult || errorTecnico || {})), 
       fechaTransaccion: new Date().toISOString(),
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: new Date().toISOString(),
       cajeroUid: decodedToken.uid,
       transactionId: transactionId,
       isNotaVenta: isNotaVenta
