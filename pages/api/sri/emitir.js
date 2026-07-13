@@ -343,59 +343,60 @@ export default async function handler(req, res) {
     const logRef = adminDb.collection('sri_logs').doc(finalClaveAcceso);
     batch.set(logRef, logData);
 
-    // 10. Actualizar Venta y Stock en Firestore SOLO SI HAY RESPUESTA DEFINITIVA O ES NOTA DE VENTA
-    const estadosDefinitivos = ['AUTORIZADO', 'RECHAZADO', 'DEVUELTA', 'NOTA_DE_VENTA'];
-    const esDefinitiva = estadosDefinitivos.includes(estadoFinalSri);
+    // 10. Actualizar Venta y Stock en Firestore (SIEMPRE se guarda la venta aunque el SRI falle)
+    let estadoSRIFinal = estadoFinalSri;
+    if (sriTimeout) estadoSRIFinal = 'PENDIENTE_ENVIO';
+    if (internalCrash) estadoSRIFinal = 'ERROR_INTERNO';
 
-    if (esDefinitiva) {
-      const comprobanteData = {
-        cliente,
-        productos,
-        subtotalSinImpuestos,
-        valorIva,
-        importeTotal,
-        formaPago,
-        paymentMethod: req.body.transferRecipient ? 'TRANSFERENCIA' : 'EFECTIVO',
-        transferRecipient: req.body.transferRecipient || null,
-        totals: {
-          subtotal: subtotalSinImpuestos,
-          ivaAmount: valorIva,
-          total: importeTotal
-        },
-        emisorId,
-        numeroComprobante: isNotaVenta ? 'S/N' : numeroComprobanteCompleto,
-        establecimiento: estab,
-        puntoEmision: ptoEmi,
-        secuencial: isNotaVenta ? 'S/N' : secStr,
-        claveAcceso: finalClaveAcceso,
-        estadoSri: estadoFinalSri, 
-        numeroAutorizacion: (authResult && authResult.numeroAutorizacion) ? authResult.numeroAutorizacion : null,
-        fechaAutorizacion: (authResult && authResult.fechaAutorizacion) ? authResult.fechaAutorizacion : null,
-        mensajesSri: (authResult && authResult.mensajes) ? authResult.mensajes : [],
-        xmlFirmado: signedXml,
-        xmlAutorizado: (authResult && (authResult.comprobante || authResult.xmlAutorizado)) ? (authResult.comprobante || authResult.xmlAutorizado) : null,
-        sriRawResponse: authResult || errorTecnico, 
-        fechaTransaccion: new Date().toISOString(),
-        cajeroUid: decodedToken.uid,
-        transactionId: transactionId,
-        isNotaVenta: isNotaVenta
-      };
+    const comprobanteData = {
+      cliente,
+      productos,
+      subtotalSinImpuestos,
+      valorIva,
+      importeTotal,
+      formaPago,
+      paymentMethod: req.body.transferRecipient ? 'TRANSFERENCIA' : 'EFECTIVO',
+      transferRecipient: req.body.transferRecipient || null,
+      totals: {
+        subtotal: subtotalSinImpuestos,
+        ivaAmount: valorIva,
+        total: importeTotal
+      },
+      emisorId,
+      numeroComprobante: isNotaVenta ? 'S/N' : numeroComprobanteCompleto,
+      establecimiento: estab,
+      puntoEmision: ptoEmi,
+      secuencial: isNotaVenta ? 'S/N' : secStr,
+      claveAcceso: finalClaveAcceso,
+      estadoVenta: 'FINALIZADA',
+      estadoSri: estadoSRIFinal, 
+      numeroAutorizacion: (authResult && authResult.numeroAutorizacion) ? authResult.numeroAutorizacion : null,
+      fechaAutorizacion: (authResult && authResult.fechaAutorizacion) ? authResult.fechaAutorizacion : null,
+      mensajesSri: (authResult && authResult.mensajes) ? authResult.mensajes : [],
+      xmlFirmado: signedXml || xmlUnsigned,
+      xmlAutorizado: (authResult && (authResult.comprobante || authResult.xmlAutorizado)) ? (authResult.comprobante || authResult.xmlAutorizado) : null,
+      sriRawResponse: authResult || errorTecnico, 
+      fechaTransaccion: new Date().toISOString(),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      cajeroUid: decodedToken.uid,
+      transactionId: transactionId,
+      isNotaVenta: isNotaVenta
+    };
 
-      const nuevaVentaRef = adminDb.collection('ventas').doc(finalClaveAcceso);
-      batch.set(nuevaVentaRef, comprobanteData);
+    const nuevaVentaRef = adminDb.collection('ventas').doc(finalClaveAcceso);
+    batch.set(nuevaVentaRef, comprobanteData);
 
-      // REDUCCIÓN DE STOCK
-      for (const prod of productos) {
-        const prodId = prod.id || prod.codigo;
-        if (prodId && prodId !== 'CUSTOM_PRODUCT') {
-          const prodRef = adminDb.collection('productos').doc(prodId);
-          // Get the current stock first
-          const pDoc = await prodRef.get();
-          if (pDoc.exists) {
-            const currentStock = pDoc.data().stock || 0;
-            const newStock = Math.max(0, currentStock - (prod.cantidad || 1));
-            batch.update(prodRef, { stock: newStock });
-          }
+    // REDUCCIÓN DE STOCK (SIEMPRE SE DESCUENTA)
+    for (const prod of productos) {
+      const prodId = prod.id || prod.codigo;
+      if (prodId && prodId !== 'CUSTOM_PRODUCT') {
+        const prodRef = adminDb.collection('productos').doc(prodId);
+        // Get the current stock first
+        const pDoc = await prodRef.get();
+        if (pDoc.exists) {
+          const currentStock = pDoc.data().stock || 0;
+          const newStock = Math.max(0, currentStock - (prod.cantidad || 1));
+          batch.update(prodRef, { stock: newStock });
         }
       }
     }

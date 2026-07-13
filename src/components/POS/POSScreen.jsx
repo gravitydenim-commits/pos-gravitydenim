@@ -371,8 +371,8 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
          throw new Error(errorMsg);
       }
 
-      if (estadoFactura === 'CONTINGENCIA_LOCAL') {
-        alert(`⚠️ Sin conexión con el SRI. La factura se guardó internamente y se emitirá automáticamente cuando regrese el internet.\nClave temporal: ${claveAcceso}`);
+      if (estadoFactura === 'CONTINGENCIA_LOCAL' || estadoFactura === 'PENDIENTE_ENVIO') {
+        alert(`⚠️ Sin conexión o fallo temporal con el SRI. La venta se guardó localmente en estado PENDIENTE.\nPodrás reintentar el envío manualmente desde la pestaña de facturas pendientes.\nClave temporal: ${claveAcceso}`);
       } else if (estadoFactura === 'RECHAZADO') {
         throw new Error(sriData.error || sriData.message || 'La factura fue rechazada por el servidor SRI.');
       }
