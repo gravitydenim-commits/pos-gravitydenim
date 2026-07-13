@@ -133,11 +133,12 @@ async function runE2E() {
     }, null, 2));
     
     console.log('\n=== PRUEBA E2E COMPLETADA CON ÉXITO ===');
-    process.exit(0);
-    
   } catch(e) {
     console.error('\n❌ ERROR E2E:', e);
-    process.exit(1);
+    process.exitCode = 1;
+  } finally {
+    console.log('Limpiando recursos de Firebase Admin...');
+    await Promise.all(admin.apps.map(app => app.delete()));
   }
 }
 
