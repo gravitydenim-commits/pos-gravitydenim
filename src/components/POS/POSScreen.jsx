@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { ShoppingCart, Plus, Minus, Trash2, Tag, Shirt, UserCircle, Printer, CreditCard, User, Search, Loader2, ShoppingBag, Scissors, Package, Briefcase, Glasses, Watch, Gem } from 'lucide-react';
 import { db } from '../../firebase/config';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { validarCedula, validarRUC } from '../../utils/validators';
 
 // Los productos ahora vienen de Firebase/App.js como productsDB
 
@@ -257,13 +258,25 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     if (!isNotaVenta) {
       const ci = customer.numeroIdentificacion.trim();
       const tipo = customer.tipoDocumento;
-      if (tipo === 'CEDULA' && ci.length !== 10 && ci !== '9999999999') {
-        alert("⚠️ EL NÚMERO DE CÉDULA DEBE TENER EXACTAMENTE 10 DÍGITOS.\n\nPara RUCs (13 dígitos) cambia el tipo de documento a RUC.");
-        return;
+      if (tipo === 'CEDULA') {
+        if (ci.length !== 10 && ci !== '9999999999') {
+          alert("⚠️ EL NÚMERO DE CÉDULA DEBE TENER EXACTAMENTE 10 DÍGITOS.\n\nPara RUCs (13 dígitos) cambia el tipo de documento a RUC.");
+          return;
+        }
+        if (!validarCedula(ci)) {
+          alert("❌ LA CÉDULA INGRESADA ES INVÁLIDA.\n\nPor favor, verifica el número y vuelve a intentarlo.");
+          return;
+        }
       }
-      if (tipo === 'RUC' && ci.length !== 13 && ci !== '9999999999999') {
-        alert("⚠️ EL RUC DEBE TENER EXACTAMENTE 13 DÍGITOS.");
-        return;
+      if (tipo === 'RUC') {
+        if (ci.length !== 13 && ci !== '9999999999999') {
+          alert("⚠️ EL RUC DEBE TENER EXACTAMENTE 13 DÍGITOS.");
+          return;
+        }
+        if (!validarRUC(ci)) {
+          alert("❌ EL RUC INGRESADO ES INVÁLIDO.\n\nPor favor, verifica el número y vuelve a intentarlo.");
+          return;
+        }
       }
       if (tipo === 'CONSUMIDOR_FINAL' && ci !== '9999999999999' && ci !== '9999999999') {
         alert("⚠️ PARA CONSUMIDOR FINAL EL NÚMERO DEBE SER 9999999999999.");
