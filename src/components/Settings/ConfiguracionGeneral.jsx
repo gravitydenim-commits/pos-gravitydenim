@@ -83,6 +83,51 @@ export default function ConfiguracionGeneral() {
     return () => unsub();
   }, []);
 
+  // --- GESTIÓN DE PROPIETARIOS DE MERCADERÍA ---
+  const [ownersList, setOwnersList] = useState(['Edgar', 'Amparito', 'Junior']);
+  const [newOwnerName, setNewOwnerName] = useState('');
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'owners'), (docSnap) => {
+      if (docSnap.exists() && Array.isArray(docSnap.data().list)) {
+        setOwnersList(docSnap.data().list);
+      } else {
+        setDoc(doc(db, 'settings', 'owners'), { list: ['Edgar', 'Amparito', 'Junior'] }, { merge: true });
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const handleAddOwner = async () => {
+    const trimmed = newOwnerName.trim();
+    if (!trimmed) return;
+    if (ownersList.includes(trimmed)) {
+      alert("Este propietario ya existe.");
+      return;
+    }
+    const updated = [...ownersList, trimmed];
+    try {
+      await setDoc(doc(db, 'settings', 'owners'), { list: updated }, { merge: true });
+      setNewOwnerName('');
+      alert("Propietario agregado con éxito.");
+    } catch (e) {
+      console.error(e);
+      alert("Error al agregar propietario.");
+    }
+  };
+
+  const handleRemoveOwner = async (name) => {
+    if (!window.confirm(`¿Estás seguro de eliminar a ${name} de los propietarios?`)) return;
+    const updated = ownersList.filter(o => o !== name);
+    try {
+      await setDoc(doc(db, 'settings', 'owners'), { list: updated }, { merge: true });
+      alert("Propietario eliminado.");
+    } catch (e) {
+      console.error(e);
+      alert("Error al eliminar propietario.");
+    }
+  };
+
   const handleQRUpload = async (person, e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -861,6 +906,51 @@ export default function ConfiguracionGeneral() {
 
       </div>
 
+        {/* Propietarios de Mercadería */}
+        <div className="glass-panel" style={{ padding: '1.5rem', marginTop: '2rem', background: 'var(--panel-bg)', borderRadius: '12px', border: '1px solid var(--panel-border)' }}>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            👥 Propietarios de Mercadería / Socios
+          </h3>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '1rem', fontSize: '0.9rem' }}>
+            Agrega o elimina los dueños de prendas en el inventario. Al agregar un dueño aquí, aparecerá como opción en el POS, Inventario y Reportes.
+          </p>
+
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '1.5rem' }}>
+            <input 
+              type="text" 
+              placeholder="Nombre del nuevo dueño (Ej. Edgar)" 
+              value={newOwnerName} 
+              onChange={(e) => setNewOwnerName(e.target.value)} 
+              style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white' }}
+            />
+            <button 
+              onClick={handleAddOwner}
+              className="btn-primary" 
+              style={{ padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
+            >
+              ➕ Agregar Dueño
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+            {ownersList.map(name => (
+              <div 
+                key={name} 
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}
+              >
+                <span style={{ fontWeight: 'bold', color: 'white' }}>👤 {name}</span>
+                <button 
+                  onClick={() => handleRemoveOwner(name)}
+                  style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 'bold' }}
+                  title="Eliminar propietario"
+                >
+                  &times;
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Zona de Mantenimiento y Respaldo */}
         <div style={{ marginTop: '2rem', padding: '1.5rem', background: '#3f1f1f', borderRadius: '12px', border: '1px solid #7f1d1d' }}>
           <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#fca5a5', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -875,6 +965,8 @@ export default function ConfiguracionGeneral() {
             <button 
               onClick={async () => {
                 try {
+                  const { getAuth } = await import('firebase/auth');
+                  const auth = getAuth();
                   const token = await auth.currentUser.getIdToken();
                   const res = await fetch('/api/admin/backup', {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -903,6 +995,8 @@ export default function ConfiguracionGeneral() {
                 const conf = prompt('⚠️ PELIGRO ⚠️\nEsta acción eliminará todas las Ventas, Productos y Clientes de la base de datos (se conservarán las firmas electrónicas).\n\nEscribe la palabra BORRAR en mayúsculas para confirmar:');
                 if (conf === 'BORRAR') {
                   try {
+                    const { getAuth } = await import('firebase/auth');
+                    const auth = getAuth();
                     const token = await auth.currentUser.getIdToken();
                     const res = await fetch('/api/admin/reset', {
                       method: 'POST',

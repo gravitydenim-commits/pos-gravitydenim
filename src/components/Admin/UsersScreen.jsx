@@ -158,6 +158,14 @@ const UsersScreen = ({ modulesConfig, isSuperAdmin }) => {
 
   return (
     <div>
+      <style>{`
+        .cart-table th, .cart-table td {
+          padding: 14px 20px !important;
+          text-align: left;
+          vertical-align: middle;
+          white-space: nowrap;
+        }
+      `}</style>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <h2 style={{ margin: 0 }}>Gestión de Usuarios</h2>
         <button className="btn btn-primary" onClick={openNewUserModal} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

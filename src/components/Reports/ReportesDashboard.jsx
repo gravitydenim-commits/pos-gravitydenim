@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { BarChart3, TrendingUp, DollarSign, Percent, Package, Users, Activity, FileText, Download, FileType2, FileCode2 } from 'lucide-react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { BarChart3, TrendingUp, DollarSign, Percent, Package, Users, Activity, FileText, Download, FileType2, FileCode2, Printer } from 'lucide-react';
 import { generarFacturaA4 } from '../../utils/generadorA4';
 
 const parseSaleDate = (sale) => {
@@ -25,6 +25,94 @@ const parseSaleDate = (sale) => {
 };
 
 export default function ReportesDashboard({ sales, issuers }) {
+  const [filterDate, setFilterDate] = useState('');
+  const [filterClient, setFilterClient] = useState('');
+  const [filterInvoice, setFilterInvoice] = useState('');
+  const [filterSriState, setFilterSriState] = useState('');
+  const [selectedVenta, setSelectedVenta] = useState(null);
+
+  const filteredSales = useMemo(() => {
+    return sales.filter(sale => {
+      if (filterDate) {
+        const saleDate = parseSaleDate(sale);
+        if (!saleDate) return false;
+        const formattedSaleDate = saleDate.toISOString().split('T')[0];
+        if (formattedSaleDate !== filterDate) return false;
+      }
+      if (filterClient) {
+        const clientName = ((sale.cliente || sale.customer)?.nombre || '').toLowerCase();
+        if (!clientName.includes(filterClient.toLowerCase())) return false;
+      }
+      if (filterInvoice) {
+        const invoiceNum = (sale.numeroComprobante || sale.claveAcceso || sale.id || '').toLowerCase();
+        if (!invoiceNum.includes(filterInvoice.toLowerCase())) return false;
+      }
+      if (filterSriState) {
+        const sriState = (sale.estadoSri || sale.status || 'PENDIENTE_ENVIO').toUpperCase();
+        if (filterSriState === 'AUTORIZADO') {
+          if (sriState !== 'AUTORIZADO' && sriState !== 'AUTORIZADA') return false;
+        } else if (sriState !== filterSriState.toUpperCase()) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [sales, filterDate, filterClient, filterInvoice, filterSriState]);
+
+  const handleReimprimir = async (venta, format) => {
+    try {
+      const emisorId = venta.emisorId || venta.issuerId || 'hermano_geovanny';
+      const emisorData = issuers?.find(i => i.id === emisorId) || { 
+        razonSocial: venta.issuerName || "Edgar Geovanny Sanchez Ramirez",
+        name: venta.issuerName || "GRAVITY DENIM", 
+        ruc: "1803805405001",
+        direccionMatriz: "Av. maldonado y Quimiag"
+      };
+
+      const { imprimirTicket } = await import('../../utils/printTicket');
+      imprimirTicket(
+        emisorData,
+        venta.productos || venta.items || [],
+        venta.totals || { subtotal: venta.subtotal || 0, ivaAmount: venta.ivaAmount || 0, total: venta.total || 0 },
+        venta.cliente || venta.customer || { nombre: 'CONSUMIDOR FINAL', numeroIdentificacion: '9999999999999' },
+        venta.claveAcceso || venta.id,
+        venta.paymentMethod || 'EFECTIVO',
+        venta.transferRecipient,
+        venta.isNotaVenta || (venta.estadoSri === 'NOTA_DE_VENTA' || venta.status === 'NOTA_DE_VENTA'),
+        format,
+        true // isReprint = true
+      );
+    } catch (err) {
+      alert("Error al reimprimir: " + err.message);
+    }
+  };
+
+  const handleReimprimirClick = (venta) => {
+    const estado = venta.estadoSri || venta.status;
+    const isNota = (estado === 'NOTA_DE_VENTA');
+    if (!isNota && estado !== 'AUTORIZADO' && estado !== 'AUTORIZADA') {
+      alert(`⚠️ NO SE PUEDE REIMPRIMIR:\nEl comprobante no está autorizado por el SRI. Estado actual: ${estado || 'PENDIENTE'}`);
+      return;
+    }
+
+    const choice = window.prompt(
+      "Selecciona el formato de reimpresión:\n\n" +
+      "1 - Ticket Térmico de 58 mm\n" +
+      "2 - Ticket Térmico de 80 mm\n" +
+      "3 - Descargar PDF\n\n" +
+      "Ingresa el número de tu opción:",
+      "2"
+    );
+
+    if (choice === "1") {
+      handleReimprimir(venta, '58mm');
+    } else if (choice === "2") {
+      handleReimprimir(venta, '80mm');
+    } else if (choice === "3") {
+      window.open(`/api/sri/pdf?claveAcceso=${venta.claveAcceso || venta.id}`, '_blank');
+    }
+  };
+
   // Procesar datos para el mes actual y el día de hoy
   const { currentMonthTotal, currentMonthIVA, salesByIssuer, topProducts, todayTotal, todayEfectivo, todayTransferencia, monthEfectivo, monthTransferencia, todayTransferDetails, monthTransferDetails } = useMemo(() => {
     let currentMonthTotal = 0;
@@ -224,6 +312,14 @@ export default function ReportesDashboard({ sales, issuers }) {
 
   return (
     <div className="report-container animate-fade-in" style={{ padding: '2rem', height: '100%', overflowY: 'auto' }}>
+      <style>{`
+        .pos-table th, .pos-table td {
+          padding: 14px 18px !important;
+          text-align: left;
+          vertical-align: middle;
+          white-space: nowrap;
+        }
+      `}</style>
       <div className="header" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2><Activity className="inline" style={{verticalAlign: 'bottom'}}/> Dashboard de Reportes</h2>
@@ -237,10 +333,10 @@ export default function ReportesDashboard({ sales, issuers }) {
             Reportes SRI
           </button>
           <button 
-            onClick={() => setActiveTab('pendientes')}
-            style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: activeTab === 'pendientes' ? '#f59e0b' : 'transparent', border: '1px solid #f59e0b', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}
+            onClick={() => setActiveTab('cierre_hermano')}
+            style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: activeTab === 'cierre_hermano' ? '#f59e0b' : 'transparent', border: '1px solid #f59e0b', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}
           >
-            Facturas Pendientes
+            Cierre por Hermano
           </button>
           <button 
             onClick={() => setActiveTab('internos')}
@@ -288,7 +384,7 @@ export default function ReportesDashboard({ sales, issuers }) {
             <h3 style={{ color: 'var(--text-main)', margin: 0, fontSize: '1.2rem' }}>Reporte de ventas</h3>
           </div>
           
-          <div style={{ minWidth: '1000px' }}>
+          <div style={{ minWidth: '1500px' }}>
             <table className="pos-table" style={{ fontSize: '0.85rem' }}>
               <thead>
                 <tr style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)' }}>
@@ -379,7 +475,7 @@ export default function ReportesDashboard({ sales, issuers }) {
             <h3 style={{ color: 'var(--warning)', margin: 0, fontSize: '1.2rem' }}>Control Interno (Notas de Venta)</h3>
           </div>
           
-          <div style={{ minWidth: '1000px' }}>
+          <div style={{ minWidth: '1300px' }}>
             <table className="pos-table" style={{ fontSize: '0.85rem' }}>
               <thead>
                 <tr style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)' }}>
@@ -553,8 +649,39 @@ export default function ReportesDashboard({ sales, issuers }) {
               <Download size={16} /> Exportar Excel (CSV)
             </button>
           </div>
+
+          {/* Filtros de Reportes */}
+          <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginBottom: '1.5rem', background: 'rgba(0,0,0,0.2)', padding: '15px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Fecha:</label>
+              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white' }} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: '150px' }}>
+              <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Cliente:</label>
+              <input type="text" placeholder="Buscar cliente..." value={filterClient} onChange={(e) => setFilterClient(e.target.value)} style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white' }} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: '150px' }}>
+              <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No. Factura/ID:</label>
+              <input type="text" placeholder="Buscar número o clave..." value={filterInvoice} onChange={(e) => setFilterInvoice(e.target.value)} style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white' }} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Estado SRI:</label>
+              <select value={filterSriState} onChange={(e) => setFilterSriState(e.target.value)} style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white' }}>
+                <option value="">Todos</option>
+                <option value="AUTORIZADO">Autorizada</option>
+                <option value="PENDIENTE_ENVIO">Pendiente Envío</option>
+                <option value="RECHAZADA">Rechazada</option>
+                <option value="DEVUELTA">Devuelta</option>
+                <option value="NOTA_DE_VENTA">Nota de Venta</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+              <button onClick={() => { setFilterDate(''); setFilterClient(''); setFilterInvoice(''); setFilterSriState(''); }} style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer' }}>Limpiar Filtros</button>
+            </div>
+          </div>
+
           <div style={{ overflowX: 'auto' }}>
-            <table className="pos-table" style={{ minWidth: '800px' }}>
+            <table className="pos-table" style={{ minWidth: '950px' }}>
               <thead>
                 <tr>
                   <th>Fecha</th>
@@ -566,10 +693,11 @@ export default function ReportesDashboard({ sales, issuers }) {
                   <th>Método/Quién Cobró</th>
                   <th>Subtotal</th>
                   <th>Total</th>
+                  <th style={{ textAlign: 'right' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {sales.sort((a, b) => {
+                {filteredSales.sort((a, b) => {
                   const dateA = parseSaleDate(a);
                   const dateB = parseSaleDate(b);
                   if (!dateA && !dateB) return 0;
@@ -580,15 +708,18 @@ export default function ReportesDashboard({ sales, issuers }) {
                   const saleDate = parseSaleDate(sale);
                   if (!saleDate) return <tr key={idx}><td colSpan="15" style={{textAlign: 'center', color: 'var(--text-muted)'}}>Sin fecha</td></tr>;
                   const itemsQty = (sale.productos || sale.items || []) ? (sale.productos || sale.items || []).reduce((acc, item) => acc + item.qty, 0) : 0;
+                  const isNota = (sale.estadoSri === 'NOTA_DE_VENTA' || sale.status === 'NOTA_DE_VENTA');
+                  const isAutorizada = (sale.estadoSri === 'AUTORIZADO' || sale.estadoSri === 'AUTORIZADA' || sale.status === 'AUTORIZADO' || sale.status === 'AUTORIZADA');
+                  
                   return (
                     <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'middle' }}>
                       <td style={{ whiteSpace: 'nowrap' }}>{saleDate.toLocaleString('es-EC', { dateStyle: 'short', timeStyle: 'short' })}</td>
                       <td>
                         <span style={{ 
-                          background: (sale.estadoSri || sale.status) === 'NOTA_DE_VENTA' ? 'var(--warning)' : '#3b82f6', 
+                          background: isNota ? 'var(--warning)' : '#3b82f6', 
                           color: 'white', padding: '4px 8px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 'bold' 
                         }}>
-                          {(sale.estadoSri || sale.status) === 'NOTA_DE_VENTA' ? 'NOTA VENTA' : 'FACTURA SRI'}
+                          {isNota ? 'NOTA VENTA' : 'FACTURA SRI'}
                         </span>
                       </td>
                       <td>{sale.issuerName || sale.issuerId}</td>
@@ -616,12 +747,44 @@ export default function ReportesDashboard({ sales, issuers }) {
                       </td>
                       <td>${(sale.totals?.subtotal || 0).toFixed(2)}</td>
                       <td style={{ color: 'var(--success)', fontWeight: 'bold', fontSize: '1.1rem' }}>${(sale.totals?.total || 0).toFixed(2)}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                          <button 
+                            onClick={() => setSelectedVenta(sale)}
+                            style={{ padding: '6px 10px', background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.4)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                          >
+                            Ver
+                          </button>
+                          {(isAutorizada || isNota) ? (
+                            <>
+                              <button 
+                                onClick={() => handleReimprimirClick(sale)}
+                                style={{ padding: '6px 10px', background: 'rgba(255, 255, 255, 0.1)', color: 'white', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                              >
+                                Reimprimir
+                              </button>
+                              {!isNota && (
+                                <button 
+                                  onClick={() => window.open(`/api/sri/pdf?claveAcceso=${sale.claveAcceso || sale.id}`, '_blank')}
+                                  style={{ padding: '6px 10px', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.4)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                                >
+                                  PDF
+                                </button>
+                              )}
+                            </>
+                          ) : (
+                            <span style={{ fontSize: '0.75rem', color: '#ef4444', fontStyle: 'italic', padding: '4px 8px' }}>
+                              {sale.estadoSri || sale.status || 'PENDIENTE'}
+                            </span>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
-                {sales.length === 0 && (
+                {filteredSales.length === 0 && (
                   <tr>
-                    <td colSpan="9" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No hay transacciones registradas</td>
+                    <td colSpan="10" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>No hay transacciones registradas que coincidan con los filtros</td>
                   </tr>
                 )}
               </tbody>
@@ -631,108 +794,611 @@ export default function ReportesDashboard({ sales, issuers }) {
         </>
       )}
 
-      {activeTab === 'pendientes' && (
-        <FacturasPendientesView sales={sales} />
+
+
+      {/* Detalle Modal */}
+      {selectedVenta && (
+         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+           <div className="glass-panel" style={{ width: '100%', maxWidth: '600px', padding: '2rem', maxHeight: '90vh', overflowY: 'auto', background: 'var(--panel-bg)', border: '1px solid var(--panel-border)', borderRadius: '12px', color: 'white' }}>
+             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>
+               <h3 style={{ margin: 0 }}>Detalle de Factura</h3>
+               <button onClick={() => setSelectedVenta(null)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer', lineHeight: '1' }}>&times;</button>
+             </div>
+
+             <div style={{ fontSize: '0.9rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '1.5rem' }}>
+               <div>
+                 <h4 style={{ margin: '0 0 5px 0', color: 'var(--accent)' }}>Emisor</h4>
+                 <div><b>Nombre/Razón Social:</b> {selectedVenta.issuerName || 'GRAVITY DENIM'}</div>
+                 <div><b>RUC:</b> {selectedVenta.issuerRuc || '1803805405001'}</div>
+               </div>
+               <div>
+                 <h4 style={{ margin: '0 0 5px 0', color: 'var(--accent)' }}>Cliente</h4>
+                 <div><b>Nombre:</b> {(selectedVenta.cliente || selectedVenta.customer)?.nombre || 'CONSUMIDOR FINAL'}</div>
+                 <div><b>RUC/CI:</b> {(selectedVenta.cliente || selectedVenta.customer)?.numeroIdentificacion || '9999999999999'}</div>
+                 <div><b>Email:</b> {(selectedVenta.cliente || selectedVenta.customer)?.correo || 'N/A'}</div>
+               </div>
+             </div>
+
+             <div style={{ marginBottom: '1.5rem' }}>
+               <h4 style={{ margin: '0 0 8px 0', color: 'var(--accent)' }}>Productos</h4>
+               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                 <thead>
+                   <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-muted)' }}>
+                     <th style={{ padding: '6px' }}>Cant</th>
+                     <th style={{ padding: '6px' }}>Descripción</th>
+                     <th style={{ padding: '6px', textAlign: 'right' }}>P.Unit</th>
+                     <th style={{ padding: '6px', textAlign: 'right' }}>Total</th>
+                   </tr>
+                 </thead>
+                 <tbody>
+                   {(selectedVenta.productos || selectedVenta.items || []).map((p, idx) => (
+                     <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                       <td style={{ padding: '6px' }}>{p.qty || p.cantidad || 1}</td>
+                       <td style={{ padding: '6px' }}>{p.name || p.nombre}</td>
+                       <td style={{ padding: '6px', textAlign: 'right' }}>${Number(p.price || p.precio || 0).toFixed(2)}</td>
+                       <td style={{ padding: '6px', textAlign: 'right' }}>${((p.price || p.precio || 0) * (p.qty || p.cantidad || 1) - (p.descuento || 0)).toFixed(2)}</td>
+                     </tr>
+                   ))}
+                 </tbody>
+               </table>
+             </div>
+
+             <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+               <div>
+                 <div><b>Forma de Pago:</b> {selectedVenta.paymentMethod || 'EFECTIVO'}</div>
+                 <div><b>Estado SRI:</b> <span style={{ color: '#22c55e', fontWeight: 'bold' }}>{selectedVenta.estadoSri || selectedVenta.status || 'NOTA_DE_VENTA'}</span></div>
+               </div>
+               <div style={{ textAlign: 'right' }}>
+                 <div>Subtotal: ${(selectedVenta.totals?.subtotal || selectedVenta.subtotal || 0).toFixed(2)}</div>
+                 <div>IVA (15%): ${(selectedVenta.totals?.ivaAmount || selectedVenta.ivaAmount || 0).toFixed(2)}</div>
+                 <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--success)', marginTop: '4px' }}>Total: ${(selectedVenta.totals?.total || selectedVenta.total || 0).toFixed(2)}</div>
+               </div>
+             </div>
+
+             <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '6px', fontSize: '0.8rem' }}>
+               <div><b>Clave Acceso:</b> {selectedVenta.claveAcceso || selectedVenta.id}</div>
+               <div><b>Número Autorización:</b> {selectedVenta.numeroAutorizacion || 'N/A'}</div>
+               <div><b>Fecha Autorización:</b> {selectedVenta.fechaAutorizacion || 'N/A'}</div>
+             </div>
+
+             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+               <button onClick={() => handleReimprimirClick(selectedVenta)} style={{ padding: '8px 16px', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                 <Printer size={16} /> Reimprimir
+               </button>
+               <button onClick={() => setSelectedVenta(null)} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '4px', cursor: 'pointer' }}>
+                 Cerrar
+               </button>
+             </div>
+           </div>
+         </div>
+      )}
+
+      {activeTab === 'cierre_hermano' && (
+        <CierreHermanoView sales={sales} />
       )}
 
     </div>
   );
 }
 
-function FacturasPendientesView({ sales }) {
-  const [loadingId, setLoadingId] = useState(null);
+function CierreHermanoView({ sales }) {
+  const [users, setUsers] = useState([]);
+  const [selectedSiblingId, setSelectedSiblingId] = useState('');
+  const [dateFrom, setDateFrom] = useState(() => new Date().toISOString().split('T')[0]);
+  const [dateTo, setDateTo] = useState(() => new Date().toISOString().split('T')[0]);
 
-  const pendingSales = sales.filter(s => s.estadoSri && s.estadoSri !== 'AUTORIZADO' && s.estadoSri !== 'NOTA_DE_VENTA');
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const { getDocs, collection } = await import('firebase/firestore');
+        const { db } = await import('../../firebase/config');
+        const snap = await getDocs(collection(db, 'users'));
+        setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (err) {
+        console.error("Error loading users in CierreHermanoView:", err);
+      }
+    };
+    fetchUsers();
+  }, []);
 
-  const handleRetry = async (saleId) => {
-    try {
-      setLoadingId(saleId);
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/sri/reintentar', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ claveAcceso: saleId })
+  const siblingProfiles = useMemo(() => {
+    const list = [
+      { id: 'Edgar', name: 'Edgar', dbKeys: ['edgar'] },
+      { id: 'Amparito', name: 'Amparito', dbKeys: ['amparito'] },
+      { id: 'Junior', name: 'Junior (Domingo Sánchez)', dbKeys: ['domingo', 'junior', 'sanchez'] },
+      { id: 'Diana', name: 'Diana (Esposa de Junior)', dbKeys: ['diana'] }
+    ];
+    return list.map(item => {
+      const matchedUser = users.find(u => {
+        const uName = (u.name || '').toLowerCase();
+        return item.dbKeys.some(k => uName.includes(k));
       });
-      
-      const data = await response.json();
-      if (!response.ok) {
-         alert(`❌ ERROR:\n${data.error}`);
-         return;
-      }
-      
-      if (!data.success) {
-         alert(`⚠️ FALLO EL REINTENTO:\nEstado: ${data.estado}\n${data.error || 'Intenta de nuevo más tarde'}`);
-      } else {
-         alert(`✅ FACTURA AUTORIZADA EXITOSAMENTE:\n${data.mensajes?.join(', ')}`);
-         // Idealmente recargar las ventas aquí, por ahora con alert es suficiente, 
-         // Firebase listener de snapshot ya refrescará el dashboard automáticamente
-      }
-    } catch (e) {
-      alert(`❌ ERROR CATASTRÓFICO: ${e.message}`);
-    } finally {
-      setLoadingId(null);
+      return {
+        ...item,
+        firebaseId: matchedUser ? matchedUser.id : item.id,
+        firebaseName: matchedUser ? matchedUser.name : item.name
+      };
+    });
+  }, [users]);
+
+  // Filtrar ventas por fecha
+  const salesInDateRange = useMemo(() => {
+    return sales.filter(sale => {
+      const saleDate = parseSaleDate(sale);
+      if (!saleDate) return false;
+      const dateStr = saleDate.toISOString().split('T')[0];
+      if (dateFrom && dateStr < dateFrom) return false;
+      if (dateTo && dateStr > dateTo) return false;
+      return true;
+    });
+  }, [sales, dateFrom, dateTo]);
+
+  // Cálculos de compensación y desglose para el hermano seleccionado o general
+  const siblingData = useMemo(() => {
+    if (!selectedSiblingId) return null;
+    
+    if (selectedSiblingId === 'Todos') {
+      let ventasPropiasTotal = 0;
+      let ventasPropiasCantidad = 0;
+      let ventasPropiasEfectivo = 0;
+      let ventasPropiasTransferencias = 0;
+      const ventasPropiasDetalle = [];
+
+      const compensations = {};
+      siblingProfiles.forEach(p => {
+        compensations[p.firebaseId] = {
+          brotherName: p.name,
+          amountOwedToSibling: 0,
+          amountSiblingOwesToUs: 0
+        };
+      });
+
+      salesInDateRange.forEach(sale => {
+        const items = sale.productos || sale.items || [];
+        const totalItemsVal = items.reduce((acc, item) => acc + ((item.price || item.precio || 0) * (item.qty || 1) - (item.descuento || 0)), 0);
+        if (totalItemsVal <= 0) return;
+
+        const proportionVal = sale.totals?.total || sale.total || 0;
+        ventasPropiasTotal += proportionVal;
+        ventasPropiasCantidad += items.reduce((acc, i) => acc + (i.qty || 1), 0);
+
+        const paymentDetails = sale.paymentDetails || {
+          method: sale.paymentMethod || 'EFECTIVO',
+          cashAmount: sale.paymentMethod === 'EFECTIVO' ? (sale.totals?.total || sale.total || 0) : 0,
+          transfers: sale.paymentMethod === 'TRANSFERENCIA' ? [
+            {
+              recipientId: 'unknown',
+              recipientName: sale.transferRecipient || 'Desconocido',
+              amount: sale.totals?.total || sale.total || 0
+            }
+          ] : []
+        };
+
+        ventasPropiasEfectivo += paymentDetails.cashAmount || 0;
+        const transfersPart = paymentDetails.transfers || [];
+        transfersPart.forEach(t => {
+          ventasPropiasTransferencias += t.amount || 0;
+        });
+
+        ventasPropiasDetalle.push({
+          numeroVenta: sale.numeroComprobante || sale.id.substring(0, 8),
+          cliente: (sale.cliente || sale.customer)?.nombre || 'Consumidor Final',
+          productos: items.map(i => `${i.qty || 1}x ${i.name || i.nombre} (${i.ownerName || 'Sin Dueño'})`).join(', '),
+          montoTotal: proportionVal
+        });
+
+        // Calcular compensación general entre hermanos
+        transfersPart.forEach(t => {
+          const recipientProfile = siblingProfiles.find(p => {
+            if (t.recipientId && p.firebaseId === t.recipientId) return true;
+            return t.recipientName && t.recipientName.toLowerCase().includes(p.id.toLowerCase());
+          });
+          const recipientId = recipientProfile ? recipientProfile.firebaseId : (t.recipientId || 'unknown');
+
+          items.forEach(item => {
+            const itemOwnerProfile = siblingProfiles.find(p => {
+              if (item.ownerId && p.firebaseId === item.ownerId) return true;
+              return item.ownerName && item.ownerName.toLowerCase().includes(p.id.toLowerCase());
+            });
+            const ownerId = itemOwnerProfile ? itemOwnerProfile.firebaseId : (item.ownerId || 'unknown');
+            const itemVal = (item.price || item.precio || 0) * (item.qty || 1) - (item.descuento || 0);
+            const itemProp = itemVal / totalItemsVal;
+            const itemTransferAmount = itemProp * t.amount;
+
+            if (recipientId !== ownerId) {
+              if (compensations[recipientId]) {
+                compensations[recipientId].amountSiblingOwesToUs += itemTransferAmount;
+              }
+              if (compensations[ownerId]) {
+                compensations[ownerId].amountOwedToSibling += itemTransferAmount;
+              }
+            }
+          });
+        });
+      });
+
+      return {
+        siblingName: 'Todos los Hermanos (Ventas Completas)',
+        ventasPropiasTotal,
+        ventasPropiasCantidad,
+        ventasPropiasEfectivo,
+        ventasPropiasTransferencias,
+        ventasPropiasDetalle,
+        transferenciasRecibidas: [],
+        transferenciasPropiasEnOtrosHermanos: [],
+        compensations
+      };
     }
-  };
+
+    const selectedProfile = siblingProfiles.find(p => p.id === selectedSiblingId);
+    if (!selectedProfile) return null;
+
+    // 1. Ventas de productos propios
+    let ventasPropiasTotal = 0;
+    let ventasPropiasCantidad = 0;
+    let ventasPropiasEfectivo = 0;
+    let ventasPropiasTransferencias = 0;
+    const ventasPropiasDetalle = [];
+
+    // 2. Transferencias recibidas en su cuenta
+    const transferenciasRecibidas = [];
+
+    // 3. Transferencias de su pertenencia recibidas por otros hermanos
+    const transferenciasPropiasEnOtrosHermanos = [];
+
+    // Matriz de saldos cruzados
+    const compensations = {};
+    siblingProfiles.forEach(p => {
+      if (p.id !== selectedSiblingId) {
+        compensations[p.firebaseId] = {
+          brotherName: p.name,
+          amountOwedToSibling: 0,
+          amountSiblingOwesToUs: 0
+        };
+      }
+    });
+
+    salesInDateRange.forEach(sale => {
+      const items = sale.productos || sale.items || [];
+      const totalItemsVal = items.reduce((acc, item) => acc + ((item.price || item.precio || 0) * (item.qty || 1) - (item.descuento || 0)), 0);
+      if (totalItemsVal <= 0) return;
+
+      // Calcular lo vendido por el hermano seleccionado en esta venta
+      const siblingItems = items.filter(item => {
+        return item.ownerId === selectedProfile.firebaseId || 
+               (item.ownerName && item.ownerName.toLowerCase().includes(selectedProfile.id.toLowerCase()));
+      });
+      const siblingItemsVal = siblingItems.reduce((acc, item) => acc + ((item.price || item.precio || 0) * (item.qty || 1) - (item.descuento || 0)), 0);
+      
+      // Proporción (incluyendo IVA proporcional)
+      const proportion = siblingItemsVal / totalItemsVal;
+      const proportionVal = proportion * (sale.totals?.total || sale.total || 0);
+
+      // Si el hermano seleccionado es dueño de algo en esta venta
+      if (siblingItemsVal > 0) {
+        ventasPropiasTotal += proportionVal;
+        ventasPropiasCantidad += siblingItems.reduce((acc, i) => acc + (i.qty || 1), 0);
+
+        // Desglosar por método de pago
+        const paymentDetails = sale.paymentDetails || {
+          method: sale.paymentMethod || 'EFECTIVO',
+          cashAmount: sale.paymentMethod === 'EFECTIVO' ? (sale.totals?.total || sale.total || 0) : 0,
+          transfers: sale.paymentMethod === 'TRANSFERENCIA' ? [
+            {
+              recipientId: 'unknown',
+              recipientName: sale.transferRecipient || 'Desconocido',
+              amount: sale.totals?.total || sale.total || 0
+            }
+          ] : []
+        };
+
+        const cashPart = proportion * (paymentDetails.cashAmount || 0);
+        ventasPropiasEfectivo += cashPart;
+
+        const transfersPart = paymentDetails.transfers || [];
+        transfersPart.forEach(t => {
+          const tPart = proportion * (t.amount || 0);
+          ventasPropiasTransferencias += tPart;
+
+          // Si el destinatario de la transferencia es otro hermano
+          const isOther = t.recipientId ? (t.recipientId !== selectedProfile.firebaseId) : (t.recipientName && !t.recipientName.toLowerCase().includes(selectedProfile.id.toLowerCase()));
+          if (isOther) {
+            // Buscar cuál de los otros hermanos recibió la transferencia
+            const otherProfile = siblingProfiles.find(p => {
+              if (t.recipientId && p.firebaseId === t.recipientId) return true;
+              return t.recipientName && t.recipientName.toLowerCase().includes(p.id.toLowerCase());
+            });
+            const otherId = otherProfile ? otherProfile.firebaseId : (t.recipientId || 'unknown');
+            const otherName = otherProfile ? otherProfile.name : (t.recipientName || 'Otro');
+
+            transferenciasPropiasEnOtrosHermanos.push({
+              recipientId: otherId,
+              recipientName: otherName,
+              amount: tPart,
+              numeroVenta: sale.numeroComprobante || sale.id.substring(0, 8),
+              cliente: (sale.cliente || sale.customer)?.nombre || 'Consumidor Final'
+            });
+
+            if (compensations[otherId]) {
+              compensations[otherId].amountOwedToSibling += tPart;
+            }
+          }
+        });
+
+        ventasPropiasDetalle.push({
+          numeroVenta: sale.numeroComprobante || sale.id.substring(0, 8),
+          cliente: (sale.cliente || sale.customer)?.nombre || 'Consumidor Final',
+          productos: siblingItems.map(i => `${i.qty || 1}x ${i.name || i.nombre}`).join(', '),
+          montoTotal: proportionVal
+        });
+      }
+
+      // Analizar transferencias recibidas por el hermano seleccionado
+      const paymentDetails = sale.paymentDetails || {
+        method: sale.paymentMethod || 'EFECTIVO',
+        cashAmount: sale.paymentMethod === 'EFECTIVO' ? (sale.totals?.total || sale.total || 0) : 0,
+        transfers: sale.paymentMethod === 'TRANSFERENCIA' ? [
+          {
+            recipientId: 'unknown',
+            recipientName: sale.transferRecipient || 'Desconocido',
+            amount: sale.totals?.total || sale.total || 0
+          }
+        ] : []
+      };
+
+      const transfersPart = paymentDetails.transfers || [];
+      transfersPart.forEach(t => {
+        // Si el hermano seleccionado recibió esta transferencia
+        const receivedByUs = t.recipientId ? (t.recipientId === selectedProfile.firebaseId) : (t.recipientName && t.recipientName.toLowerCase().includes(selectedProfile.id.toLowerCase()));
+        if (receivedByUs) {
+          // Analizar a quién pertenecen los productos de esta transferencia
+          items.forEach(item => {
+            const itemOwnerProfile = siblingProfiles.find(p => {
+              if (item.ownerId && p.firebaseId === item.ownerId) return true;
+              return item.ownerName && item.ownerName.toLowerCase().includes(p.id.toLowerCase());
+            });
+            const itemOwnerId = itemOwnerProfile ? itemOwnerProfile.firebaseId : (item.ownerId || 'unknown');
+            const itemOwnerName = itemOwnerProfile ? itemOwnerProfile.name : (item.ownerName || 'Otro Hermano');
+            const itemVal = (item.price || item.precio || 0) * (item.qty || 1) - (item.descuento || 0);
+            const itemProp = itemVal / totalItemsVal;
+            const itemTransferAmount = itemProp * t.amount;
+
+            // Si pertenece a otro hermano, le debemos entregar este dinero
+            if (itemOwnerId !== selectedProfile.firebaseId) {
+              transferenciasRecibidas.push({
+                ownerId: itemOwnerId,
+                ownerName: itemOwnerName,
+                numeroVenta: sale.numeroComprobante || sale.id.substring(0, 8),
+                cliente: (sale.cliente || sale.customer)?.nombre || 'Consumidor Final',
+                amount: itemTransferAmount
+              });
+
+              if (compensations[itemOwnerId]) {
+                compensations[itemOwnerId].amountSiblingOwesToUs += itemTransferAmount;
+              }
+            }
+          });
+        }
+      });
+    });
+
+    return {
+      siblingName: selectedProfile.name,
+      ventasPropiasTotal,
+      ventasPropiasCantidad,
+      ventasPropiasEfectivo,
+      ventasPropiasTransferencias,
+      ventasPropiasDetalle,
+      transferenciasRecibidas,
+      transferenciasPropiasEnOtrosHermanos,
+      compensations
+    };
+  }, [selectedSiblingId, salesInDateRange, siblingProfiles]);
 
   return (
-    <div className="glass-panel" style={{ padding: '2rem' }}>
-      <h3 style={{ margin: '0 0 1rem 0' }}>Facturas en Contingencia / Erróneas</h3>
-      <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>Estas ventas YA descontaron stock y caja, pero no han sido recibidas o autorizadas por el SRI. Debes reintentarlas.</p>
-      
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-muted)' }}>
-              <th style={{ padding: '1rem 0' }}>Fecha Venta</th>
-              <th>Cliente</th>
-              <th>Clave / ID</th>
-              <th>Total</th>
-              <th>Estado Actual</th>
-              <th>Detalle de Error</th>
-              <th style={{ textAlign: 'right' }}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pendingSales.map(sale => (
-              <tr key={sale.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                <td style={{ padding: '1rem 0', whiteSpace: 'nowrap' }}>
-                  {new Date(sale.fechaTransaccion || sale.createdAt).toLocaleString()}
-                </td>
-                <td>{(sale.cliente || sale.customer)?.nombre || 'Consumidor Final'}</td>
-                <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{sale.id}</td>
-                <td style={{ color: 'var(--success)', fontWeight: 'bold' }}>${(sale.totals?.total || 0).toFixed(2)}</td>
-                <td>
-                  <span style={{ background: '#f59e0b', color: 'black', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>
-                    {sale.estadoSri}
-                  </span>
-                </td>
-                <td style={{ fontSize: '0.8rem', color: '#ef4444', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={sale.sriRawResponse || 'Error de red / Timeout'}>
-                  {sale.sriRawResponse || 'Error de conexión / Timeout local'}
-                </td>
-                <td style={{ textAlign: 'right' }}>
-                  <button 
-                    onClick={() => handleRetry(sale.id)}
-                    disabled={loadingId === sale.id}
-                    style={{ background: 'var(--accent)', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: loadingId === sale.id ? 'wait' : 'pointer' }}
-                  >
-                    {loadingId === sale.id ? 'Enviando...' : 'Reintentar SRI'}
-                  </button>
-                </td>
-              </tr>
+    <div className="glass-panel" style={{ padding: '2rem', marginTop: '1rem', color: 'white' }}>
+      <h3 style={{ color: '#f59e0b', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        📊 Cierre Diario por Hermano y Compensaciones
+      </h3>
+
+      {/* Selectores de Filtro */}
+      <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginBottom: '2rem', background: 'rgba(0,0,0,0.2)', padding: '15px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '200px' }}>
+          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Seleccionar Hermano / Propietario:</label>
+          <select 
+            value={selectedSiblingId} 
+            onChange={(e) => setSelectedSiblingId(e.target.value)}
+            style={{ padding: '8px 12px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white', fontWeight: 'bold' }}
+          >
+            <option value="">Selecciona...</option>
+            <option value="Todos">Todos los Hermanos / General</option>
+            {siblingProfiles.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
             ))}
-            {pendingSales.length === 0 && (
-              <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                  ✅ No hay facturas pendientes. Todo está autorizado y en orden.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+          </select>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Desde:</label>
+          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ padding: '7px 10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white' }} />
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Hasta:</label>
+          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ padding: '7px 10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white' }} />
+        </div>
       </div>
+
+      {!selectedSiblingId ? (
+        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+          💡 Selecciona un hermano de la lista para ver su balance de cierre diario.
+        </div>
+      ) : siblingData ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          
+          {/* Fila de KPIs de Ventas Propias */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
+            <div className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(34, 197, 94, 0.05)', borderLeft: '4px solid #22c55e' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 5px 0' }}>Total Vendido Propio</p>
+              <h3 style={{ fontSize: '1.8rem', margin: 0, color: '#22c55e' }}>${siblingData.ventasPropiasTotal.toFixed(2)}</h3>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{siblingData.ventasPropiasCantidad} prendas vendidas</span>
+            </div>
+
+            <div className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)', borderLeft: '4px solid rgba(255,255,255,0.1)' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 5px 0' }}>Proporción Efectivo</p>
+              <h3 style={{ fontSize: '1.8rem', margin: 0 }}>${siblingData.ventasPropiasEfectivo.toFixed(2)}</h3>
+            </div>
+
+            <div className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(59, 130, 246, 0.05)', borderLeft: '4px solid #3b82f6' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 5px 0' }}>Proporción Transferencias</p>
+              <h3 style={{ fontSize: '1.8rem', margin: 0, color: '#3b82f6' }}>${siblingData.ventasPropiasTransferencias.toFixed(2)}</h3>
+            </div>
+          </div>
+
+          {/* Sección 1: Detalle de Ventas Propias */}
+          <div className="glass-panel" style={{ padding: '1.25rem' }}>
+            <h4 style={{ color: '#60a5fa', margin: '0 0 1rem 0' }}>📦 Detalle de prendas vendidas pertenecientes a {siblingData.siblingName}</h4>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-muted)' }}>
+                    <th style={{ padding: '8px' }}>No. Venta</th>
+                    <th style={{ padding: '8px' }}>Cliente</th>
+                    <th style={{ padding: '8px' }}>Detalle Prendas</th>
+                    <th style={{ padding: '8px', textAlign: 'right' }}>Monto Propio</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {siblingData.ventasPropiasDetalle.map((v, i) => (
+                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td style={{ padding: '8px' }}>{v.numeroVenta}</td>
+                      <td style={{ padding: '8px' }}>{v.cliente}</td>
+                      <td style={{ padding: '8px', color: 'var(--text-main)' }}>{v.productos}</td>
+                      <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', color: 'var(--success)' }}>${v.montoTotal.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  {siblingData.ventasPropiasDetalle.length === 0 && (
+                    <tr>
+                      <td colSpan="4" style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)' }}>No se vendieron prendas de este hermano en el rango de fechas.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Sección 2: Transferencias recibidas en su cuenta (De otros hermanos) */}
+          <div className="glass-panel" style={{ padding: '1.25rem' }}>
+            <h4 style={{ color: '#a78bfa', margin: '0 0 1rem 0' }}>🏦 Transferencias recibidas en cuenta de {siblingData.siblingName} por productos de otros</h4>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-muted)' }}>
+                    <th style={{ padding: '8px' }}>No. Venta</th>
+                    <th style={{ padding: '8px' }}>Cliente</th>
+                    <th style={{ padding: '8px' }}>Dueño del Producto</th>
+                    <th style={{ padding: '8px', textAlign: 'right' }}>Monto Recibido</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {siblingData.transferenciasRecibidas.map((v, i) => (
+                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td style={{ padding: '8px' }}>{v.numeroVenta}</td>
+                      <td style={{ padding: '8px' }}>{v.cliente}</td>
+                      <td style={{ padding: '8px', fontWeight: 'bold' }}>{v.ownerName}</td>
+                      <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', color: '#a78bfa' }}>${v.amount.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  {siblingData.transferenciasRecibidas.length === 0 && (
+                    <tr>
+                      <td colSpan="4" style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)' }}>No se recibieron transferencias ajenas en su cuenta.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Sección 3: Transferencias propias en cuentas de otros hermanos */}
+          <div className="glass-panel" style={{ padding: '1.25rem' }}>
+            <h4 style={{ color: '#f59e0b', margin: '0 0 1rem 0' }}>🔀 Transferencias de productos de {siblingData.siblingName} recibidas en cuentas de otros</h4>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-muted)' }}>
+                    <th style={{ padding: '8px' }}>No. Venta</th>
+                    <th style={{ padding: '8px' }}>Cliente</th>
+                    <th style={{ padding: '8px' }}>Quién recibió la transferencia</th>
+                    <th style={{ padding: '8px', textAlign: 'right' }}>Monto a Recuperar</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {siblingData.transferenciasPropiasEnOtrosHermanos.map((v, i) => (
+                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td style={{ padding: '8px' }}>{v.numeroVenta}</td>
+                      <td style={{ padding: '8px' }}>{v.cliente}</td>
+                      <td style={{ padding: '8px', fontWeight: 'bold' }}>{v.recipientName}</td>
+                      <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', color: '#f59e0b' }}>${v.amount.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  {siblingData.transferenciasPropiasEnOtrosHermanos.length === 0 && (
+                    <tr>
+                      <td colSpan="4" style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)' }}>Ninguna transferencia propia fue recibida por otros hermanos.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Sección 4: Tabla Resumen de Compensaciones */}
+          <div className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <h4 style={{ color: 'var(--success)', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              ⚖️ Matriz de Compensaciones para {siblingData.siblingName}
+            </h4>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-muted)' }}>
+                    <th style={{ padding: '10px 8px' }}>Hermano</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Debe entregar a {siblingData.siblingName}</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>{siblingData.siblingName} debe entregarle</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Saldo Neto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(siblingData.compensations).map(([bId, comp]) => {
+                    const net = comp.amountOwedToSibling - comp.amountSiblingOwesToUs;
+                    let netColor = 'white';
+                    let netText = `$${Math.abs(net).toFixed(2)}`;
+                    if (net > 0) {
+                      netColor = '#22c55e';
+                      netText = `A favor: +${netText}`;
+                    } else if (net < 0) {
+                      netColor = '#ef4444';
+                      netText = `En contra: -${netText}`;
+                    } else {
+                      netText = `$0.00`;
+                    }
+
+                    return (
+                      <tr key={bId} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <td style={{ padding: '10px 8px', fontWeight: 'bold' }}>{comp.brotherName}</td>
+                        <td style={{ padding: '10px 8px', textAlign: 'right', color: '#22c55e' }}>${comp.amountOwedToSibling.toFixed(2)}</td>
+                        <td style={{ padding: '10px 8px', textAlign: 'right', color: '#ef4444' }}>${comp.amountSiblingOwesToUs.toFixed(2)}</td>
+                        <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 'bold', color: netColor }}>{netText}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      ) : null}
     </div>
   );
 }
+
+

@@ -1,5 +1,6 @@
 import { getAdminAuth, getAdminDb } from '../../../src/lib/firebaseAdmin';
 const { validateXml, authorizeXml } = require('osodreamer-sri-xml-signer');
+import { sanitizeFirestorePayload } from '../../../src/utils/sanitize';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -63,9 +64,13 @@ export default async function handler(req, res) {
     console.log(`Reintentando envío SRI para clave: ${claveAcceso} en ambiente: ${sriEnv}`);
 
     try {
-      await validateXml({ env: sriEnv, xml: Buffer.from(ventaData.xmlFirmado, 'utf8') });
-      // El SRI a veces toma 1-2 segundos en procesar el XML encolado antes de autorizarlo.
-      await new Promise(r => setTimeout(r, 2500));
+      try {
+        await validateXml({ env: sriEnv, xml: Buffer.from(ventaData.xmlFirmado, 'utf8') });
+        // El SRI a veces toma 1-2 segundos en procesar el XML encolado antes de autorizarlo.
+        await new Promise(r => setTimeout(r, 2500));
+      } catch (valErr) {
+        console.warn("Advertencia en validateXml (intentando autorizar de todas formas):", valErr.message);
+      }
       authResult = await authorizeXml({ claveAcceso, env: sriEnv });
     } catch (e) {
       console.error("Error técnico contactando al SRI en REINTENTO:", e);
@@ -81,42 +86,50 @@ export default async function handler(req, res) {
 
     let estadoFinalSri = 'EN_PROCESO';
     if (authResult) {
-      estadoFinalSri = authResult.estado || 'PENDIENTE_ENVIO'; 
+      estadoFinalSri = authResult.estadoAutorizacion || authResult.estado || 'PENDIENTE_ENVIO'; 
     } else if (sriTimeout) {
       estadoFinalSri = 'PENDIENTE_ENVIO'; // Se mantiene pendiente
     }
 
-    const safeAuthResult = authResult ? JSON.parse(JSON.stringify(authResult)) : null;
-    const safeErrorTecnico = errorTecnico ? JSON.parse(JSON.stringify(errorTecnico)) : null;
+    const safeAuthResult = authResult || { estado: 'PENDIENTE_ENVIO' };
+    const safeErrorTecnico = errorTecnico || '';
+
+    // Prevenir undefined
+    const updatePayload = sanitizeFirestorePayload({
+      estadoSri: estadoFinalSri || 'PENDIENTE_ENVIO',
+      numeroAutorizacion: (authResult && authResult.numeroAutorizacion) || (authResult && authResult.estadoAutorizacion === 'AUTORIZADO' ? claveAcceso : null) || (ventaData.numeroAutorizacion || null),
+      fechaAutorizacion: (authResult && authResult.fechaAutorizacion && (typeof authResult.fechaAutorizacion === 'string' || authResult.fechaAutorizacion instanceof Date)) ? authResult.fechaAutorizacion.toString() : (authResult ? new Date().toISOString() : (ventaData.fechaAutorizacion || null)),
+      mensajesSri: (authResult && authResult.mensajes) || [],
+      xmlAutorizado: (authResult && (authResult.comprobante || authResult.xmlAutorizado)) || null,
+      sriRawResponse: safeAuthResult,
+      ultimoReintento: new Date().toISOString()
+    });
+
+    console.log('--- ACTUALIZANDO VENTA EN FIRESTORE ---');
+    console.log(JSON.stringify(updatePayload, null, 2));
 
     // Actualizar el documento original
-    await ventaRef.update({
+    await ventaRef.update(updatePayload);
+
+    const logPayload = sanitizeFirestorePayload({
+      timestamp: new Date().toISOString(),
+      emisorId,
+      cajeroUid: decodedToken.uid || 'UNKNOWN',
+      ambiente: sriEnv,
+      numeroComprobante: ventaData.numeroComprobante,
+      secuencial: ventaData.secuencial,
+      xmlFirmado: ventaData.xmlFirmado || 'NO_GENERADO',
+      estadoLocal: sriTimeout ? 'TIMEOUT_REINTENTO' : 'PROCESADO',
       estadoSri: estadoFinalSri || 'PENDIENTE_ENVIO',
-      numeroAutorizacion: (authResult && authResult.numeroAutorizacion) ? authResult.numeroAutorizacion : (ventaData.numeroAutorizacion || null),
-      fechaAutorizacion: (authResult && authResult.fechaAutorizacion) ? authResult.fechaAutorizacion : (ventaData.fechaAutorizacion || null),
-      mensajesSri: (authResult && authResult.mensajes) ? authResult.mensajes : (ventaData.mensajesSri || []),
-      xmlAutorizado: (authResult && (authResult.comprobante || authResult.xmlAutorizado)) ? (authResult.comprobante || authResult.xmlAutorizado) : (ventaData.xmlAutorizado || null),
-      sriRawResponse: safeAuthResult || safeErrorTecnico || {},
-      ultimoReintento: new Date().toISOString()
+      respuestaSri: safeAuthResult,
+      errorTecnico: safeErrorTecnico,
+      esReintento: true,
+      claveOriginal: claveAcceso
     });
 
     // Registrar el LOG del reintento
     const logRef = adminDb.collection('sri_logs').doc(`${claveAcceso}-reintento-${Date.now()}`);
-    await logRef.set({
-      timestamp: new Date().toISOString(),
-      emisorId,
-      cajeroUid: decodedToken.uid,
-      ambiente: sriEnv,
-      numeroComprobante: ventaData.numeroComprobante,
-      secuencial: ventaData.secuencial,
-      xmlFirmado: ventaData.xmlFirmado,
-      estadoLocal: sriTimeout ? 'TIMEOUT_REINTENTO' : 'PROCESADO',
-      estadoSri: estadoFinalSri,
-      respuestaSri: safeAuthResult,
-      errorTecnico: errorTecnico || null,
-      esReintento: true,
-      claveOriginal: claveAcceso
-    });
+    await logRef.set(logPayload);
 
     if (sriTimeout) {
       return res.status(200).json({ 

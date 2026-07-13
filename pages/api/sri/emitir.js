@@ -2,6 +2,8 @@ import { getAdminAuth, getAdminDb } from '../../../src/lib/firebaseAdmin';
 const { generateXmlInvoice, signXml, validateXml, authorizeXml } = require('osodreamer-sri-xml-signer');
 import fs from 'fs';
 import path from 'path';
+import { TAX_CONFIG } from '../../../src/utils/taxes';
+import { sanitizeFirestorePayload } from '../../../src/utils/sanitize';
 
 const round2 = (val) => Number(Number(val).toFixed(2));
 const pad2 = (n) => String(n).padStart(2, '0');
@@ -112,10 +114,10 @@ export default async function handler(req, res) {
           impuesto: [
             {
               codigo: 2, // IVA
-              codigoPorcentaje: 4, // 15%
-              tarifa: 15.00,
+              codigoPorcentaje: TAX_CONFIG.IVA.CODE,
+              tarifa: TAX_CONFIG.IVA.RATE,
               baseImponible: precioTotalSinImpuesto,
-              valor: round2(precioTotalSinImpuesto * 0.15)
+              valor: round2(precioTotalSinImpuesto * TAX_CONFIG.IVA.PERCENTAGE)
             }
           ]
         }
@@ -123,7 +125,7 @@ export default async function handler(req, res) {
     });
 
     subtotalSinImpuestos = round2(subtotalSinImpuestos);
-    const valorIva = round2(subtotalSinImpuestos * 0.15);
+    const valorIva = round2(subtotalSinImpuestos * TAX_CONFIG.IVA.PERCENTAGE);
     const importeTotal = round2(subtotalSinImpuestos + valorIva);
 
     const estab = emisor.establecimiento || '001';
@@ -182,7 +184,7 @@ export default async function handler(req, res) {
           totalImpuesto: [
             {
               codigo: 2,
-              codigoPorcentaje: 4,
+              codigoPorcentaje: TAX_CONFIG.IVA.CODE,
               baseImponible: subtotalSinImpuestos,
               valor: valorIva
             }
@@ -311,7 +313,7 @@ export default async function handler(req, res) {
       
       estadoFinalSri = 'EN_PROCESO';
       if (authResult) {
-        estadoFinalSri = authResult.estado; // AUTORIZADO, RECHAZADO, DEVUELTA
+        estadoFinalSri = authResult.estadoAutorizacion || authResult.estado || 'RECIBIDA_SIN_ESTADO'; // Garantizar propiedad correcta del SRI
       } else if (sriTimeout) {
         estadoFinalSri = 'TIMEOUT';
       } else if (internalCrash) {
@@ -323,22 +325,25 @@ export default async function handler(req, res) {
     const latencyMs = Math.round(endMs - startMs);
     
     // 9. Construir y guardar LOG de intento en sri_logs SIEMPRE (incluso para Notas de Venta)
-    const logData = {
+    const logData = sanitizeFirestorePayload({
       timestamp: new Date().toISOString(),
       emisorId,
-      cajeroUid: decodedToken.uid,
+      cajeroUid: decodedToken.uid || 'UNKNOWN',
       ambiente: '1',
       latenciaMs: latencyMs,
       numeroComprobante: numeroComprobanteCompleto,
       secuencial: secStr,
       xmlFirmado: signedXml || xmlUnsigned || 'NO_GENERADO',
       estadoLocal: sriTimeout ? 'TIMEOUT' : 'PROCESADO',
-      estadoSri: estadoFinalSri,
-      respuestaSri: authResult || null,
-      errorTecnico: errorTecnico || null,
+      estadoSri: estadoFinalSri || 'PENDIENTE_ENVIO',
+      respuestaSri: authResult || {},
+      errorTecnico: errorTecnico || '',
       transactionId: transactionId // Llave de idempotencia guardada en el log
-    };
+    });
 
+    console.log('--- LOG DATA QUE SE GUARDARÁ EN FIRESTORE ---');
+    console.log(JSON.stringify(logData, null, 2));
+    
     const batch = adminDb.batch();
     const logRef = adminDb.collection('sri_logs').doc(finalClaveAcceso);
     batch.set(logRef, logData);
@@ -348,15 +353,28 @@ export default async function handler(req, res) {
     if (sriTimeout) estadoSRIFinal = 'PENDIENTE_ENVIO';
     if (internalCrash) estadoSRIFinal = 'ERROR_INTERNO';
 
-    const comprobanteData = {
+    const comprobanteData = sanitizeFirestorePayload({
       cliente,
       productos,
       subtotalSinImpuestos,
       valorIva,
       importeTotal,
       formaPago,
-      paymentMethod: req.body.transferRecipient ? 'TRANSFERENCIA' : 'EFECTIVO',
+      paymentMethod: req.body.paymentMethod || (req.body.transferRecipient ? 'TRANSFERENCIA' : 'EFECTIVO'),
       transferRecipient: req.body.transferRecipient || null,
+      paymentDetails: req.body.paymentDetails || {
+        method: req.body.paymentMethod || (req.body.transferRecipient ? 'TRANSFERENCIA' : 'EFECTIVO'),
+        cashAmount: (req.body.paymentMethod === 'EFECTIVO') ? (req.body.total || 0) : 0,
+        transfers: req.body.transferRecipient ? [
+          {
+            recipientId: req.body.transferRecipientId || 'unknown',
+            recipientName: req.body.transferRecipient,
+            amount: req.body.total || 0,
+            bank: req.body.transferBank || '',
+            reference: req.body.transferReference || ''
+          }
+        ] : []
+      },
       totals: {
         subtotal: subtotalSinImpuestos,
         ivaAmount: valorIva,
@@ -369,19 +387,22 @@ export default async function handler(req, res) {
       secuencial: isNotaVenta ? 'S/N' : secStr,
       claveAcceso: finalClaveAcceso,
       estadoVenta: 'FINALIZADA',
-      estadoSri: estadoSRIFinal, 
-      numeroAutorizacion: (authResult && authResult.numeroAutorizacion) ? authResult.numeroAutorizacion : null,
-      fechaAutorizacion: (authResult && authResult.fechaAutorizacion) ? authResult.fechaAutorizacion : null,
-      mensajesSri: (authResult && authResult.mensajes) ? authResult.mensajes : [],
-      xmlFirmado: signedXml || xmlUnsigned,
-      xmlAutorizado: (authResult && (authResult.comprobante || authResult.xmlAutorizado)) ? (authResult.comprobante || authResult.xmlAutorizado) : null,
-      sriRawResponse: JSON.parse(JSON.stringify(authResult || errorTecnico || {})), 
+      estadoSri: estadoSRIFinal || 'PENDIENTE_ENVIO', 
+      numeroAutorizacion: (authResult && authResult.numeroAutorizacion) || (authResult && authResult.estadoAutorizacion === 'AUTORIZADO' ? finalClaveAcceso : null) || null,
+      fechaAutorizacion: (authResult && authResult.fechaAutorizacion && (typeof authResult.fechaAutorizacion === 'string' || authResult.fechaAutorizacion instanceof Date)) ? authResult.fechaAutorizacion.toString() : (authResult ? new Date().toISOString() : null),
+      mensajesSri: (authResult && authResult.mensajes) || [],
+      xmlFirmado: signedXml || xmlUnsigned || null,
+      xmlAutorizado: (authResult && (authResult.comprobante || authResult.xmlAutorizado)) || null,
+      sriRawResponse: authResult || { error: errorTecnico || 'Desconocido' }, 
       fechaTransaccion: new Date().toISOString(),
       createdAt: new Date().toISOString(),
-      cajeroUid: decodedToken.uid,
+      cajeroUid: decodedToken.uid || 'UNKNOWN',
       transactionId: transactionId,
       isNotaVenta: isNotaVenta
-    };
+    });
+
+    console.log('--- COMPROBANTE DATA QUE SE GUARDARÁ EN FIRESTORE ---');
+    console.log(JSON.stringify(comprobanteData, null, 2));
 
     const nuevaVentaRef = adminDb.collection('ventas').doc(finalClaveAcceso);
     batch.set(nuevaVentaRef, comprobanteData);

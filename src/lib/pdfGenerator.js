@@ -1,4 +1,4 @@
-const PdfPrinter = require('pdfmake');
+const PdfPrinter = require('pdfmake/js/Printer').default || require('pdfmake/js/Printer');
 
 const fonts = {
   Helvetica: {
@@ -9,10 +9,13 @@ const fonts = {
   }
 };
 
-const printer = new PdfPrinter(fonts);
+const URLResolver = require('pdfmake/js/URLResolver').default || require('pdfmake/js/URLResolver');
+const { virtualfs } = require('pdfmake');
+const urlResolver = new URLResolver(virtualfs);
+const printer = new PdfPrinter(fonts, virtualfs, urlResolver);
 
 async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAcceso, numeroComprobante, fecha }) {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     try {
       const docDefinition = {
         defaultStyle: {
@@ -60,14 +63,7 @@ async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAc
                           { text: 'AMBIENTE: PRUEBAS', margin: [0, 0, 0, 2] },
                           { text: 'EMISIÓN: NORMAL', margin: [0, 0, 0, 10] },
                           { text: 'CLAVE DE ACCESO', bold: true },
-                          {
-                            // Código de barras generado por pdfmake
-                            barcode: claveAcceso,
-                            type: 'code128',
-                            width: 250,
-                            height: 40,
-                            margin: [0, 5, 0, 0]
-                          },
+                          { text: '[Código de Barras - Clave de Acceso]', alignment: 'center', color: 'gray', margin: [0, 10, 0, 5] },
                           { text: claveAcceso, fontSize: 8, alignment: 'center', margin: [0, 2, 0, 0] }
                         ],
                         border: [true, true, true, true],
@@ -128,7 +124,7 @@ async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAc
                 ],
                 // Filas (Mapeo dinámico)
                 ...cart.map(item => [
-                  { text: item.sku || item.id, alignment: 'center' },
+                  { text: item.sku || '', alignment: 'center' },
                   { text: item.qty.toString(), alignment: 'center' },
                   { text: item.name },
                   { text: Number(item.price).toFixed(2), alignment: 'right' },
@@ -181,7 +177,7 @@ async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAc
                 table: {
                   widths: ['*', 'auto'],
                   body: [
-                    [{ text: 'SUBTOTAL 15%', bold: true }, { text: Number(totalsData.baseImponible).toFixed(2), alignment: 'right' }],
+                    [{ text: 'SUBTOTAL 15%', bold: true }, { text: Number(totalsData.baseImponible || totalsData.subtotal || 0).toFixed(2), alignment: 'right' }],
                     [{ text: 'SUBTOTAL 0%', bold: true }, { text: '0.00', alignment: 'right' }],
                     [{ text: 'SUBTOTAL No objeto de IVA', bold: true }, { text: '0.00', alignment: 'right' }],
                     [{ text: 'SUBTOTAL Exento de IVA', bold: true }, { text: '0.00', alignment: 'right' }],
@@ -197,7 +193,7 @@ async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAc
         ]
       };
 
-      const pdfDoc = printer.createPdfKitDocument(docDefinition);
+      const pdfDoc = await printer.createPdfKitDocument(docDefinition);
       const chunks = [];
       pdfDoc.on('data', chunk => chunks.push(chunk));
       pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));

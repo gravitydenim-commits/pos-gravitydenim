@@ -3,6 +3,7 @@ import { ShoppingCart, Plus, Minus, Trash2, Tag, Shirt, UserCircle, Printer, Cre
 import { db } from '../../firebase/config';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { validarCedula, validarRUC } from '../../utils/validators';
+import { TAX_CONFIG } from '../../utils/taxes';
 
 // Los productos ahora vienen de Firebase/App.js como productsDB
 
@@ -14,6 +15,37 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
   const [checkoutWithPrint, setCheckoutWithPrint] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('EFECTIVO');
   const [transferRecipient, setTransferRecipient] = useState('');
+  const [users, setUsers] = useState([]);
+  const [mixCashAmount, setMixCashAmount] = useState(0);
+  const [mixTransferAmount, setMixTransferAmount] = useState(0);
+  const [transferBank, setTransferBank] = useState('');
+  const [transferReference, setTransferReference] = useState('');
+  const [transferRecipientId, setTransferRecipientId] = useState(''); // brother user id
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const { getDocs, collection } = await import('firebase/firestore');
+        const snap = await getDocs(collection(db, 'users'));
+        const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setUsers(list);
+        
+        // Auto select Edgar as default transfer recipient if found
+        const edgar = list.find(u => (u.name || '').toLowerCase().includes('edgar'));
+        if (edgar) {
+          setTransferRecipientId(edgar.id);
+          setTransferRecipient(edgar.name);
+        } else if (list.length > 0) {
+          setTransferRecipientId(list[0].id);
+          setTransferRecipient(list[0].name);
+        }
+      } catch (err) {
+        console.error("Error cargando usuarios:", err);
+      }
+    };
+    fetchUsers();
+  }, []);
+
   const [isNotaVenta, setIsNotaVenta] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false); // Previene doble clic
   const [transferQrs, setTransferQrs] = useState({});
@@ -197,11 +229,11 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       finalTotal = sum;
     } else if (vatIncluded) {
       finalTotal = sum;
-      base = sum / 1.15;
+      base = sum / (1 + TAX_CONFIG.IVA.PERCENTAGE);
       iva = finalTotal - base;
     } else {
       base = sum;
-      iva = base * 0.15;
+      iva = base * TAX_CONFIG.IVA.PERCENTAGE;
       finalTotal = base + iva;
     }
 
@@ -291,8 +323,9 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
   // --- CONFIRMAR PAGO REAL (SRI Y FIREBASE) ---
   const confirmCheckout = async () => {
     if (isProcessing) return; // Bloqueo anti doble clic
-    if (paymentMethod === 'TRANSFERENCIA' && !transferRecipient) {
-      alert("⚠️ DEBES SELECCIONAR A QUIÉN SE REALIZÓ LA TRANSFERENCIA (Edgar, Amparito, Junior, Diana).");
+
+    if (paymentMethod === 'TRANSFERENCIA' && !transferRecipientId) {
+      alert("⚠️ DEBES SELECCIONAR A QUIÉN SE REALIZÓ LA TRANSFERENCIA.");
       return;
     }
 
@@ -309,6 +342,21 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
 
     // Generar Llave de Idempotencia única para esta transacción
     const transactionId = crypto.randomUUID ? crypto.randomUUID() : `tx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // Construir paymentDetails estructurado (Simplificado sin MIXTO)
+    const paymentDetails = {
+      method: paymentMethod,
+      cashAmount: paymentMethod === 'EFECTIVO' ? total : 0,
+      transfers: paymentMethod === 'TRANSFERENCIA' ? [
+        {
+          recipientId: transferRecipientId,
+          recipientName: transferRecipient,
+          amount: total,
+          bank: transferBank,
+          reference: transferReference
+        }
+      ] : []
+    };
 
     try {
       const totalsData = { subtotal, baseImponible, ivaAmount, total };
@@ -349,7 +397,12 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
           ivaAmount,
           total,
           isNotaVenta: isNotaVenta,
-          transferRecipient: paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null
+          paymentMethod,
+          transferRecipient,
+          transferRecipientId,
+          transferBank,
+          transferReference,
+          paymentDetails
         })
       });
       
@@ -723,6 +776,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
             {/* MÉTODO DE PAGO */}
             <div style={{ padding: '0.5rem 0', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <button 
+                type="button"
                 onClick={() => setPaymentMethod('EFECTIVO')}
                 style={{ 
                   flex: 1, 
@@ -738,6 +792,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                 💵 Efectivo
               </button>
               <button 
+                type="button"
                 onClick={() => setPaymentMethod('TRANSFERENCIA')}
                 style={{ 
                   flex: 1, 
@@ -755,27 +810,64 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
             </div>
 
             {paymentMethod === 'TRANSFERENCIA' && (
-              <div style={{ marginBottom: '1rem', padding: '0.5rem', background: 'var(--panel-bg)', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
-                <div style={{ fontSize: '0.9rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Destinatario de la Transferencia:</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                  {['Edgar', 'Amparito', 'Junior', 'Diana'].map((name) => (
-                    <button
-                      key={name}
-                      onClick={() => setTransferRecipient(name)}
-                      style={{
-                        padding: '6px',
-                        borderRadius: '6px',
-                        border: `1px solid ${transferRecipient === name ? '#3b82f6' : 'var(--panel-border)'}`,
-                        background: transferRecipient === name ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                        color: transferRecipient === name ? '#3b82f6' : 'var(--text-main)',
-                        fontWeight: transferRecipient === name ? 'bold' : 'normal',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {name}
-                    </button>
-                  ))}
+              <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--panel-border)', display: 'flex', flexDirection: 'column', gap: '8px', color: 'white' }}>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Cuenta que recibió la transferencia *</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '3px' }}>
+                    {['Diana', 'Junior', 'Edgar', 'Amparito'].map((name) => (
+                      <button
+                        type="button"
+                        key={name}
+                        onClick={() => {
+                          setTransferRecipient(name);
+                          const found = users.find(u => (u.name || '').toLowerCase().includes(name.toLowerCase()));
+                          if (found) {
+                            setTransferRecipientId(found.id);
+                          } else {
+                            setTransferRecipientId(name);
+                          }
+                        }}
+                        style={{
+                          padding: '8px',
+                          borderRadius: '6px',
+                          border: `2px solid ${transferRecipient === name ? '#3b82f6' : 'var(--panel-border)'}`,
+                          background: transferRecipient === name ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                          color: transferRecipient === name ? '#3b82f6' : 'var(--text-main)',
+                          fontWeight: transferRecipient === name ? 'bold' : 'normal',
+                          cursor: 'pointer',
+                          fontSize: '0.85rem'
+                        }}
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Banco:</label>
+                    <input 
+                      type="text" 
+                      placeholder="Ej. Pichincha"
+                      value={transferBank}
+                      onChange={(e) => setTransferBank(e.target.value)}
+                      style={{ padding: '6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white', fontSize: '0.85rem' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Referencia:</label>
+                    <input 
+                      type="text" 
+                      placeholder="No. Documento/Ref"
+                      value={transferReference}
+                      onChange={(e) => setTransferReference(e.target.value)}
+                      style={{ padding: '6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white', fontSize: '0.85rem' }}
+                    />
+                  </div>
+                </div>
+
               </div>
             )}
 

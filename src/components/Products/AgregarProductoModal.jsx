@@ -27,8 +27,35 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
     precioBase: '',
     stock: '',
     urlImagen: '',
-    icono: '👕'
+    icono: '👕',
+    ownerId: '',
+    ownerName: ''
   });
+
+  const [owners, setOwners] = useState([]);
+
+  useEffect(() => {
+    const fetchOwners = async () => {
+      try {
+        const { getDoc, doc } = await import('firebase/firestore');
+        const { db } = await import('../../firebase/config');
+        const snap = await getDoc(doc(db, 'settings', 'owners'));
+        let list = ['Edgar', 'Amparito', 'Junior'];
+        if (snap.exists() && Array.isArray(snap.data().list)) {
+          list = snap.data().list;
+        }
+        setOwners(list);
+        
+        if (!initialData) {
+          const edgar = list.find(o => o.toLowerCase().includes('edgar')) || list[0] || '';
+          setFormData(prev => ({ ...prev, ownerId: edgar, ownerName: edgar }));
+        }
+      } catch (err) {
+        console.error("Error cargando propietarios:", err);
+      }
+    };
+    fetchOwners();
+  }, [initialData]);
 
   const [hiddenIcons, setHiddenIcons] = useState(() => {
     try {
@@ -51,6 +78,8 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
       setFormData({
         ...initialData,
         precioBase: initialData.precioBase || initialData.price || '',
+        ownerId: initialData.ownerId || '',
+        ownerName: initialData.ownerName || ''
       });
     }
   }, [initialData]);
@@ -66,8 +95,8 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
     e.preventDefault();
     
     // Validación básica
-    if (!formData.nombre || !formData.precioBase || !formData.stock) {
-      alert("Por favor completa los campos requeridos (Nombre, Precio, Stock).");
+    if (!formData.nombre || !formData.precioBase || !formData.stock || !formData.ownerId) {
+      alert("Por favor completa los campos requeridos (Nombre, Precio, Stock, Propietario).");
       return;
     }
 
@@ -108,7 +137,7 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
                 type="text" 
                 name="codigoBarras" 
                 placeholder="Ej. 786123456" 
-                value={formData.codigoBarras} 
+                value={formData.codigoBarras || ''} 
                 onChange={handleChange} 
               />
             </div>
@@ -119,7 +148,7 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
                 type="text" 
                 name="nombre" 
                 placeholder="Ej. Vintage Denim Jacket" 
-                value={formData.nombre} 
+                value={formData.nombre || ''} 
                 onChange={handleChange} 
                 required 
               />
@@ -133,7 +162,7 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
                   step="0.01" 
                   name="precioBase" 
                   placeholder="0.00" 
-                  value={formData.precioBase} 
+                  value={formData.precioBase || ''} 
                   onChange={handleChange} 
                   required 
                 />
@@ -145,7 +174,7 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
                   type="number" 
                   name="stock" 
                   placeholder="Cantidad inicial" 
-                  value={formData.stock} 
+                  value={formData.stock || ''} 
                   onChange={handleChange} 
                   required 
                 />
@@ -155,11 +184,29 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div className="form-group">
                 <label>Categoría</label>
-                <select name="categoria" value={formData.categoria} onChange={handleChange}>
+                <select name="categoria" value={formData.categoria || 'Jeans'} onChange={handleChange}>
                   <option value="Jeans">Jeans</option>
                   <option value="Chaquetas">Chaquetas</option>
                   <option value="Camisas">Camisas</option>
                   <option value="Accesorios">Accesorios</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Propietario / Hermano *</label>
+                <select 
+                  name="ownerId" 
+                  value={formData.ownerId || ''} 
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData(prev => ({ ...prev, ownerId: val, ownerName: val }));
+                  }}
+                  required
+                >
+                  <option value="">Seleccionar Propietario...</option>
+                  {owners.map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
                 </select>
               </div>
 

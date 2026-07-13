@@ -58,7 +58,6 @@ export async function imprimirTicketBluetooth58mm(issuerData, clientData, cartIt
       sendText(`NOTA DE VENTA\n`);
       send([ESC, 0x21, 0x00]); // Normal
       sendText(`Ref Interna: ${comprobante.claveAcceso || 'S/N'}\n`);
-      sendText(`\n DOCUMENTO SIN VALIDEZ TRIBUTARIA\n\n`);
     } else if (comprobante) {
       sendText(`FACTURA: ${comprobante.numeroComprobante || 'S/N'}\n`);
       sendText(`Clave Acceso: ${comprobante.claveAcceso || 'S/N'}\n`);
