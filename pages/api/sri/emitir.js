@@ -285,8 +285,10 @@ export default async function handler(req, res) {
       if (!internalCrash) {
         try {
           // 8.3 Enviar (validar) y Autorizar SRI (Red/Internet)
-          await validateXml({ env: '1', xml: Buffer.from(signedXml, 'utf8') });
-          authResult = await authorizeXml({ claveAcceso: invoiceData.infoTributaria.claveAcceso, env: '1' });
+          // Mapear ambiente (1 = 'test', 2 = 'prod') para la librería osodreamer
+          const sriEnv = invoiceData.infoTributaria.ambiente === 1 ? 'test' : 'prod';
+          await validateXml({ env: sriEnv, xml: Buffer.from(signedXml, 'utf8') });
+          authResult = await authorizeXml({ claveAcceso: invoiceData.infoTributaria.claveAcceso, env: sriEnv });
         } catch (e) {
           console.error("Error técnico contactando al SRI o validando XML:", e);
           errorTecnico = e.message;
