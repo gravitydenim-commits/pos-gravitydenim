@@ -7,36 +7,43 @@ if (!getApps().length) {
   try {
     let credential;
 
-    // Verificar si estamos en Vercel (o si existe la variable de entorno)
-    if (process.env.FIREBASE_PRIVATE_KEY) {
-      // Producción / Vercel
+    // 1. Intentar cargar desde variables de entorno
+    if (process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL) {
       credential = cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
         privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
       });
       console.log('Firebase Admin: Inicializado con Variables de Entorno');
-    } else if (process.env.NODE_ENV !== 'production') {
+    } else {
+      // 2. Intentar cargar desde archivo local en desarrollo
       try {
-        // En Desarrollo, evitamos que Turbopack/Vercel analice estáticamente "fs" o "require"
         const fs = eval('require("fs")');
         const path = eval('require("path")');
         const serviceAccountPath = path.resolve(process.cwd(), 'serviceAccountKey.json');
-        const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-        credential = cert(serviceAccount);
-        console.log('Firebase Admin: Inicializado con serviceAccountKey.json local');
+        
+        if (fs.existsSync(serviceAccountPath)) {
+          const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+          credential = cert(serviceAccount);
+          console.log('Firebase Admin: Inicializado con serviceAccountKey.json local');
+        }
       } catch (err) {
-        console.log('Firebase Admin: No se encontró serviceAccountKey.json o falló carga. Usando por defecto.');
-        credential = undefined;
+        console.log('Firebase Admin: No se pudo cargar el archivo local.');
       }
-    } else {
-      console.log('Firebase Admin: Usando credenciales por defecto (solo funciona si GOOGLE_APPLICATION_CREDENTIALS está seteado)');
-      credential = undefined; // Esto hará que intente usar las credenciales por defecto del sistema
     }
 
-    initializeApp(credential ? { credential } : undefined);
+    if (!credential) {
+      throw new Error(
+        'Faltan las variables de entorno de Firebase Admin (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY) ' +
+        'y tampoco se encontró un archivo serviceAccountKey.json local. ' +
+        'Para evitar llamadas fallidas al Metadata Server de Google Cloud, la inicialización ha sido detenida.'
+      );
+    }
+
+    initializeApp({ credential });
   } catch (error) {
     console.error('Firebase admin initialization error:', error.message);
+    throw error;
   }
 }
 
