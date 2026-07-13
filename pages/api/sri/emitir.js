@@ -169,7 +169,7 @@ export default async function handler(req, res) {
         dirMatriz: emisor.direccionMatriz
       },
       infoFactura: {
-        fechaEmision: formatSriDate(new Date()),
+        fechaEmision: new Date().toISOString(),
         dirEstablecimiento: emisor.direccionEstablecimiento || emisor.direccionMatriz,
         obligadoContabilidad: emisor.obligadoContabilidad ? 'SI' : 'NO',
         tipoIdentificacionComprador: cliente.tipoDocumento === 'CEDULA' ? '05' : cliente.tipoDocumento === 'RUC' ? '04' : cliente.tipoDocumento === 'CONSUMIDOR_FINAL' ? '07' : '06',
