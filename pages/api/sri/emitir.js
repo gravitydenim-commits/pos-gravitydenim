@@ -1,4 +1,12 @@
 import { getAdminAuth, getAdminDb } from '../../../src/lib/firebaseAdmin';
+
+// CRITICAL: Forzar zona horaria Ecuador ANTES de importar osodreamer.
+// La librería osodreamer usa getTimezoneOffset() para calcular el SigningTime XAdES.
+// En Vercel (UTC, offset=0), la fórmula interna tiene un bug que SUMA 5h en vez de
+// restar, generando una fecha futura que el SRI rechaza con "FIRMA INVÁLIDA (ID 39)".
+// Al forzar TZ=America/Guayaquil, getTimezoneOffset() devuelve 300 y la fórmula funciona.
+process.env.TZ = 'America/Guayaquil';
+
 const { generateXmlInvoice, signXml, validateXml, authorizeXml } = require('osodreamer-sri-xml-signer');
 import fs from 'fs';
 import path from 'path';
@@ -263,6 +271,17 @@ export default async function handler(req, res) {
         console.log(`--- FIN DIAGNÓSTICO P12 ---`);
 
         // 8.2 Firmar XML (CPU Local)
+        // --- LOG DE DIAGNÓSTICO DE ZONA HORARIA ---
+        const _diagNow = new Date();
+        const _diagOffset = _diagNow.getTimezoneOffset();
+        const _diagEcuador = new Date(_diagNow.getTime() - 5 * 3600000);
+        console.log(`[TIMEZONE] Servidor UTC:       ${_diagNow.toISOString()}`);
+        console.log(`[TIMEZONE] Servidor local:     ${_diagNow.toString()}`);
+        console.log(`[TIMEZONE] getTimezoneOffset:  ${_diagOffset} min (esperado: 300 para ECU)`);
+        console.log(`[TIMEZONE] process.env.TZ:     ${process.env.TZ || '(no definido)'}`);
+        console.log(`[TIMEZONE] Hora Ecuador real:  ${_diagEcuador.toISOString().replace('Z', '-05:00')}`);
+        // --- FIN LOG ---
+
         signedXml = await signXml({
           p12Buffer: p12Buffer,
           password: p12Password,
