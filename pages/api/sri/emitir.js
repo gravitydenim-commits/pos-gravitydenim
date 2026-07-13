@@ -3,6 +3,10 @@ import { generateXmlInvoice, signXml, validateXml, authorizeXml } from 'osodream
 import fs from 'fs';
 import path from 'path';
 
+const round2 = (val) => Number(Number(val).toFixed(2));
+const pad2 = (n) => String(n).padStart(2, '0');
+const formatSriDate = (d = new Date()) => `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -92,9 +96,9 @@ export default async function handler(req, res) {
     let subtotalSinImpuestos = 0;
     const detalles = productos.map(prod => {
       const cantidad = prod.qty || prod.cantidad || 1;
-      const precioUnitario = prod.price !== undefined ? prod.price : prod.precio; 
-      const descuento = prod.descuento || 0;
-      const precioTotalSinImpuesto = (precioUnitario * cantidad) - descuento;
+      const precioUnitario = round2(prod.price !== undefined ? prod.price : prod.precio); 
+      const descuento = round2(prod.descuento || 0);
+      const precioTotalSinImpuesto = round2((precioUnitario * cantidad) - descuento);
       subtotalSinImpuestos += precioTotalSinImpuesto;
       
       return {
@@ -111,15 +115,16 @@ export default async function handler(req, res) {
               codigoPorcentaje: 2, // 12%
               tarifa: 12.00,
               baseImponible: precioTotalSinImpuesto,
-              valor: precioTotalSinImpuesto * 0.12
+              valor: round2(precioTotalSinImpuesto * 0.12)
             }
           ]
         }
       };
     });
 
-    const valorIva = subtotalSinImpuestos * 0.12; // Ajustar real
-    const importeTotal = subtotalSinImpuestos + valorIva;
+    subtotalSinImpuestos = round2(subtotalSinImpuestos);
+    const valorIva = round2(subtotalSinImpuestos * 0.12);
+    const importeTotal = round2(subtotalSinImpuestos + valorIva);
 
     const estab = emisor.establecimiento || '001';
     const ptoEmi = emisor.puntoEmision || '001';
@@ -164,7 +169,7 @@ export default async function handler(req, res) {
         dirMatriz: emisor.direccionMatriz
       },
       infoFactura: {
-        fechaEmision: new Date().toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+        fechaEmision: formatSriDate(new Date()),
         dirEstablecimiento: emisor.direccionEstablecimiento || emisor.direccionMatriz,
         obligadoContabilidad: emisor.obligadoContabilidad ? 'SI' : 'NO',
         tipoIdentificacionComprador: cliente.tipoDocumento === 'CEDULA' ? '05' : cliente.tipoDocumento === 'RUC' ? '04' : cliente.tipoDocumento === 'CONSUMIDOR_FINAL' ? '07' : '06',
