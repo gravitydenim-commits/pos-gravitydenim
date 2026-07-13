@@ -237,6 +237,16 @@ export default async function handler(req, res) {
       } catch (e) {
         console.error("Error interno generando/firmando XML:", e);
         errorTecnico = "Fallo de Generación/Firma: " + e.message;
+        
+        // Extraer detalles de validación de esquema o firma
+        if (e.errors) {
+          errorTecnico += " | Errores de esquema: " + (typeof e.errors === 'string' ? e.errors : JSON.stringify(e.errors));
+        }
+        if (e.details) {
+          errorTecnico += " | Detalles: " + (typeof e.details === 'string' ? e.details : JSON.stringify(e.details));
+        }
+        
+        console.error("Stack trace de fallo interno:", e.stack);
         internalCrash = true;
       }
 
