@@ -456,6 +456,9 @@ export default async function handler(req, res) {
     }
 
     const contextType = req.body?.isNotaVenta ? 'nota de venta' : 'facturación SRI';
-    return res.status(500).json({ error: `Error procesando ${contextType}: ` + errMsg });
+    return res.status(500).json({ 
+      error: `Error procesando ${contextType}: ` + errMsg,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
+    });
   }
 }

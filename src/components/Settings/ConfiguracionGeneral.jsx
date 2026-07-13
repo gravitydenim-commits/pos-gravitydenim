@@ -128,6 +128,39 @@ export default function ConfiguracionGeneral() {
     }
   };
 
+  // --- CONFIGURACIÓN BLUETOOTH DIRECTO ---
+  const [activeBluetoothPrinter, setActiveBluetoothPrinter] = useState('');
+  const [testingBluetooth, setTestingBluetooth] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('bluetooth_printer_name');
+    if (saved) setActiveBluetoothPrinter(saved);
+  }, []);
+
+  const handlePairBluetooth = async () => {
+    try {
+      const { conectarImpresoraBluetoothDirecta } = await import('../../utils/escposPrinter');
+      const name = await conectarImpresoraBluetoothDirecta();
+      setActiveBluetoothPrinter(name);
+      alert(`Impresora "${name}" vinculada con éxito.`);
+    } catch (e) {
+      alert(`Error de emparejamiento:\n${e.message}`);
+    }
+  };
+
+  const handleTestBluetoothDirect = async () => {
+    setTestingBluetooth(true);
+    try {
+      const { probarConexionDirecta } = await import('../../utils/escposPrinter');
+      await probarConexionDirecta();
+      alert("Prueba de impresión enviada.");
+    } catch (e) {
+      alert(`Fallo de conexión técnica:\n- Tipo: Bluetooth GATT Direct\n- Mensaje: ${e.message}`);
+    } finally {
+      setTestingBluetooth(false);
+    }
+  };
+
   const handleQRUpload = async (person, e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -817,9 +850,35 @@ export default function ConfiguracionGeneral() {
                 style={{ width: '100%', padding: '12px', background: 'var(--input-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', borderRadius: '8px' }}
               >
                 <option value="sistema">Impresión de Sistema (HTML/Dialog)</option>
-                <option value="bluetooth">Bluetooth Clásico SPP (Vía RawBT)</option>
+                <option value="bluetooth_direct">Bluetooth Directo (Web Bluetooth API)</option>
+                <option value="bluetooth">Bluetooth Clásico SPP (Vía RawBT App)</option>
               </select>
             </div>
+
+            {printMethod === 'bluetooth_direct' && (
+              <div style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: '1.2rem', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+                <strong style={{ color: '#f59e0b', display: 'block', marginBottom: '0.5rem' }}>🔌 Conexión Directa Bluetooth (CRM-03 y similares)</strong>
+                Esta opción utiliza la API de Web Bluetooth de tu navegador para conectarse directamente a la ticketera de 58 mm sin intermediarios.
+                <br/><br/>
+                <strong>Estado actual:</strong> {activeBluetoothPrinter ? <span style={{ color: '#22c55e', fontWeight: 'bold' }}>Vinculada a "{activeBluetoothPrinter}"</span> : <span style={{ color: '#ef4444' }}>No vinculada</span>}
+                <div style={{ display: 'flex', gap: '10px', marginTop: '1rem' }}>
+                  <button 
+                    onClick={handlePairBluetooth}
+                    className="btn-primary" 
+                    style={{ padding: '8px 14px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer' }}
+                  >
+                    🔍 Buscar y Vincular Impresora
+                  </button>
+                  <button 
+                    onClick={handleTestBluetoothDirect}
+                    disabled={testingBluetooth}
+                    style={{ padding: '8px 14px', fontSize: '0.85rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', borderRadius: '4px', cursor: 'pointer', opacity: testingBluetooth ? 0.5 : 1 }}
+                  >
+                    ⚡ {testingBluetooth ? 'Probando...' : 'Probar Conexión'}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {printMethod === 'bluetooth' && (
               <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid var(--accent)', padding: '1rem', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
@@ -860,7 +919,20 @@ export default function ConfiguracionGeneral() {
 
               <button 
                 onClick={() => {
-                  if (printMethod === 'bluetooth') {
+                  if (printMethod === 'bluetooth_direct') {
+                    import('../../utils/escposPrinter').then(module => {
+                      module.imprimirTicketBluetoothDirecto(
+                        { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001' }, 
+                        { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
+                        [{ name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
+                        25.00, 0, 25.00, null
+                      ).then(() => {
+                        alert("Ticket de prueba enviado por Bluetooth Directo con éxito.");
+                      }).catch(err => {
+                        alert("Error de conexión:\n- Tipo: Bluetooth GATT Direct\n- Detalle: " + err.message);
+                      });
+                    });
+                  } else if (printMethod === 'bluetooth') {
                     import('../../utils/escposPrinter').then(module => {
                       module.imprimirTicketBluetooth58mm(
                         { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001' }, 
@@ -892,16 +964,13 @@ export default function ConfiguracionGeneral() {
                     });
                   }
                 }}
-                className="btn-primary"
-                style={{ padding: '12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                style={{ padding: '12px', background: 'var(--panel-border)', color: 'var(--text-main)', border: '1px solid #334155', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
               >
-                🖨️ Imprimir Prueba 58 mm (Portable)
+                🖨️ Imprimir Prueba 58 mm (Portátil/Bluetooth)
               </button>
             </div>
           </div>
         </div>
-
-      </div>
 
         {/* Propietarios de Mercadería */}
         <div className="glass-panel" style={{ padding: '1.5rem', marginTop: '2rem', background: 'var(--panel-bg)', borderRadius: '12px', border: '1px solid var(--panel-border)' }}>
@@ -1016,6 +1085,7 @@ export default function ConfiguracionGeneral() {
           </div>
         </div>
 
+    </div>
     </div>
   );
 }

@@ -407,12 +407,12 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       });
       
       let sriData = {};
+      const textResponse = await response.text();
+      console.log("Raw API Response:", textResponse);
       try {
-        const textResponse = await response.text();
-        console.log("Raw API Response:", textResponse);
         sriData = JSON.parse(textResponse);
       } catch (e) {
-        throw new Error('El servidor no respondió correctamente. Revisa la consola para más detalles.');
+        throw new Error(`Código de Error HTTP ${response.status}\n\nRespuesta del Servidor:\n${textResponse.substring(0, 500)}`);
       }
       
       const claveAcceso = sriData.claveAcceso || `FALLBACK-${Date.now()}`;
@@ -420,8 +420,8 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       
       if (!response.ok) {
          const errorMsg = sriData.error || sriData.message || 'Error en el servidor al procesar la venta.';
-         alert(`❌ ERROR DE EMISIÓN:\n\n${errorMsg}\n\nPor favor, corrige el error e intenta cobrar nuevamente.`);
-         throw new Error(errorMsg);
+         const stackTrace = sriData.stack ? `\n\nSTACK:\n${sriData.stack}` : '';
+         throw new Error(`Endpoint: /api/sri/emitir\nMotivo: ${errorMsg}${stackTrace}`);
       }
 
       if (estadoFactura === 'CONTINGENCIA_LOCAL' || estadoFactura === 'PENDIENTE_ENVIO') {
