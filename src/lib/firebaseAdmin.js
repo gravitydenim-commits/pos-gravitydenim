@@ -7,8 +7,13 @@ if (!getApps().length) {
   try {
     let credential;
 
+    const missing = [];
+    if (!process.env.FIREBASE_PROJECT_ID) missing.push('FIREBASE_PROJECT_ID');
+    if (!process.env.FIREBASE_CLIENT_EMAIL) missing.push('FIREBASE_CLIENT_EMAIL');
+    if (!process.env.FIREBASE_PRIVATE_KEY) missing.push('FIREBASE_PRIVATE_KEY');
+
     // 1. Intentar cargar desde variables de entorno
-    if (process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL) {
+    if (missing.length === 0) {
       credential = cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
@@ -33,10 +38,11 @@ if (!getApps().length) {
     }
 
     if (!credential) {
+      const detailMsg = missing.length > 0 
+        ? `Faltan las siguientes variables de entorno en Vercel: ${missing.join(', ')}`
+        : 'Falta configurar las credenciales de Firebase Admin o el archivo serviceAccountKey.json local.';
       throw new Error(
-        'Faltan las variables de entorno de Firebase Admin (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY) ' +
-        'y tampoco se encontró un archivo serviceAccountKey.json local. ' +
-        'Para evitar llamadas fallidas al Metadata Server de Google Cloud, la inicialización ha sido detenida.'
+        `${detailMsg}. Para evitar llamadas fallidas al Metadata Server de Google Cloud, la inicialización ha sido detenida.`
       );
     }
 
