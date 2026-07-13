@@ -1,13 +1,7 @@
-import admin from 'firebase-admin';
+import { getAdminDb } from '../../../src/lib/firebaseAdmin';
 import { generateRidePdf } from '../../../src/lib/pdfGenerator';
 
-if (!admin.apps.length) {
-  const serviceAccount = require('../../../serviceAccountKey.json');
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
-}
-const db = admin.firestore();
+const db = getAdminDb();
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
