@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, UploadCloud, FileKey, ShieldCheck, Loader2, AlertTriangle } from 'lucide-react';
+import { Save, UploadCloud, FileKey, ShieldCheck, Loader2, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { db, storage } from '../../firebase/config';
 import { collection, onSnapshot, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -8,6 +8,7 @@ export default function ConfiguracionGeneral() {
   // --- PREFERENCIAS DE IMPRESIÓN ---
   const [printFormat, setPrintFormat] = useState('80mm');
   const [printMethod, setPrintMethod] = useState('sistema');
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     // Cargar preferencias
@@ -493,15 +494,24 @@ export default function ConfiguracionGeneral() {
 
               <div style={{ marginBottom: '2rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem' }}>Contraseña de la Firma Electrónica</label>
-                <input 
-                  type="password" 
-                  name="passwordP12" 
-                  value={formData.passwordP12} 
-                  onChange={handleInputChange} 
-                  placeholder="Escriba la clave secreta del .p12"
-                  required
-                  style={{ width: '100%', padding: '10px', background: 'var(--card-bg)', border: '1px solid var(--panel-border)', borderRadius: '6px', color: 'var(--text-main)' }}
-                />
+                <div style={{ position: 'relative' }}>
+                  <input 
+                    type={showPassword ? "text" : "password"} 
+                    name="passwordP12" 
+                    value={formData.passwordP12} 
+                    onChange={handleInputChange} 
+                    placeholder="Escriba la clave secreta del .p12"
+                    required
+                    style={{ width: '100%', padding: '10px', paddingRight: '40px', background: 'var(--card-bg)', border: '1px solid var(--panel-border)', borderRadius: '6px', color: 'var(--text-main)' }}
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowPassword(!showPassword)} 
+                    style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
                 <small style={{ color: 'var(--danger)', display: 'block', marginTop: '0.5rem' }}>
                   * Esta contraseña se utilizará para firmar los XML en el backend.
                 </small>
