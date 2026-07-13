@@ -1,5 +1,5 @@
 import { getAdminAuth, getAdminDb } from '../../../src/lib/firebaseAdmin';
-import { generateXmlInvoice, signXml, validateXml, authorizeXml } from 'osodreamer-sri-xml-signer';
+const { generateXmlInvoice, signXml, validateXml, authorizeXml } = require('osodreamer-sri-xml-signer');
 import fs from 'fs';
 import path from 'path';
 
