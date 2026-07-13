@@ -139,29 +139,26 @@ export default function ConfiguracionGeneral() {
 
     setUploadingQRFor(person);
     try {
-      // Create a reference in Firebase Storage
-      const qrRef = ref(storage, `qrs/${person}_qr_${Date.now()}`);
-      const uploadTask = uploadBytesResumable(qrRef, file);
-
-      uploadTask.on('state_changed', 
-        (snapshot) => {}, // progress
-        (error) => {
-          console.error("Error subiendo QR:", error);
-          alert("Error subiendo QR.");
-          setUploadingQRFor(null);
-        },
-        async () => {
-          // Success
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          // Save to Firestore
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64data = reader.result;
+        try {
           await setDoc(doc(db, 'settings', 'transfer_qrs'), {
-            [person]: downloadURL
+            [person]: base64data
           }, { merge: true });
-          
           setUploadingQRFor(null);
           alert(`QR de ${person} guardado con éxito.`);
+        } catch (dbErr) {
+          console.error("Error guardando QR en Firestore:", dbErr);
+          alert("Error guardando el QR en la base de datos.");
+          setUploadingQRFor(null);
         }
-      );
+      };
+      reader.onerror = () => {
+        alert("Error al leer el archivo.");
+        setUploadingQRFor(null);
+      };
+      reader.readAsDataURL(file);
     } catch (err) {
       console.error(err);
       alert("Error iniciando la subida.");
