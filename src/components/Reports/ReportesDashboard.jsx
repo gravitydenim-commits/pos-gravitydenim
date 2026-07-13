@@ -237,6 +237,12 @@ export default function ReportesDashboard({ sales, issuers }) {
             Reportes SRI
           </button>
           <button 
+            onClick={() => setActiveTab('pendientes')}
+            style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: activeTab === 'pendientes' ? '#f59e0b' : 'transparent', border: '1px solid #f59e0b', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}
+          >
+            Facturas Pendientes
+          </button>
+          <button 
             onClick={() => setActiveTab('internos')}
             style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: activeTab === 'internos' ? '#10b981' : 'transparent', border: '1px solid #10b981', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}
           >
@@ -625,6 +631,108 @@ export default function ReportesDashboard({ sales, issuers }) {
         </>
       )}
 
+      {activeTab === 'pendientes' && (
+        <FacturasPendientesView sales={sales} />
+      )}
+
+    </div>
+  );
+}
+
+function FacturasPendientesView({ sales }) {
+  const [loadingId, setLoadingId] = useState(null);
+
+  const pendingSales = sales.filter(s => s.estadoSri && s.estadoSri !== 'AUTORIZADO' && s.estadoSri !== 'NOTA_DE_VENTA');
+
+  const handleRetry = async (saleId) => {
+    try {
+      setLoadingId(saleId);
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/sri/reintentar', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ claveAcceso: saleId })
+      });
+      
+      const data = await response.json();
+      if (!response.ok) {
+         alert(`❌ ERROR:\n${data.error}`);
+         return;
+      }
+      
+      if (!data.success) {
+         alert(`⚠️ FALLO EL REINTENTO:\nEstado: ${data.estado}\n${data.error || 'Intenta de nuevo más tarde'}`);
+      } else {
+         alert(`✅ FACTURA AUTORIZADA EXITOSAMENTE:\n${data.mensajes?.join(', ')}`);
+         // Idealmente recargar las ventas aquí, por ahora con alert es suficiente, 
+         // Firebase listener de snapshot ya refrescará el dashboard automáticamente
+      }
+    } catch (e) {
+      alert(`❌ ERROR CATASTRÓFICO: ${e.message}`);
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
+  return (
+    <div className="glass-panel" style={{ padding: '2rem' }}>
+      <h3 style={{ margin: '0 0 1rem 0' }}>Facturas en Contingencia / Erróneas</h3>
+      <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>Estas ventas YA descontaron stock y caja, pero no han sido recibidas o autorizadas por el SRI. Debes reintentarlas.</p>
+      
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-muted)' }}>
+              <th style={{ padding: '1rem 0' }}>Fecha Venta</th>
+              <th>Cliente</th>
+              <th>Clave / ID</th>
+              <th>Total</th>
+              <th>Estado Actual</th>
+              <th>Detalle de Error</th>
+              <th style={{ textAlign: 'right' }}>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pendingSales.map(sale => (
+              <tr key={sale.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <td style={{ padding: '1rem 0', whiteSpace: 'nowrap' }}>
+                  {new Date(sale.fechaTransaccion || sale.createdAt).toLocaleString()}
+                </td>
+                <td>{(sale.cliente || sale.customer)?.nombre || 'Consumidor Final'}</td>
+                <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{sale.id}</td>
+                <td style={{ color: 'var(--success)', fontWeight: 'bold' }}>${(sale.totals?.total || 0).toFixed(2)}</td>
+                <td>
+                  <span style={{ background: '#f59e0b', color: 'black', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                    {sale.estadoSri}
+                  </span>
+                </td>
+                <td style={{ fontSize: '0.8rem', color: '#ef4444', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={sale.sriRawResponse || 'Error de red / Timeout'}>
+                  {sale.sriRawResponse || 'Error de conexión / Timeout local'}
+                </td>
+                <td style={{ textAlign: 'right' }}>
+                  <button 
+                    onClick={() => handleRetry(sale.id)}
+                    disabled={loadingId === sale.id}
+                    style={{ background: 'var(--accent)', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: loadingId === sale.id ? 'wait' : 'pointer' }}
+                  >
+                    {loadingId === sale.id ? 'Enviando...' : 'Reintentar SRI'}
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {pendingSales.length === 0 && (
+              <tr>
+                <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                  ✅ No hay facturas pendientes. Todo está autorizado y en orden.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
