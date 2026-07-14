@@ -2,35 +2,140 @@
 const ESC = 0x1B;
 const GS = 0x1D;
 
+// UUIDs de servicios BLE conocidos para impresoras térmicas ESC/POS
 const PRINTER_SERVICES = [
   '000018f0-0000-1000-8000-00805f9b34fb', // Generic BLE printer service
+  '0000ff00-0000-1000-8000-00805f9b34fb', // Common Chinese BLE printer (FF00)
+  '0000fee7-0000-1000-8000-00805f9b34fb', // Tencent / Generic
   '0000e781-0000-1000-8000-00805f9b34fb', // Custom printer UUID
-  '00004953-5343-fe7d-4158-6465636c6b6d', // ISSC
-  '49535343-fe7d-4158-6465-636c6b6d6567'  // Microchip
+  '00004953-5343-fe7d-4158-6465636c6b6d', // ISSC Transparent
+  '49535343-fe7d-4158-6465-636c6b6d6567', // Microchip BLE UART
+  'e7810a71-73ae-499d-8c15-faa9aef0c3f2', // Common thermal printer
 ];
 
-async function findWriteCharacteristic(server) {
-  let service;
+// UUIDs de características de escritura conocidas
+const WRITE_CHAR_UUIDS = [
+  '0000ff02-0000-1000-8000-00805f9b34fb', // FF02 write
+  '00002af1-0000-1000-8000-00805f9b34fb', // 2AF1 write
+  '49535343-8841-43f4-a8d4-ecbe34729bb3', // ISSC Transparent TX
+  '49535343-1e4d-4bd9-ba61-23c647249616', // ISSC Transparent RX
+  'bef8d6c9-9c21-4c9e-b632-bd58c1009f9f', // Common thermal write
+];
+
+async function discoverAllServices(server) {
+  // Intentar descubrir TODOS los servicios disponibles en el dispositivo
+  console.log('[BT] Descubriendo todos los servicios GATT disponibles...');
+  
+  let allServices = [];
+  
+  // 1. Intentar con los UUIDs conocidos
   for (const uuid of PRINTER_SERVICES) {
     try {
-      service = await server.getPrimaryService(uuid);
-      if (service) break;
+      const svc = await server.getPrimaryService(uuid);
+      console.log(`[BT] ✅ Servicio encontrado: ${uuid}`);
+      allServices.push(svc);
     } catch (e) {
-      console.log(`GATT Service ${uuid} not found, trying next...`);
+      // No existe, continuar
     }
   }
 
-  if (!service) {
-    throw new Error("No se detectó un GATT Service compatible en la impresora (UUIDs de impresora estándar no encontrados).");
+  // 2. Si no encontramos ninguno conocido, intentar Serial Port Profile genérico
+  if (allServices.length === 0) {
+    const genericUUIDs = [
+      '00001101-0000-1000-8000-00805f9b34fb', // SPP UUID
+      '0000ffe0-0000-1000-8000-00805f9b34fb', // Common HM-10 / HM-05
+      '0000fff0-0000-1000-8000-00805f9b34fb', // Common alt
+    ];
+    for (const uuid of genericUUIDs) {
+      try {
+        const svc = await server.getPrimaryService(uuid);
+        console.log(`[BT] ✅ Servicio genérico encontrado: ${uuid}`);
+        allServices.push(svc);
+      } catch (e) {
+        // No existe
+      }
+    }
   }
 
-  const characteristics = await service.getCharacteristics();
-  const writeChar = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
-  if (!writeChar) {
-    throw new Error("El servicio de impresión no expone una característica de escritura válida (Write Characteristic).");
+  return allServices;
+}
+
+async function findWriteCharacteristic(server) {
+  const services = await discoverAllServices(server);
+
+  if (services.length === 0) {
+    throw new Error(
+      "No se detectó ningún servicio GATT compatible en la impresora.\n" +
+      "Servicios buscados: " + PRINTER_SERVICES.length + " UUIDs estándar.\n" +
+      "Verifica que la impresora esté encendida y en modo Bluetooth."
+    );
   }
 
-  return writeChar;
+  // Buscar una característica de escritura en CUALQUIER servicio encontrado
+  for (const service of services) {
+    try {
+      const characteristics = await service.getCharacteristics();
+      console.log(`[BT] Servicio ${service.uuid} tiene ${characteristics.length} característica(s):`);
+      
+      for (const c of characteristics) {
+        const props = [];
+        if (c.properties.write) props.push('write');
+        if (c.properties.writeWithoutResponse) props.push('writeWithoutResponse');
+        if (c.properties.read) props.push('read');
+        if (c.properties.notify) props.push('notify');
+        console.log(`  [BT] Char ${c.uuid}: [${props.join(', ')}]`);
+      }
+
+      // Preferir writeWithoutResponse (más rápido para impresoras)
+      let writeChar = characteristics.find(c => c.properties.writeWithoutResponse);
+      if (!writeChar) {
+        writeChar = characteristics.find(c => c.properties.write);
+      }
+      
+      if (writeChar) {
+        console.log(`[BT] ✅ Usando característica de escritura: ${writeChar.uuid} (${writeChar.properties.writeWithoutResponse ? 'writeWithoutResponse' : 'write'})`);
+        return writeChar;
+      }
+    } catch (e) {
+      console.warn(`[BT] Error al leer características del servicio ${service.uuid}:`, e.message);
+    }
+  }
+
+  throw new Error(
+    "La impresora expone servicios GATT pero ninguno tiene una característica de escritura.\n" +
+    "Servicios encontrados: " + services.map(s => s.uuid).join(', ') + "\n" +
+    "Esto puede indicar que la impresora requiere Bluetooth Clásico (SPP) en vez de BLE."
+  );
+}
+
+async function writeWithRetry(writeChar, chunk, retries = 3) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      if (writeChar.properties.writeWithoutResponse) {
+        await writeChar.writeValueWithoutResponse(chunk);
+      } else {
+        await writeChar.writeValueWithResponse(chunk);
+      }
+      return;
+    } catch (e) {
+      if (attempt === retries) throw e;
+      console.warn(`[BT] Escritura fallo intento ${attempt}/${retries}, reintentando...`);
+      await new Promise(r => setTimeout(r, 50 * attempt));
+    }
+  }
+}
+
+async function sendPayload(writeChar, payload) {
+  // Escribir en chunks de 20 bytes (límite MTU estándar BLE)
+  const chunkSize = 20;
+  for (let i = 0; i < payload.length; i += chunkSize) {
+    const chunk = payload.slice(i, i + chunkSize);
+    await writeWithRetry(writeChar, chunk);
+    // Pequeña pausa entre chunks para evitar overflow del buffer de la impresora
+    if (i + chunkSize < payload.length) {
+      await new Promise(r => setTimeout(r, 10));
+    }
+  }
 }
 
 export function buildEscposPayload(issuerData, clientData, cartItems, subtotal, ivaTotal, grandTotal, comprobante) {
@@ -130,30 +235,93 @@ export function buildEscposPayload(issuerData, clientData, cartItems, subtotal, 
 
 export async function conectarImpresoraBluetoothDirecta() {
   if (!navigator.bluetooth) {
-    throw new Error("Web Bluetooth API no está soportada en este navegador. Utiliza Google Chrome, Microsoft Edge o una PWA instalada bajo HTTPS.");
+    throw new Error(
+      "Web Bluetooth API no está soportada en este navegador.\n" +
+      "Utiliza Google Chrome o Microsoft Edge con HTTPS habilitado."
+    );
   }
 
+  console.log('[BT] Solicitando dispositivo Bluetooth...');
+
+  let device;
   try {
-    const device = await navigator.bluetooth.requestDevice({
+    device = await navigator.bluetooth.requestDevice({
+      // Aceptar todos los dispositivos para mostrar impresoras genéricas
       acceptAllDevices: true,
-      optionalServices: PRINTER_SERVICES
+      // Declarar todos los servicios que podríamos usar
+      optionalServices: [
+        ...PRINTER_SERVICES,
+        '00001101-0000-1000-8000-00805f9b34fb', // SPP
+        '0000ffe0-0000-1000-8000-00805f9b34fb', // HM-10
+        '0000fff0-0000-1000-8000-00805f9b34fb', // Alt
+      ]
     });
-
-    console.log(`Dispositivo seleccionado: ${device.name}`);
-    const server = await device.gatt.connect();
-    
-    // Verificar que expone característica compatible
-    await findWriteCharacteristic(server);
-    
-    // Guardar en localStorage para auto-conectar
-    localStorage.setItem('bluetooth_printer_name', device.name || 'CRM-03');
-    
-    server.disconnect();
-    return device.name || 'CRM-03';
   } catch (err) {
-    console.error("Error al conectar por Web Bluetooth:", err);
-    throw new Error(err.message || "Usuario canceló el emparejamiento o el dispositivo no respondió.");
+    if (err.name === 'NotFoundError' || err.message.includes('cancelled') || err.message.includes('canceled')) {
+      throw new Error("Selección cancelada. No se eligió ningún dispositivo.");
+    }
+    throw new Error(`Error al buscar dispositivos: ${err.message}`);
   }
+
+  console.log(`[BT] Dispositivo seleccionado: "${device.name || '(sin nombre)'}"`);
+  console.log(`[BT] ID: ${device.id}`);
+
+  // Paso 2: Conectar al servidor GATT
+  let server;
+  try {
+    console.log('[BT] Conectando al servidor GATT...');
+    server = await device.gatt.connect();
+    console.log('[BT] ✅ Servidor GATT conectado');
+  } catch (err) {
+    throw new Error(
+      `Error al conectar GATT con "${device.name}":\n` +
+      `${err.message}\n\n` +
+      `Posibles causas:\n` +
+      `- La impresora está apagada o fuera de alcance\n` +
+      `- Otro dispositivo ya tiene una conexión activa\n` +
+      `- La impresora usa Bluetooth Clásico (SPP) y no BLE`
+    );
+  }
+
+  // Paso 3: Buscar un servicio/característica de escritura
+  let writeChar;
+  try {
+    writeChar = await findWriteCharacteristic(server);
+  } catch (err) {
+    server.disconnect();
+    throw new Error(
+      `Conectado a "${device.name}" pero no se encontró servicio de impresión:\n` +
+      `${err.message}\n\n` +
+      `Si la CRM-03 no aparece compatible, prueba el método "Bluetooth Clásico (RawBT)".`
+    );
+  }
+
+  // Paso 4: Enviar un byte de prueba para confirmar que la escritura funciona
+  try {
+    const initCmd = new Uint8Array([ESC, 0x40]); // ESC @ (Initialize printer)
+    await writeWithRetry(writeChar, initCmd);
+    console.log('[BT] ✅ Comando de inicialización enviado con éxito');
+  } catch (err) {
+    server.disconnect();
+    throw new Error(
+      `Conectado a "${device.name}" y servicio encontrado, pero la escritura falló:\n` +
+      `${err.message}\n\n` +
+      `Puede ser un problema de permisos GATT o la impresora rechazó el comando.`
+    );
+  }
+
+  // Guardar info del dispositivo
+  const printerName = device.name || 'CRM-03';
+  localStorage.setItem('bluetooth_printer_name', printerName);
+  localStorage.setItem('bluetooth_printer_id', device.id);
+  
+  // Guardar UUID de servicio y característica que funcionaron para reconexión rápida
+  localStorage.setItem('bluetooth_printer_service', writeChar.service.uuid);
+  localStorage.setItem('bluetooth_printer_char', writeChar.uuid);
+
+  server.disconnect();
+  console.log(`[BT] ✅ Impresora "${printerName}" vinculada y verificada con éxito`);
+  return printerName;
 }
 
 export async function probarConexionDirecta() {
@@ -161,42 +329,73 @@ export async function probarConexionDirecta() {
     throw new Error("Web Bluetooth API no soportada en este navegador.");
   }
 
-  const devices = await navigator.bluetooth.getDevices();
+  // Intentar obtener la impresora previamente vinculada
   const savedName = localStorage.getItem('bluetooth_printer_name');
-  const device = devices.find(d => d.name === savedName) || devices[0];
-  
-  if (!device) {
-    throw new Error("No hay impresoras vinculadas. Por favor, haz clic en 'Buscar y Vincular Impresora'.");
+  let device;
+
+  try {
+    const devices = await navigator.bluetooth.getDevices();
+    console.log(`[BT] Dispositivos previamente vinculados: ${devices.length}`);
+    devices.forEach(d => console.log(`  - "${d.name}" (${d.id})`));
+
+    device = devices.find(d => d.name === savedName);
+    
+    if (device) {
+      // Solicitar vigilancia de advertisements para poder reconectar
+      try {
+        const abortController = new AbortController();
+        await device.watchAdvertisements({ signal: abortController.signal });
+        // Esperar un poco para que aparezca el advertisement
+        await new Promise(r => setTimeout(r, 2000));
+        abortController.abort();
+      } catch (e) {
+        console.log('[BT] watchAdvertisements no soportado o falló, intentando conexión directa...');
+      }
+    }
+  } catch (e) {
+    console.log('[BT] getDevices() no disponible:', e.message);
   }
 
-  const server = await device.gatt.connect();
+  if (!device) {
+    throw new Error(
+      `No se encontró la impresora "${savedName || '(ninguna)'}". ` +
+      `Haz clic en "Buscar y Vincular Impresora" para emparejarla nuevamente.`
+    );
+  }
+
+  console.log(`[BT] Reconectando a "${device.name}"...`);
+  let server;
+  try {
+    server = await device.gatt.connect();
+  } catch (err) {
+    throw new Error(
+      `No se pudo reconectar a "${device.name}":\n${err.message}\n\n` +
+      `Intenta vincular la impresora nuevamente con el botón "Buscar y Vincular".`
+    );
+  }
+
   try {
     const writeChar = await findWriteCharacteristic(server);
     
     // Enviar comandos ESC/POS de prueba
     const encoder = new TextEncoder();
-    
     let testData = [];
     testData.push(ESC, 0x40); // Init
     testData.push(ESC, 0x61, 0x01); // Centro
     
-    // Text encoder
-    const textBytes = encoder.encode("\n--- CONEXION CRM-03 OK ---\nImpresora 58mm ESC/POS\n\n\n\n");
+    const textBytes = encoder.encode("\n--- CONEXION CRM-03 OK ---\nImpresora 58mm ESC/POS\nGravity Denim POS\n\n\n\n");
     textBytes.forEach(b => testData.push(b));
     testData.push(GS, 0x56, 0x41, 0x00); // Cortar
     
     const payload = new Uint8Array(testData);
+    await sendPayload(writeChar, payload);
     
-    // Escribir en chunks de 20 bytes
-    const chunkSize = 20;
-    for (let i = 0; i < payload.length; i += chunkSize) {
-      const chunk = payload.slice(i, i + chunkSize);
-      await writeChar.writeValue(chunk);
-    }
+    console.log('[BT] ✅ Prueba de impresión enviada con éxito');
     return true;
   } catch (err) {
-    console.error("Error en prueba Bluetooth:", err);
-    throw new Error(err.message || "Error al comunicarse con la característica GATT.");
+    throw new Error(
+      `Conectado a "${device.name}" pero falló el envío de datos:\n${err.message}`
+    );
   } finally {
     server.disconnect();
   }
@@ -207,29 +406,51 @@ export async function imprimirTicketBluetoothDirecto(issuerData, clientData, car
     throw new Error("Web Bluetooth API no soportada.");
   }
 
-  const devices = await navigator.bluetooth.getDevices();
   const savedName = localStorage.getItem('bluetooth_printer_name');
-  const device = devices.find(d => d.name === savedName) || devices[0];
+  let device;
+
+  try {
+    const devices = await navigator.bluetooth.getDevices();
+    device = devices.find(d => d.name === savedName);
+    
+    if (device) {
+      try {
+        const abortController = new AbortController();
+        await device.watchAdvertisements({ signal: abortController.signal });
+        await new Promise(r => setTimeout(r, 1500));
+        abortController.abort();
+      } catch (e) {
+        // watchAdvertisements puede no estar soportado, intentar conexión directa
+      }
+    }
+  } catch (e) {
+    console.log('[BT] getDevices() falló:', e.message);
+  }
   
   if (!device) {
-    throw new Error("No hay impresoras Bluetooth vinculadas. Vincula la CRM-03 en Ajustes.");
+    throw new Error(`No hay impresoras Bluetooth vinculadas. Vincula la CRM-03 en Ajustes.`);
   }
 
+  console.log(`[BT] Conectando a "${device.name}" para imprimir...`);
   const payload = buildEscposPayload(issuerData, clientData, cartItems, subtotal, ivaTotal, grandTotal, comprobante);
 
-  const server = await device.gatt.connect();
+  let server;
+  try {
+    server = await device.gatt.connect();
+  } catch (err) {
+    throw new Error(
+      `No se pudo conectar a "${device.name}" para imprimir:\n${err.message}\n\n` +
+      `Verifica que la impresora esté encendida y cerca.`
+    );
+  }
+
   try {
     const writeChar = await findWriteCharacteristic(server);
-
-    const chunkSize = 20;
-    for (let i = 0; i < payload.length; i += chunkSize) {
-      const chunk = payload.slice(i, i + chunkSize);
-      await writeChar.writeValue(chunk);
-    }
+    await sendPayload(writeChar, payload);
+    console.log('[BT] ✅ Ticket enviado con éxito');
     return true;
   } catch (err) {
-    console.error("Error en impresión Bluetooth directa:", err);
-    throw new Error("Fallo al enviar datos: " + (err.message || "Error GATT indefinido"));
+    throw new Error(`Fallo al enviar datos a "${device.name}":\n${err.message}`);
   } finally {
     server.disconnect();
   }

@@ -1,0 +1,26 @@
+const sa = JSON.parse(require('fs').readFileSync('serviceAccountKey.json', 'utf8'));
+
+console.log('=== VERIFICACIÓN DE MAPEO ===');
+console.log('');
+console.log('JSON "project_id" → env FIREBASE_PROJECT_ID:', sa.project_id ? '✅ Tiene valor' : '❌ Vacío');
+console.log('JSON "client_email" → env FIREBASE_CLIENT_EMAIL:', sa.client_email ? '✅ Tiene valor' : '❌ Vacío');
+console.log('JSON "private_key" → env FIREBASE_PRIVATE_KEY:', sa.private_key ? '✅ Tiene valor (' + sa.private_key.length + ' chars)' : '❌ Vacío');
+console.log('');
+console.log('=== MAPEO EN firebaseAdmin.js ===');
+console.log('process.env.FIREBASE_PROJECT_ID  → cert({ projectId })   ✅ Coincide con JSON "project_id"');
+console.log('process.env.FIREBASE_CLIENT_EMAIL → cert({ clientEmail }) ✅ Coincide con JSON "client_email"');
+console.log('process.env.FIREBASE_PRIVATE_KEY  → cert({ privateKey })  ✅ Coincide con JSON "private_key"');
+console.log('');
+console.log('=== VALORES A CONFIGURAR EN VERCEL ===');
+console.log('');
+console.log('1. FIREBASE_PROJECT_ID');
+console.log('   ' + sa.project_id);
+console.log('');
+console.log('2. FIREBASE_CLIENT_EMAIL');
+console.log('   ' + sa.client_email);
+console.log('');
+console.log('3. FIREBASE_PRIVATE_KEY');
+console.log('   (Copia TODA la cadena de abajo, incluyendo BEGIN y END)');
+console.log('---INICIO---');
+console.log(sa.private_key);
+console.log('---FIN---');

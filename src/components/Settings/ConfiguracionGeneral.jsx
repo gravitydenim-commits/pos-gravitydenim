@@ -697,74 +697,6 @@ export default function ConfiguracionGeneral() {
           </div>
         </div>
 
-        {/* --- OPCIONES DE IMPRESIÓN --- */}
-        <div className="glass-panel" style={{ padding: '2rem', marginTop: '2rem' }}>
-          <h3 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            🖨️ Opciones de Impresión de Tickets
-          </h3>
-          <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-            Configura cómo deseas imprimir los comprobantes en este dispositivo.
-          </p>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Método de Impresión</label>
-              <select 
-                value={printMethod}
-                onChange={(e) => handlePrintPreferenceChange('method', e.target.value)}
-                style={{ width: '100%', padding: '12px', background: 'var(--input-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', borderRadius: '8px', marginBottom: '1.5rem' }}
-              >
-                <option value="sistema">Sistema / Navegador (Por defecto)</option>
-                <option value="bluetooth">Impresora Bluetooth Externa (Solo Chrome)</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Formato del Ticket</label>
-              <select 
-                value={printFormat}
-                onChange={(e) => handlePrintPreferenceChange('format', e.target.value)}
-                style={{ width: '100%', padding: '12px', background: 'var(--input-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', borderRadius: '8px', marginBottom: '1.5rem' }}
-              >
-                <option value="80mm">80 mm (Estándar)</option>
-                <option value="58mm">58 mm (Compacto)</option>
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-            <button 
-              onClick={() => {
-                import('../../utils/printTicket').then(({ printTestTicket }) => {
-                  printTestTicket('80mm');
-                });
-              }}
-              style={{ padding: '10px 16px', background: 'transparent', border: '1px solid var(--panel-border)', color: 'var(--text-main)', borderRadius: '8px', cursor: 'pointer' }}
-            >
-              Imprimir Prueba 80mm (Sistema)
-            </button>
-
-            <button 
-              onClick={async () => {
-                try {
-                  const { imprimirTicketBluetooth58mm } = await import('../../utils/escposPrinter');
-                  await imprimirTicketBluetooth58mm(
-                    { razonSocial: "Gravity Denim Prueba", ruc: "0000000000001", direccionMatriz: "Local" },
-                    { nombre: "Consumidor", numeroIdentificacion: "9999999999" },
-                    [{ nombre: "Producto Test", cantidad: 1, precio: 10.00 }],
-                    10.00, 0, 10.00,
-                    { numeroComprobante: "001-001-000000001", claveAcceso: "1234567890" }
-                  );
-                } catch (e) {
-                  alert("Error en prueba Bluetooth: " + e.message);
-                }
-              }}
-              style={{ padding: '10px 16px', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid #3b82f6', color: '#3b82f6', borderRadius: '8px', cursor: 'pointer' }}
-            >
-              Imprimir Prueba 58mm (Bluetooth)
-            </button>
-          </div>
-        </div>
 
         {/* --- CÓDIGOS QR DE TRANSFERENCIAS --- */}
         <div className="glass-panel" style={{ padding: '2rem', marginTop: '2rem' }}>
@@ -831,9 +763,10 @@ export default function ConfiguracionGeneral() {
           <h3 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             🖨️ Preferencias de Impresión
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Formato de Papel</label>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Formato de Papel</label>
               <select 
                 value={printFormat} 
                 onChange={(e) => handlePrintPreferenceChange('format', e.target.value)}
@@ -842,8 +775,9 @@ export default function ConfiguracionGeneral() {
                 <option value="80mm">80 mm (Estándar)</option>
                 <option value="58mm">58 mm (Bluetooth/Portable)</option>
               </select>
-
-              <label style={{ display: 'block', margin: '1.5rem 0 0.5rem 0', color: 'var(--text-muted)' }}>Método de Conexión</label>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Método de Conexión</label>
               <select 
                 value={printMethod} 
                 onChange={(e) => handlePrintPreferenceChange('method', e.target.value)}
@@ -854,122 +788,90 @@ export default function ConfiguracionGeneral() {
                 <option value="bluetooth">Bluetooth Clásico SPP (Vía RawBT App)</option>
               </select>
             </div>
-
-            {printMethod === 'bluetooth_direct' && (
-              <div style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: '1.2rem', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
-                <strong style={{ color: '#f59e0b', display: 'block', marginBottom: '0.5rem' }}>🔌 Conexión Directa Bluetooth (CRM-03 y similares)</strong>
-                Esta opción utiliza la API de Web Bluetooth de tu navegador para conectarse directamente a la ticketera de 58 mm sin intermediarios.
-                <br/><br/>
-                <strong>Estado actual:</strong> {activeBluetoothPrinter ? <span style={{ color: '#22c55e', fontWeight: 'bold' }}>Vinculada a "{activeBluetoothPrinter}"</span> : <span style={{ color: '#ef4444' }}>No vinculada</span>}
-                <div style={{ display: 'flex', gap: '10px', marginTop: '1rem' }}>
-                  <button 
-                    onClick={handlePairBluetooth}
-                    className="btn-primary" 
-                    style={{ padding: '8px 14px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer' }}
-                  >
-                    🔍 Buscar y Vincular Impresora
-                  </button>
-                  <button 
-                    onClick={handleTestBluetoothDirect}
-                    disabled={testingBluetooth}
-                    style={{ padding: '8px 14px', fontSize: '0.85rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', borderRadius: '4px', cursor: 'pointer', opacity: testingBluetooth ? 0.5 : 1 }}
-                  >
-                    ⚡ {testingBluetooth ? 'Probando...' : 'Probar Conexión'}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {printMethod === 'bluetooth' && (
-              <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid var(--accent)', padding: '1rem', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
-                <strong style={{ color: 'var(--accent)', display: 'block', marginBottom: '0.5rem' }}>ℹ️ Requisito para Bluetooth Clásico (Impresoras 58mm genéricas)</strong>
-                Al ser una aplicación Web/PWA, no podemos acceder al Bluetooth Clásico (SPP) directamente por seguridad del navegador. 
-                Para imprimir en tu tablet, debes descargar la app gratuita <strong>RawBT</strong> desde la Play Store.
-                <br/><br/>
-                <strong>Pasos:</strong>
-                <ol style={{ paddingLeft: '1.2rem', marginTop: '0.5rem' }}>
-                  <li>Empareja tu impresora (ej. CRM-03) en los Ajustes de Bluetooth de Android.</li>
-                  <li>Abre la app RawBT y selecciona tu impresora.</li>
-                  <li>Usa el botón de abajo para imprimir. El POS se conectará automáticamente a RawBT para enviar el ticket.</li>
-                </ol>
-              </div>
-            )}
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center' }}>
-              <button 
-                onClick={() => {
-                  import('../../utils/printTicket').then(module => {
-                    module.imprimirTicket(
-                      { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001' }, 
-                      [{ name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
-                      { subtotal: 25.00, ivaAmount: 0, total: 25.00 }, 
-                      { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
-                      '1234567890', 
-                      'EFECTIVO', 
-                      null, 
-                      false, 
-                      '80mm'
-                    );
-                  });
-                }}
-                style={{ padding: '12px', background: 'var(--panel-border)', color: 'var(--text-main)', border: '1px solid #334155', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-              >
-                🖨️ Imprimir Prueba 80 mm (Sistema)
-              </button>
-
-              <button 
-                onClick={() => {
-                  if (printMethod === 'bluetooth_direct') {
-                    import('../../utils/escposPrinter').then(module => {
-                      module.imprimirTicketBluetoothDirecto(
-                        { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001' }, 
-                        { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
-                        [{ name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
-                        25.00, 0, 25.00, null
-                      ).then(() => {
-                        alert("Ticket de prueba enviado por Bluetooth Directo con éxito.");
-                      }).catch(err => {
-                        alert("Error de conexión:\n- Tipo: Bluetooth GATT Direct\n- Detalle: " + err.message);
-                      });
-                    });
-                  } else if (printMethod === 'bluetooth') {
-                    import('../../utils/escposPrinter').then(module => {
-                      module.imprimirTicketBluetooth58mm(
-                        { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001' }, 
-                        { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
-                        [{ name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
-                        25.00, 
-                        0, 
-                        25.00, 
-                        null
-                      ).then(() => {
-                        alert("Comandos enviados a RawBT exitosamente.");
-                      }).catch(err => {
-                        alert("Error: " + err.message);
-                      });
-                    });
-                  } else {
-                    import('../../utils/printTicket').then(module => {
-                      module.imprimirTicket(
-                        { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001' }, 
-                        [{ name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
-                        { subtotal: 25.00, ivaAmount: 0, total: 25.00 }, 
-                        { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
-                        '1234567890', 
-                        'EFECTIVO', 
-                        null, 
-                        false, 
-                        '58mm'
-                      );
-                    });
-                  }
-                }}
-                style={{ padding: '12px', background: 'var(--panel-border)', color: 'var(--text-main)', border: '1px solid #334155', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-              >
-                🖨️ Imprimir Prueba 58 mm (Portátil/Bluetooth)
-              </button>
-            </div>
           </div>
+
+          {printMethod === 'bluetooth_direct' && (
+            <div style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: '1.2rem', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+              <strong style={{ color: '#f59e0b', display: 'block', marginBottom: '0.5rem' }}>🔌 Conexión Directa Bluetooth (CRM-03 y similares)</strong>
+              Conecta directamente a la ticketera de 58 mm vía Web Bluetooth sin apps intermediarias.
+              <br/><br/>
+              <strong>Estado:</strong> {activeBluetoothPrinter ? <span style={{ color: '#22c55e', fontWeight: 'bold' }}>✅ Vinculada a "{activeBluetoothPrinter}"</span> : <span style={{ color: '#ef4444' }}>❌ No vinculada</span>}
+              <div style={{ display: 'flex', gap: '10px', marginTop: '1rem' }}>
+                <button 
+                  onClick={handlePairBluetooth}
+                  className="btn-primary" 
+                  style={{ padding: '8px 14px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer' }}
+                >
+                  🔍 Buscar y Vincular Impresora
+                </button>
+                <button 
+                  onClick={handleTestBluetoothDirect}
+                  disabled={testingBluetooth}
+                  style={{ padding: '8px 14px', fontSize: '0.85rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', borderRadius: '4px', cursor: 'pointer', opacity: testingBluetooth ? 0.5 : 1 }}
+                >
+                  ⚡ {testingBluetooth ? 'Probando...' : 'Probar Conexión'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {printMethod === 'bluetooth' && (
+            <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid var(--accent)', padding: '1rem', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+              <strong style={{ color: 'var(--accent)', display: 'block', marginBottom: '0.5rem' }}>ℹ️ Bluetooth Clásico (Vía RawBT)</strong>
+              Requiere la app gratuita <strong>RawBT</strong> de la Play Store.
+              Empareja la impresora en Ajustes de Android → ábrela en RawBT → usa el botón de prueba.
+            </div>
+          )}
+
+          <button 
+            onClick={() => {
+              if (printMethod === 'bluetooth_direct') {
+                import('../../utils/escposPrinter').then(module => {
+                  module.imprimirTicketBluetoothDirecto(
+                    { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001' }, 
+                    { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
+                    [{ name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
+                    25.00, 0, 25.00, null
+                  ).then(() => {
+                    alert("✅ Ticket de prueba enviado por Bluetooth Directo.");
+                  }).catch(err => {
+                    alert("❌ Error Bluetooth Directo:\n" + err.message);
+                  });
+                });
+              } else if (printMethod === 'bluetooth') {
+                import('../../utils/escposPrinter').then(module => {
+                  module.imprimirTicketBluetooth58mm(
+                    { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001' }, 
+                    { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
+                    [{ name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
+                    25.00, 0, 25.00, null
+                  ).then(() => {
+                    alert("✅ Comandos enviados a RawBT exitosamente.");
+                  }).catch(err => {
+                    alert("❌ Error RawBT:\n" + err.message);
+                  });
+                });
+              } else {
+                import('../../utils/printTicket').then(module => {
+                  module.imprimirTicket(
+                    { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001' }, 
+                    [{ name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
+                    { subtotal: 25.00, ivaAmount: 0, total: 25.00 }, 
+                    { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
+                    '1234567890', 
+                    'EFECTIVO', 
+                    null, 
+                    false, 
+                    printFormat
+                  );
+                });
+              }
+            }}
+            className="btn-primary"
+            style={{ width: '100%', padding: '14px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontSize: '1rem' }}
+          >
+            🖨️ Imprimir Ticket de Prueba ({printFormat} / {printMethod === 'bluetooth_direct' ? 'BT Directo' : printMethod === 'bluetooth' ? 'RawBT' : 'Sistema'})
+          </button>
         </div>
 
         {/* Propietarios de Mercadería */}
