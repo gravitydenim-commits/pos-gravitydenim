@@ -759,6 +759,7 @@ export default function ConfiguracionGeneral() {
         </div>
 
         {/* --- PREFERENCIAS DE IMPRESIÓN --- */}
+        {/* La CRONE CRM-03 usa Bluetooth Clásico (SPP) vía RawBT. NO usar Web Bluetooth GATT/BLE. */}
         <div className="glass-panel" style={{ padding: '2rem', marginTop: '2rem' }}>
           <h3 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             🖨️ Preferencias de Impresión
@@ -783,72 +784,40 @@ export default function ConfiguracionGeneral() {
                 onChange={(e) => handlePrintPreferenceChange('method', e.target.value)}
                 style={{ width: '100%', padding: '12px', background: 'var(--input-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', borderRadius: '8px' }}
               >
-                <option value="sistema">Impresión de Sistema (HTML/Dialog)</option>
-                <option value="bluetooth_direct">Bluetooth Directo (Web Bluetooth API)</option>
-                <option value="bluetooth">Bluetooth Clásico SPP (Vía RawBT App)</option>
+                <option value="sistema">Impresión de Sistema (Navegador)</option>
+                <option value="bluetooth">Bluetooth 58mm (CRM-03 vía RawBT)</option>
               </select>
             </div>
           </div>
 
-          {printMethod === 'bluetooth_direct' && (
-            <div style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: '1.2rem', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
-              <strong style={{ color: '#f59e0b', display: 'block', marginBottom: '0.5rem' }}>🔌 Conexión Directa Bluetooth (CRM-03 y similares)</strong>
-              Conecta directamente a la ticketera de 58 mm vía Web Bluetooth sin apps intermediarias.
-              <br/><br/>
-              <strong>Estado:</strong> {activeBluetoothPrinter ? <span style={{ color: '#22c55e', fontWeight: 'bold' }}>✅ Vinculada a "{activeBluetoothPrinter}"</span> : <span style={{ color: '#ef4444' }}>❌ No vinculada</span>}
-              <div style={{ display: 'flex', gap: '10px', marginTop: '1rem' }}>
-                <button 
-                  onClick={handlePairBluetooth}
-                  className="btn-primary" 
-                  style={{ padding: '8px 14px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer' }}
-                >
-                  🔍 Buscar y Vincular Impresora
-                </button>
-                <button 
-                  onClick={handleTestBluetoothDirect}
-                  disabled={testingBluetooth}
-                  style={{ padding: '8px 14px', fontSize: '0.85rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', borderRadius: '4px', cursor: 'pointer', opacity: testingBluetooth ? 0.5 : 1 }}
-                >
-                  ⚡ {testingBluetooth ? 'Probando...' : 'Probar Conexión'}
-                </button>
-              </div>
-            </div>
-          )}
-
           {printMethod === 'bluetooth' && (
-            <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid var(--accent)', padding: '1rem', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
-              <strong style={{ color: 'var(--accent)', display: 'block', marginBottom: '0.5rem' }}>ℹ️ Bluetooth Clásico (Vía RawBT)</strong>
-              Requiere la app gratuita <strong>RawBT</strong> de la Play Store.
-              Empareja la impresora en Ajustes de Android → ábrela en RawBT → usa el botón de prueba.
+            <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid var(--accent)', padding: '1.2rem', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
+              <strong style={{ color: 'var(--accent)', display: 'block', marginBottom: '0.5rem' }}>ℹ️ Impresora CRONE CRM-03 (Bluetooth Clásico SPP)</strong>
+              La CRM-03 se conecta vía Bluetooth Clásico a través de la app <strong>RawBT</strong> (gratuita en Play Store).
+              <br/><br/>
+              <strong>Pasos:</strong>
+              <ol style={{ paddingLeft: '1.2rem', marginTop: '0.5rem' }}>
+                <li>Empareja la CRM-03 en Ajustes de Bluetooth de Android.</li>
+                <li>Abre la app RawBT y selecciona la CRM-03.</li>
+                <li>Usa el botón de prueba de abajo para confirmar que imprime.</li>
+              </ol>
             </div>
           )}
 
           <button 
             onClick={() => {
-              if (printMethod === 'bluetooth_direct') {
-                import('../../utils/escposPrinter').then(module => {
-                  module.imprimirTicketBluetoothDirecto(
-                    { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001' }, 
-                    { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
-                    [{ name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
-                    25.00, 0, 25.00, null
-                  ).then(() => {
-                    alert("✅ Ticket de prueba enviado por Bluetooth Directo.");
-                  }).catch(err => {
-                    alert("❌ Error Bluetooth Directo:\n" + err.message);
-                  });
-                });
-              } else if (printMethod === 'bluetooth') {
+              if (printMethod === 'bluetooth') {
                 import('../../utils/escposPrinter').then(module => {
                   module.imprimirTicketBluetooth58mm(
-                    { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001' }, 
+                    { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001', razonSocial: 'GRAVITY DENIM PRUEBA' }, 
                     { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
-                    [{ name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
-                    25.00, 0, 25.00, null
+                    [{ nombre: 'Pantalón Jean Prueba', cantidad: 1, precio: 25.00, name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
+                    25.00, 0, 25.00, 
+                    { isNotaVenta: true, claveAcceso: 'PRUEBA-' + Date.now() }
                   ).then(() => {
-                    alert("✅ Comandos enviados a RawBT exitosamente.");
+                    alert("✅ Ticket de prueba enviado a la CRM-03 vía RawBT.");
                   }).catch(err => {
-                    alert("❌ Error RawBT:\n" + err.message);
+                    alert("❌ Error al imprimir:\n" + err.message);
                   });
                 });
               } else {
@@ -870,7 +839,7 @@ export default function ConfiguracionGeneral() {
             className="btn-primary"
             style={{ width: '100%', padding: '14px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontSize: '1rem' }}
           >
-            🖨️ Imprimir Ticket de Prueba ({printFormat} / {printMethod === 'bluetooth_direct' ? 'BT Directo' : printMethod === 'bluetooth' ? 'RawBT' : 'Sistema'})
+            🖨️ Imprimir Ticket de Prueba ({printFormat} / {printMethod === 'bluetooth' ? 'CRM-03 Bluetooth' : 'Sistema'})
           </button>
         </div>
 
