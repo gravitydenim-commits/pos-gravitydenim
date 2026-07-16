@@ -128,39 +128,7 @@ export default function ConfiguracionGeneral() {
     }
   };
 
-  // --- CONFIGURACIÓN BLUETOOTH DIRECTO ---
-  const [activeBluetoothPrinter, setActiveBluetoothPrinter] = useState('');
-  const [testingBluetooth, setTestingBluetooth] = useState(false);
 
-  useEffect(() => {
-    console.log("🔍 Diagnóstico nativo - window.AndroidBluetooth:", window.AndroidBluetooth);
-    const saved = localStorage.getItem('bluetooth_printer_name');
-    if (saved) setActiveBluetoothPrinter(saved);
-  }, []);
-
-  const handlePairBluetooth = async () => {
-    try {
-      const { conectarImpresoraBluetoothDirecta } = await import('../../utils/escposPrinter');
-      const name = await conectarImpresoraBluetoothDirecta();
-      setActiveBluetoothPrinter(name);
-      alert(`Impresora "${name}" vinculada con éxito.`);
-    } catch (e) {
-      alert(`Error de emparejamiento:\n${e.message}`);
-    }
-  };
-
-  const handleTestBluetoothDirect = async () => {
-    setTestingBluetooth(true);
-    try {
-      const { probarConexionDirecta } = await import('../../utils/escposPrinter');
-      await probarConexionDirecta();
-      alert("Prueba de impresión enviada.");
-    } catch (e) {
-      alert(`Fallo de conexión técnica:\n- Tipo: Bluetooth GATT Direct\n- Mensaje: ${e.message}`);
-    } finally {
-      setTestingBluetooth(false);
-    }
-  };
 
   const handleQRUpload = async (person, e) => {
     const file = e.target.files[0];
@@ -759,92 +727,36 @@ export default function ConfiguracionGeneral() {
           </div>
         </div>
 
-        {/* --- DIAGNÓSTICO TEMPORAL DE PUENTE ANDROID --- */}
-        <div className="glass-panel" style={{ padding: '1.2rem', marginTop: '2rem', background: 'rgba(236, 72, 153, 0.05)', border: '1px solid rgba(236, 72, 153, 0.3)' }}>
-          <h4 style={{ margin: '0 0 0.5rem 0', color: '#ec4899' }}>🔍 Diagnóstico de Puente Nativo</h4>
-          <div style={{ fontSize: '0.9rem', lineHeight: '1.5' }}>
-            <strong>typeof window.AndroidBluetooth:</strong>{' '}
-            {typeof window.AndroidBluetooth !== 'undefined' ? (
-              <span style={{ color: '#22c55e', fontWeight: 'bold' }}>✅ inyectado / disponible (tipo: {typeof window.AndroidBluetooth})</span>
-            ) : (
-              <span style={{ color: '#ef4444', fontWeight: 'bold' }}>❌ undefined (No disponible en este navegador)</span>
-            )}
-            <br />
-            <strong>Navegador (UserAgent):</strong> {navigator.userAgent}
-          </div>
-        </div>
-
         {/* --- PREFERENCIAS DE IMPRESIÓN --- */}
         <div className="glass-panel" style={{ padding: '2rem', marginTop: '2rem' }}>
           <h3 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            🖨️ Preferencias de Impresión
+            🖨️ Impresión de Sistema (80 mm)
           </h3>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Formato de Papel</label>
-              <select 
-                value={printFormat} 
-                onChange={(e) => handlePrintPreferenceChange('format', e.target.value)}
-                style={{ width: '100%', padding: '12px', background: 'var(--input-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', borderRadius: '8px' }}
-              >
-                <option value="80mm">80 mm (Estándar)</option>
-                <option value="58mm">58 mm (Bluetooth/Portable)</option>
-              </select>
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Método de Conexión</label>
-              <select 
-                value={printMethod} 
-                onChange={(e) => handlePrintPreferenceChange('method', e.target.value)}
-                style={{ width: '100%', padding: '12px', background: 'var(--input-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', borderRadius: '8px' }}
-              >
-                <option value="sistema">Impresión de Sistema (Navegador)</option>
-                <option value="bluetooth">Bluetooth Nativo (App Android)</option>
-              </select>
-            </div>
-          </div>
-
-          {printMethod === 'bluetooth' && (
-            <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid var(--accent)', padding: '1.2rem', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
-              <strong style={{ color: 'var(--accent)', display: 'block', marginBottom: '0.5rem' }}>ℹ️ Impresora 58mm (Puente Nativo Android)</strong>
-              La impresora se controla de forma directa utilizando el hardware nativo de la tablet inyectado en el WebView.
-              <br/><br/>
-              <strong>Nota:</strong> Este método solo funciona si ejecutas el POS dentro de la aplicación móvil de la tablet.
-            </div>
-          )}
+          
+          <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem', lineHeight: '1.6' }}>
+            La impresión se gestiona a través del diálogo clásico del navegador web. Optimizado para ticketeras térmicas estándar de escritorio (80 mm).
+          </p>
 
           <button 
             onClick={() => {
-              if (printMethod === 'bluetooth') {
-                import('../../lib/bluetoothPrinter').then(module => {
-                  module.bluetoothPrinter.printTest()
-                  .then(() => {
-                    console.log("Ticket de prueba enviado con éxito.");
-                  }).catch(err => {
-                    alert("❌ Error al imprimir:\n" + err.message);
-                  });
-                });
-              } else {
-                import('../../utils/printTicket').then(module => {
-                  module.imprimirTicket(
-                    { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001' }, 
-                    [{ name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
-                    { subtotal: 25.00, ivaAmount: 0, total: 25.00 }, 
-                    { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
-                    '1234567890', 
-                    'EFECTIVO', 
-                    null, 
-                    false, 
-                    printFormat
-                  );
-                });
-              }
+              import('../../utils/printTicket').then(module => {
+                module.imprimirTicket(
+                  { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001' }, 
+                  [{ name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
+                  { subtotal: 25.00, ivaAmount: 0, total: 25.00 }, 
+                  { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
+                  '1234567890', 
+                  'EFECTIVO', 
+                  null, 
+                  false, 
+                  '80mm'
+                );
+              });
             }}
             className="btn-primary"
             style={{ width: '100%', padding: '14px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontSize: '1rem' }}
           >
-            🖨️ Imprimir Ticket de Prueba ({printFormat} / {printMethod === 'bluetooth' ? 'Nativo' : 'Sistema'})
+            🖨️ Imprimir Ticket de Prueba
           </button>
         </div>
 
