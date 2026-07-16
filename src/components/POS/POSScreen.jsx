@@ -437,8 +437,9 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       // 3. Imprimir si corresponde
       if (withPrint) {
         const format = localStorage.getItem('printerFormat') || '80mm';
-        
-        if (format === '58mm') {
+        const method = localStorage.getItem('printerMethod') || 'sistema';
+
+        if (method === 'bluetooth') {
           import('../../utils/escposPrinter').then(async (module) => {
             try {
               await module.imprimirTicketBluetooth58mm(
@@ -451,8 +452,8 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                 { numeroComprobante: isNotaVenta ? 'S/N' : sriData.numeroComprobante || '', claveAcceso, isNotaVenta }
               );
             } catch (err) {
-              console.warn("Fallo impresión Bluetooth directa, ejecutando fallback de sistema silencioso:", err);
-              // Fallback automático y silencioso al navegador en caso de fallo bluetooth
+              console.error("Fallo Bluetooth, usando sistema:", err);
+              // Fallback automático al navegador en caso de fallo bluetooth
               import('../../utils/printTicket').then(fallbackMod => {
                  fallbackMod.imprimirTicket(issuerData, cart, totalsData, customer, claveAcceso, paymentMethod, paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, isNotaVenta, format);
               });
