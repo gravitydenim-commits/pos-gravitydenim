@@ -127,8 +127,24 @@ export default function ConfiguracionGeneral() {
       alert("Error al eliminar propietario.");
     }
   };
+  // --- CONFIGURACIÓN BLUETOOTH DIRECTO ---
+  const [activeBluetoothPrinter, setActiveBluetoothPrinter] = useState('');
 
+  useEffect(() => {
+    const saved = localStorage.getItem('bluetooth_printer_name');
+    if (saved) setActiveBluetoothPrinter(saved);
+  }, []);
 
+  const handlePairBluetooth = async () => {
+    try {
+      const { conectarImpresoraBluetoothDirecta } = await import('../../utils/escposPrinter');
+      const name = await conectarImpresoraBluetoothDirecta();
+      setActiveBluetoothPrinter(name);
+      alert(`Impresora "${name}" vinculada con éxito.`);
+    } catch (e) {
+      alert(`Error de emparejamiento:\n${e.message}`);
+    }
+  };
 
 
   const handleQRUpload = async (person, e) => {
@@ -742,42 +758,68 @@ export default function ConfiguracionGeneral() {
               style={{ width: '100%', padding: '12px', background: 'var(--input-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', borderRadius: '8px' }}
             >
               <option value="80mm">80 mm (Estándar Escritorio)</option>
-              <option value="58mm">58 mm (Portátil / Bluetooth Clásico)</option>
+              <option value="58mm">58 mm (Portátil / Bluetooth Directo)</option>
             </select>
           </div>
 
-          <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--panel-border)', padding: '1.2rem', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
-            {printFormat === '80mm' ? (
-              <>
-                <strong>🖨️ Formato de 80 mm seleccionado:</strong>
-                <br />
-                Optimizado para ticketeras térmicas estándar de escritorio de sistema.
-              </>
-            ) : (
-              <>
-                <strong>🖨️ Formato de 58 mm seleccionado:</strong>
-                <br />
-                Optimizado para ticketeras térmicas portátiles compactas (58 mm / Bluetooth).
-                Al imprimir, el navegador abrirá el diálogo del sistema para enviar a tu impresora.
-              </>
-            )}
-          </div>
+          {printFormat === '58mm' && (
+            <div style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: '1.2rem', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+              <strong style={{ color: '#f59e0b', display: 'block', marginBottom: '0.5rem' }}>🔌 Conexión Directa Bluetooth (58mm)</strong>
+              Usa el diálogo de Chrome para vincular tu impresora (ej: <strong>Printer001</strong>).
+              <br/><br/>
+              <strong>Estado actual:</strong> {activeBluetoothPrinter ? <span style={{ color: '#22c55e', fontWeight: 'bold' }}>Vinculada a "{activeBluetoothPrinter}"</span> : <span style={{ color: '#ef4444' }}>No vinculada</span>}
+              
+              <div style={{ marginTop: '1rem' }}>
+                <button 
+                  onClick={handlePairBluetooth}
+                  className="btn-primary" 
+                  style={{ padding: '8px 14px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer' }}
+                >
+                  🔍 Buscar y Vincular Impresora
+                </button>
+              </div>
+            </div>
+          )}
+
+          {printFormat === '80mm' && (
+            <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--panel-border)', padding: '1.2rem', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
+              <strong>🖨️ Formato de 80 mm seleccionado:</strong>
+              <br />
+              Optimizado para ticketeras térmicas estándar de escritorio de sistema.
+            </div>
+          )}
 
           <button 
             onClick={() => {
-              import('../../utils/printTicket').then(module => {
-                module.imprimirTicket(
-                  { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001', razonSocial: 'GRAVITY DENIM PRUEBA' }, 
-                  [{ name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
-                  { subtotal: 25.00, ivaAmount: 0, total: 25.00 }, 
-                  { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
-                  '1234567890', 
-                  'EFECTIVO', 
-                  null, 
-                  false, 
-                  printFormat
-                );
-              });
+              if (printFormat === '58mm') {
+                import('../../utils/escposPrinter').then(module => {
+                  module.imprimirTicketBluetooth58mm(
+                    { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001', razonSocial: 'GRAVITY DENIM PRUEBA' }, 
+                    { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
+                    [{ nombre: 'Pantalón Jean Prueba', cantidad: 1, precio: 25.00, name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
+                    25.00, 0, 25.00, 
+                    { isNotaVenta: true, claveAcceso: 'PRUEBA-' + Date.now() }
+                  ).then(() => {
+                    console.log("Ticket de prueba enviado.");
+                  }).catch(err => {
+                    console.error(err);
+                  });
+                });
+              } else {
+                import('../../utils/printTicket').then(module => {
+                  module.imprimirTicket(
+                    { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001', razonSocial: 'GRAVITY DENIM PRUEBA' }, 
+                    [{ name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
+                    { subtotal: 25.00, ivaAmount: 0, total: 25.00 }, 
+                    { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
+                    '1234567890', 
+                    'EFECTIVO', 
+                    null, 
+                    false, 
+                    printFormat
+                  );
+                });
+              }
             }}
             className="btn-primary"
             style={{ width: '100%', padding: '14px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontSize: '1rem' }}

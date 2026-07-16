@@ -437,19 +437,42 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       // 3. Imprimir si corresponde
       if (withPrint) {
         const format = localStorage.getItem('printerFormat') || '80mm';
-        import('../../utils/printTicket').then(module => {
-          module.imprimirTicket(
-            issuerData, 
-            cart, 
-            totalsData, 
-            customer, 
-            claveAcceso, 
-            paymentMethod, 
-            paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, 
-            isNotaVenta, 
-            format
-          );
-        });
+        
+        if (format === '58mm') {
+          import('../../utils/escposPrinter').then(async (module) => {
+            try {
+              await module.imprimirTicketBluetooth58mm(
+                issuerData, 
+                customer, 
+                cart, 
+                subtotal, 
+                ivaAmount, 
+                total, 
+                { numeroComprobante: isNotaVenta ? 'S/N' : sriData.numeroComprobante || '', claveAcceso, isNotaVenta }
+              );
+            } catch (err) {
+              console.warn("Fallo impresión Bluetooth directa, ejecutando fallback de sistema silencioso:", err);
+              // Fallback automático y silencioso al navegador en caso de fallo bluetooth
+              import('../../utils/printTicket').then(fallbackMod => {
+                 fallbackMod.imprimirTicket(issuerData, cart, totalsData, customer, claveAcceso, paymentMethod, paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, isNotaVenta, format);
+              });
+            }
+          });
+        } else {
+          import('../../utils/printTicket').then(module => {
+            module.imprimirTicket(
+              issuerData, 
+              cart, 
+              totalsData, 
+              customer, 
+              claveAcceso, 
+              paymentMethod, 
+              paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, 
+              isNotaVenta, 
+              format
+            );
+          });
+        }
       } else {
         console.log("🖨️ [RIDE] Impresión física omitida por el operador.");
       }
