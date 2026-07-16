@@ -439,21 +439,21 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         const format = localStorage.getItem('printerFormat') || '80mm';
         const method = localStorage.getItem('printerMethod') || 'sistema';
 
-        if (method === 'bluetooth') {
-          import('../../utils/escposPrinter').then(async (module) => {
+        if (format === '58mm' && method === 'bluetooth') {
+          import('../../lib/bluetoothPrinter').then(async (module) => {
             try {
-              await module.imprimirTicketBluetooth58mm(
+              await module.bluetoothPrinter.imprimirTicket58mm(
                 issuerData, 
                 customer, 
                 cart, 
                 subtotal, 
                 ivaAmount, 
                 total, 
-                { numeroComprobante: isNotaVenta ? 'S/N' : sriData.numeroComprobante || '', claveAcceso, isNotaVenta }
+                { numeroComprobante: isNotaVenta ? 'S/N' : sriData.numeroComprobante || '', claveAcceso, isNotaVenta },
+                paymentMethod
               );
             } catch (err) {
-              console.error("Fallo Bluetooth, usando sistema:", err);
-              // Fallback automático al navegador en caso de fallo bluetooth
+              console.error("Fallo impresión puente nativo AndroidBluetooth, usando sistema:", err);
               import('../../utils/printTicket').then(fallbackMod => {
                  fallbackMod.imprimirTicket(issuerData, cart, totalsData, customer, claveAcceso, paymentMethod, paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, isNotaVenta, format);
               });
