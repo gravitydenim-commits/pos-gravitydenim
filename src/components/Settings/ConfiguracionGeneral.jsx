@@ -133,6 +133,7 @@ export default function ConfiguracionGeneral() {
   const [testingBluetooth, setTestingBluetooth] = useState(false);
 
   useEffect(() => {
+    console.log("🔍 Diagnóstico nativo - window.AndroidBluetooth:", window.AndroidBluetooth);
     const saved = localStorage.getItem('bluetooth_printer_name');
     if (saved) setActiveBluetoothPrinter(saved);
   }, []);
@@ -758,8 +759,22 @@ export default function ConfiguracionGeneral() {
           </div>
         </div>
 
+        {/* --- DIAGNÓSTICO TEMPORAL DE PUENTE ANDROID --- */}
+        <div className="glass-panel" style={{ padding: '1.2rem', marginTop: '2rem', background: 'rgba(236, 72, 153, 0.05)', border: '1px solid rgba(236, 72, 153, 0.3)' }}>
+          <h4 style={{ margin: '0 0 0.5rem 0', color: '#ec4899' }}>🔍 Diagnóstico de Puente Nativo</h4>
+          <div style={{ fontSize: '0.9rem', lineHeight: '1.5' }}>
+            <strong>typeof window.AndroidBluetooth:</strong>{' '}
+            {typeof window.AndroidBluetooth !== 'undefined' ? (
+              <span style={{ color: '#22c55e', fontWeight: 'bold' }}>✅ inyectado / disponible (tipo: {typeof window.AndroidBluetooth})</span>
+            ) : (
+              <span style={{ color: '#ef4444', fontWeight: 'bold' }}>❌ undefined (No disponible en este navegador)</span>
+            )}
+            <br />
+            <strong>Navegador (UserAgent):</strong> {navigator.userAgent}
+          </div>
+        </div>
+
         {/* --- PREFERENCIAS DE IMPRESIÓN --- */}
-        {/* La CRONE CRM-03 usa Bluetooth Clásico (SPP) vía RawBT. NO usar Web Bluetooth GATT/BLE. */}
         <div className="glass-panel" style={{ padding: '2rem', marginTop: '2rem' }}>
           <h3 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             🖨️ Preferencias de Impresión
