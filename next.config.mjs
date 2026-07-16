@@ -7,7 +7,7 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Para evitar problemas con modulos nativos si se usan
+  allowedDevOrigins: ['192.168.0.117', '26.73.204.56', 'localhost', '127.0.0.1'],
 }
 
 export default nextConfig;

@@ -128,38 +128,8 @@ export default function ConfiguracionGeneral() {
     }
   };
 
-  // --- CONFIGURACIÓN BLUETOOTH DIRECTO ---
-  const [activeBluetoothPrinter, setActiveBluetoothPrinter] = useState('');
-  const [testingBluetooth, setTestingBluetooth] = useState(false);
 
-  useEffect(() => {
-    const saved = localStorage.getItem('bluetooth_printer_name');
-    if (saved) setActiveBluetoothPrinter(saved);
-  }, []);
 
-  const handlePairBluetooth = async () => {
-    try {
-      const { conectarImpresoraBluetoothDirecta } = await import('../../utils/escposPrinter');
-      const name = await conectarImpresoraBluetoothDirecta();
-      setActiveBluetoothPrinter(name);
-      alert(`Impresora "${name}" vinculada con éxito.`);
-    } catch (e) {
-      alert(`Error de emparejamiento:\n${e.message}`);
-    }
-  };
-
-  const handleTestBluetoothDirect = async () => {
-    setTestingBluetooth(true);
-    try {
-      const { probarConexionDirecta } = await import('../../utils/escposPrinter');
-      await probarConexionDirecta();
-      alert("Prueba de impresión enviada.");
-    } catch (e) {
-      alert(`Fallo de conexión técnica:\n- Tipo: Bluetooth GATT Direct\n- Mensaje: ${e.message}`);
-    } finally {
-      setTestingBluetooth(false);
-    }
-  };
 
   const handleQRUpload = async (person, e) => {
     const file = e.target.files[0];
@@ -759,54 +729,41 @@ export default function ConfiguracionGeneral() {
         </div>
 
         {/* --- PREFERENCIAS DE IMPRESIÓN --- */}
-        {/* La CRONE CRM-03 usa Bluetooth Clásico (SPP) vía RawBT. NO usar Web Bluetooth GATT/BLE. */}
         <div className="glass-panel" style={{ padding: '2rem', marginTop: '2rem' }}>
           <h3 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             🖨️ Preferencias de Impresión
           </h3>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Formato de Papel</label>
-              <select 
-                value={printFormat} 
-                onChange={(e) => handlePrintPreferenceChange('format', e.target.value)}
-                style={{ width: '100%', padding: '12px', background: 'var(--input-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', borderRadius: '8px' }}
-              >
-                <option value="80mm">80 mm (Estándar)</option>
-                <option value="58mm">58 mm (Bluetooth/Portable)</option>
-              </select>
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Método de Conexión</label>
-              <select 
-                value={printMethod} 
-                onChange={(e) => handlePrintPreferenceChange('method', e.target.value)}
-                style={{ width: '100%', padding: '12px', background: 'var(--input-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', borderRadius: '8px' }}
-              >
-                <option value="sistema">Impresión de Sistema (Navegador)</option>
-                <option value="bluetooth">Bluetooth 58mm (CRM-03 vía RawBT)</option>
-              </select>
-            </div>
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Formato de Papel</label>
+            <select 
+              value={printFormat} 
+              onChange={(e) => handlePrintPreferenceChange('format', e.target.value)}
+              style={{ width: '100%', padding: '12px', background: 'var(--input-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', borderRadius: '8px' }}
+            >
+              <option value="80mm">80 mm (Estándar Escritorio)</option>
+              <option value="58mm">58 mm (Portátil / Bluetooth Directo)</option>
+            </select>
           </div>
 
-          {printMethod === 'bluetooth' && (
-            <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid var(--accent)', padding: '1.2rem', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
-              <strong style={{ color: 'var(--accent)', display: 'block', marginBottom: '0.5rem' }}>ℹ️ Impresora CRONE CRM-03 (Bluetooth Clásico SPP)</strong>
-              La CRM-03 se conecta vía Bluetooth Clásico a través de la app <strong>RawBT</strong> (gratuita en Play Store).
-              <br/><br/>
-              <strong>Pasos:</strong>
-              <ol style={{ paddingLeft: '1.2rem', marginTop: '0.5rem' }}>
-                <li>Empareja la CRM-03 en Ajustes de Bluetooth de Android.</li>
-                <li>Abre la app RawBT y selecciona la CRM-03.</li>
-                <li>Usa el botón de prueba de abajo para confirmar que imprime.</li>
-              </ol>
+          {printFormat === '58mm' && (
+            <div style={{ background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.2)', padding: '1.2rem', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
+              <strong style={{ color: 'var(--accent)', display: 'block', marginBottom: '0.5rem' }}>🔌 Conexión Directa Bluetooth (58mm)</strong>
+              Al pulsar "Imprimir Ticket de Prueba", el navegador abrirá un cuadro de diálogo nativo para seleccionar tu impresora (ej: <strong>Printer001</strong>).
+            </div>
+          )}
+
+          {printFormat === '80mm' && (
+            <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--panel-border)', padding: '1.2rem', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
+              <strong>🖨️ Formato de 80 mm seleccionado:</strong>
+              <br />
+              Optimizado para ticketeras térmicas estándar de escritorio de sistema.
             </div>
           )}
 
           <button 
             onClick={() => {
-              if (printMethod === 'bluetooth') {
+              if (printFormat === '58mm') {
                 import('../../utils/escposPrinter').then(module => {
                   module.imprimirTicketBluetooth58mm(
                     { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001', razonSocial: 'GRAVITY DENIM PRUEBA' }, 
@@ -815,15 +772,15 @@ export default function ConfiguracionGeneral() {
                     25.00, 0, 25.00, 
                     { isNotaVenta: true, claveAcceso: 'PRUEBA-' + Date.now() }
                   ).then(() => {
-                    alert("✅ Ticket de prueba enviado a la CRM-03 vía RawBT.");
+                    console.log("Ticket enviado con éxito.");
                   }).catch(err => {
-                    alert("❌ Error al imprimir:\n" + err.message);
+                    alert("Error al conectar / imprimir: " + err.message);
                   });
                 });
               } else {
                 import('../../utils/printTicket').then(module => {
                   module.imprimirTicket(
-                    { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001' }, 
+                    { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001', razonSocial: 'GRAVITY DENIM PRUEBA' }, 
                     [{ name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
                     { subtotal: 25.00, ivaAmount: 0, total: 25.00 }, 
                     { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
@@ -839,7 +796,7 @@ export default function ConfiguracionGeneral() {
             className="btn-primary"
             style={{ width: '100%', padding: '14px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontSize: '1rem' }}
           >
-            🖨️ Imprimir Ticket de Prueba ({printFormat} / {printMethod === 'bluetooth' ? 'CRM-03 Bluetooth' : 'Sistema'})
+            🖨️ Imprimir Ticket de Prueba ({printFormat} / {printFormat === '58mm' ? 'Bluetooth' : 'Sistema'})
           </button>
         </div>
 
