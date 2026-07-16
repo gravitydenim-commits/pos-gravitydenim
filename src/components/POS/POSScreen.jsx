@@ -435,46 +435,21 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       // para evitar duplicaciones y ser parte del commit atómico del SRI.
 
       // 3. Imprimir si corresponde
-      // 3. Imprimir si corresponde
       if (withPrint) {
         const format = localStorage.getItem('printerFormat') || '80mm';
-        
-        if (format === '58mm') {
-          import('../../utils/escposPrinter').then(async (module) => {
-            try {
-              await module.imprimirTicketBluetooth58mm(
-                issuerData, 
-                customer, 
-                cart, 
-                subtotal, 
-                ivaAmount, 
-                total, 
-                { numeroComprobante: isNotaVenta ? 'S/N' : sriData.numeroComprobante || '', claveAcceso, isNotaVenta }
-              );
-            } catch (err) {
-              console.error("Fallo impresión Bluetooth, usando sistema:", err);
-              if (window.confirm("Fallo la impresión Bluetooth directa. ¿Deseas imprimir usando el navegador (sistema clásico)?")) {
-                import('../../utils/printTicket').then(fallbackMod => {
-                   fallbackMod.imprimirTicket(issuerData, cart, totalsData, customer, claveAcceso, paymentMethod, paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, isNotaVenta, format);
-                });
-              }
-            }
-          });
-        } else {
-          import('../../utils/printTicket').then(module => {
-            module.imprimirTicket(
-              issuerData, 
-              cart, 
-              totalsData, 
-              customer, 
-              claveAcceso, 
-              paymentMethod, 
-              paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, 
-              isNotaVenta, 
-              format
-            );
-          });
-        }
+        import('../../utils/printTicket').then(module => {
+          module.imprimirTicket(
+            issuerData, 
+            cart, 
+            totalsData, 
+            customer, 
+            claveAcceso, 
+            paymentMethod, 
+            paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, 
+            isNotaVenta, 
+            format
+          );
+        });
       } else {
         console.log("🖨️ [RIDE] Impresión física omitida por el operador.");
       }
