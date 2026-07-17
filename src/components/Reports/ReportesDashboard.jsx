@@ -492,7 +492,14 @@ export default function ReportesDashboard({ sales, issuers }) {
           <h2><Activity className="inline" style={{verticalAlign: 'bottom'}}/> Dashboard de Reportes</h2>
           <span style={{color: 'var(--text-muted)'}}>Inteligencia Multi-RUC y Rendimiento</span>
         </div>
-        <div style={{ display: 'flex', gap: '1rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <button 
+            onClick={handleImprimirReporteDelDia}
+            className="btn-success" 
+            style={{ padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Printer size={16} /> Imprimir Cierre del Día
+          </button>
           <button 
             onClick={() => setActiveTab('sri')}
             style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: activeTab === 'sri' ? 'var(--accent)' : 'transparent', border: '1px solid var(--accent)', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}
