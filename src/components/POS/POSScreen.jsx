@@ -814,7 +814,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                   <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Cuenta que recibió la transferencia *</label>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '3px' }}>
-                    {['Diana', 'Junior', 'Edgar', 'Amparito'].map((name) => (
+                    {['Diana', 'Fabian', 'Edgar', 'Amparito'].map((name) => (
                       <button
                         type="button"
                         key={name}

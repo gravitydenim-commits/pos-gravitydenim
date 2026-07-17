@@ -122,8 +122,8 @@ export default function ReportesDashboard({ sales, issuers }) {
     let todayTransferencia = 0;
     let monthEfectivo = 0;
     let monthTransferencia = 0;
-    const todayTransferDetails = { 'Edgar': 0, 'Amparito': 0, 'Junior': 0, 'Diana': 0, 'Otro': 0 };
-    const monthTransferDetails = { 'Edgar': 0, 'Amparito': 0, 'Junior': 0, 'Diana': 0, 'Otro': 0 };
+    const todayTransferDetails = { 'Edgar': 0, 'Amparito': 0, 'Fabian': 0, 'Diana': 0, 'Otro': 0 };
+    const monthTransferDetails = { 'Edgar': 0, 'Amparito': 0, 'Fabian': 0, 'Diana': 0, 'Otro': 0 };
     const issuerTotals = {};
     const productSales = {};
 
@@ -581,7 +581,7 @@ export default function ReportesDashboard({ sales, issuers }) {
           
           <div className="glass-panel" style={{ padding: '1.5rem' }}>
             <h3 style={{ color: '#3b82f6', margin: '0 0 1rem 0', fontSize: '1.1rem' }}>Detalle Transferencias (Hoy)</h3>
-            {['Edgar', 'Amparito', 'Junior', 'Diana', 'Otro'].map(name => todayTransferDetails[name] > 0 && (
+            {['Edgar', 'Amparito', 'Fabian', 'Diana', 'Otro'].map(name => todayTransferDetails[name] > 0 && (
               <div key={name} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', borderBottom: '1px solid var(--panel-border)', paddingBottom: '0.2rem' }}>
                 <span style={{ color: 'var(--text-main)' }}>{name}</span>
                 <span style={{ fontWeight: 'bold' }}>${todayTransferDetails[name].toFixed(2)}</span>
@@ -594,7 +594,7 @@ export default function ReportesDashboard({ sales, issuers }) {
 
           <div className="glass-panel" style={{ padding: '1.5rem' }}>
             <h3 style={{ color: '#3b82f6', margin: '0 0 1rem 0', fontSize: '1.1rem' }}>Detalle Transferencias (Mes)</h3>
-            {['Edgar', 'Amparito', 'Junior', 'Diana', 'Otro'].map(name => monthTransferDetails[name] > 0 && (
+            {['Edgar', 'Amparito', 'Fabian', 'Diana', 'Otro'].map(name => monthTransferDetails[name] > 0 && (
               <div key={name} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', borderBottom: '1px solid var(--panel-border)', paddingBottom: '0.2rem' }}>
                 <span style={{ color: 'var(--text-main)' }}>{name}</span>
                 <span style={{ fontWeight: 'bold' }}>${monthTransferDetails[name].toFixed(2)}</span>
@@ -905,8 +905,8 @@ function CierreHermanoView({ sales }) {
     const list = [
       { id: 'Edgar', name: 'Edgar', dbKeys: ['edgar'] },
       { id: 'Amparito', name: 'Amparito', dbKeys: ['amparito'] },
-      { id: 'Junior', name: 'Junior (Domingo Sánchez)', dbKeys: ['domingo', 'junior', 'sanchez'] },
-      { id: 'Diana', name: 'Diana (Esposa de Junior)', dbKeys: ['diana'] }
+      { id: 'Fabian', name: 'Fabian (Domingo Sánchez)', dbKeys: ['domingo', 'fabian', 'junior', 'sanchez'] },
+      { id: 'Diana', name: 'Diana (Esposa de Fabian)', dbKeys: ['diana'] }
     ];
     return list.map(item => {
       const matchedUser = users.find(u => {

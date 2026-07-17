@@ -88,7 +88,7 @@ export default function ConfiguracionGeneral() {
   const [transferQrs, setTransferQrs] = useState({
     Edgar: null,
     Amparito: null,
-    Junior: null,
+    Fabian: null,
     Diana: null
   });
   const [uploadingQRFor, setUploadingQRFor] = useState(null);
@@ -99,7 +99,7 @@ export default function ConfiguracionGeneral() {
         setTransferQrs({
           Edgar: docSnap.data().Edgar || null,
           Amparito: docSnap.data().Amparito || null,
-          Junior: docSnap.data().Junior || null,
+          Fabian: docSnap.data().Fabian || docSnap.data().Junior || null,
           Diana: docSnap.data().Diana || null
         });
       }
@@ -108,7 +108,7 @@ export default function ConfiguracionGeneral() {
   }, []);
 
   // --- GESTIÓN DE PROPIETARIOS DE MERCADERÍA ---
-  const [ownersList, setOwnersList] = useState(['Edgar', 'Amparito', 'Junior']);
+  const [ownersList, setOwnersList] = useState(['Edgar', 'Amparito', 'Fabian']);
   const [newOwnerName, setNewOwnerName] = useState('');
 
   useEffect(() => {
@@ -116,7 +116,7 @@ export default function ConfiguracionGeneral() {
       if (docSnap.exists() && Array.isArray(docSnap.data().list)) {
         setOwnersList(docSnap.data().list);
       } else {
-        setDoc(doc(db, 'settings', 'owners'), { list: ['Edgar', 'Amparito', 'Junior'] }, { merge: true });
+        setDoc(doc(db, 'settings', 'owners'), { list: ['Edgar', 'Amparito', 'Fabian'] }, { merge: true });
       }
     });
     return () => unsub();
@@ -701,7 +701,7 @@ export default function ConfiguracionGeneral() {
           </p>
           
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-            {['Edgar', 'Amparito', 'Junior', 'Diana'].map((person) => (
+            {['Edgar', 'Amparito', 'Fabian', 'Diana'].map((person) => (
               <div key={person} style={{ background: 'var(--card-bg)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--panel-border)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                   <h4 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.1rem' }}>{person}</h4>
