@@ -30,6 +30,21 @@ export default function ReportesDashboard({ sales, issuers }) {
   const [filterInvoice, setFilterInvoice] = useState('');
   const [filterSriState, setFilterSriState] = useState('');
   const [selectedVenta, setSelectedVenta] = useState(null);
+  const [usersList, setUsersList] = useState([]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const { getDocs, collection } = await import('firebase/firestore');
+        const { db } = await import('../../firebase/config');
+        const snap = await getDocs(collection(db, 'users'));
+        setUsersList(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (err) {
+        console.error("Error loading users in ReportesDashboard:", err);
+      }
+    };
+    fetchUsers();
+  }, []);
 
   const filteredSales = useMemo(() => {
     return sales.filter(sale => {
@@ -114,6 +129,15 @@ export default function ReportesDashboard({ sales, issuers }) {
   };
 
   const handleImprimirReporteDelDia = async () => {
+    const getCajeroName = (sale) => {
+      const uid = sale.cajeroUid || sale.usuarioUid;
+      if (uid) {
+        const found = usersList.find(u => u.id === uid);
+        if (found) return found.name || found.username || 'Edgar';
+      }
+      return sale.cajeroNombre || sale.usuarioNombre || 'Edgar';
+    };
+
     // 1. Filtrar ventas de hoy
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -171,7 +195,7 @@ export default function ReportesDashboard({ sales, issuers }) {
           facturasSales.forEach(sale => {
             const items = sale.productos || sale.items || [];
             const payMethod = (sale.paymentMethod || 'EFECTIVO').substring(0, 5);
-            const cajero = (sale.cajeroNombre || sale.usuarioNombre || 'Edgar').substring(0, 6);
+            const cajero = getCajeroName(sale).substring(0, 6);
             const saleTot = sale.totals?.total || 0;
             totalFacturas += saleTot;
 
@@ -203,7 +227,7 @@ export default function ReportesDashboard({ sales, issuers }) {
           notasSales.forEach(sale => {
             const items = sale.productos || sale.items || [];
             const payMethod = (sale.paymentMethod || 'EFECTIVO').substring(0, 5);
-            const cajero = (sale.cajeroNombre || sale.usuarioNombre || 'Edgar').substring(0, 6);
+            const cajero = getCajeroName(sale).substring(0, 6);
             const saleTot = sale.totals?.total || 0;
             totalNotas += saleTot;
 
@@ -296,7 +320,7 @@ export default function ReportesDashboard({ sales, issuers }) {
         facturasSales.forEach(sale => {
           const items = sale.productos || sale.items || [];
           const payMethod = sale.paymentMethod || 'EFECTIVO';
-          const cajero = sale.cajeroNombre || sale.usuarioNombre || 'Edgar';
+          const cajero = getCajeroName(sale);
           const saleTot = sale.totals?.total || 0;
           
           totalFacturas += saleTot;
@@ -343,7 +367,7 @@ export default function ReportesDashboard({ sales, issuers }) {
         notasSales.forEach(sale => {
           const items = sale.productos || sale.items || [];
           const payMethod = sale.paymentMethod || 'EFECTIVO';
-          const cajero = sale.cajeroNombre || sale.usuarioNombre || 'Edgar';
+          const cajero = getCajeroName(sale);
           const saleTot = sale.totals?.total || 0;
           
           totalNotas += saleTot;
