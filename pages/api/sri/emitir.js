@@ -143,6 +143,7 @@ export default async function handler(req, res) {
     // 6. Generar Secuencial de forma ATÓMICA (Evita race conditions)
     // Se ejecuta solo después de que TODAS las validaciones pasaron
     let nextSecuencial = 0;
+    const secKeyNV = `${estab}_${ptoEmi}_NV`;
     
     if (!isNotaVenta) {
       nextSecuencial = await adminDb.runTransaction(async (t) => {
@@ -159,10 +160,24 @@ export default async function handler(req, res) {
         t.update(ref, { [`secuenciales.${secKey}`]: next });
         return next;
       });
+    } else {
+      // Secuencial atómico para Nota de Venta
+      nextSecuencial = await adminDb.runTransaction(async (t) => {
+        const ref = adminDb.collection('issuers').doc(emisorId);
+        const doc = await t.get(ref);
+        const data = doc.data();
+        
+        const secuenciales = data.secuenciales || {};
+        const current = secuenciales[secKeyNV] || 0;
+        const next = current + 1;
+        
+        t.update(ref, { [`secuenciales.${secKeyNV}`]: next });
+        return next;
+      });
     }
 
     const secStr = String(nextSecuencial).padStart(9, '0');
-    const numeroComprobanteCompleto = isNotaVenta ? 'S/N' : `${estab}-${ptoEmi}-${secStr}`;
+    const numeroComprobanteCompleto = isNotaVenta ? `NV-${estab}-${ptoEmi}-${secStr}` : `${estab}-${ptoEmi}-${secStr}`;
 
     const invoiceData = {
       infoTributaria: {
@@ -228,7 +243,7 @@ export default async function handler(req, res) {
     let errorTecnico = null;
     let sriTimeout = false;
     let internalCrash = false;
-    let finalClaveAcceso = `NV-${Date.now()}`;
+    let finalClaveAcceso = isNotaVenta ? numeroComprobanteCompleto : `NV-${Date.now()}`;
     let estadoFinalSri = 'NOTA_DE_VENTA';
 
     const startMs = performance.now(); // Medir tiempo de respuesta
