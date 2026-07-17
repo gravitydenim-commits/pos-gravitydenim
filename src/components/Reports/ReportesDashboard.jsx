@@ -194,23 +194,27 @@ export default function ReportesDashboard({ sales, issuers }) {
 
           facturasSales.forEach(sale => {
             const items = sale.productos || sale.items || [];
-            const payMethod = (sale.paymentMethod || 'EFECTIVO').substring(0, 5);
-            const cajero = getCajeroName(sale).substring(0, 6);
+            const payMethod = sale.paymentMethod || 'EFECTIVO';
             const saleTot = sale.totals?.total || 0;
             totalFacturas += saleTot;
 
-            if (payMethod === 'EFECTI') {
+            const isEfectivo = payMethod === 'EFECTIVO';
+            if (isEfectivo) {
               totalEfectivo += saleTot;
             } else {
               totalTransf += saleTot;
             }
+
+            const infoCobro = isEfectivo 
+              ? `EFC/${getCajeroName(sale).substring(0, 5)}` 
+              : `TRF/${(sale.transferRecipient || 'Otro').substring(0, 5)}`;
 
             items.forEach(item => {
               const qty = String(item.qty || item.cantidad || 1);
               const desc = printer58Service.normalizeText(item.name || item.nombre || 'Prenda').substring(0, 12).padEnd(12, ' ');
               const val = Number((item.qty || item.cantidad || 1) * (item.price || item.precio || 0));
               const valStr = "$" + val.toFixed(0);
-              raw += `${qty} ${desc} ${valStr.padStart(4, ' ')} ${payMethod}/${cajero}` + printer58Service.cmds.FEED_LINE;
+              raw += `${qty} ${desc} ${valStr.padStart(4, ' ')} ${infoCobro}` + printer58Service.cmds.FEED_LINE;
             });
           });
           raw += "--------------------------------" + printer58Service.cmds.FEED_LINE;
@@ -226,23 +230,27 @@ export default function ReportesDashboard({ sales, issuers }) {
 
           notasSales.forEach(sale => {
             const items = sale.productos || sale.items || [];
-            const payMethod = (sale.paymentMethod || 'EFECTIVO').substring(0, 5);
-            const cajero = getCajeroName(sale).substring(0, 6);
+            const payMethod = sale.paymentMethod || 'EFECTIVO';
             const saleTot = sale.totals?.total || 0;
             totalNotas += saleTot;
 
-            if (payMethod === 'EFECTI' || payMethod === 'EFECT') {
+            const isEfectivo = payMethod === 'EFECTIVO';
+            if (isEfectivo) {
               totalEfectivo += saleTot;
             } else {
               totalTransf += saleTot;
             }
+
+            const infoCobro = isEfectivo 
+              ? `EFC/${getCajeroName(sale).substring(0, 5)}` 
+              : `TRF/${(sale.transferRecipient || 'Otro').substring(0, 5)}`;
 
             items.forEach(item => {
               const qty = String(item.qty || item.cantidad || 1);
               const desc = printer58Service.normalizeText(item.name || item.nombre || 'Prenda').substring(0, 12).padEnd(12, ' ');
               const val = Number((item.qty || item.cantidad || 1) * (item.price || item.precio || 0));
               const valStr = "$" + val.toFixed(0);
-              raw += `${qty} ${desc} ${valStr.padStart(4, ' ')} ${payMethod}/${cajero}` + printer58Service.cmds.FEED_LINE;
+              raw += `${qty} ${desc} ${valStr.padStart(4, ' ')} ${infoCobro}` + printer58Service.cmds.FEED_LINE;
             });
           });
           raw += "--------------------------------" + printer58Service.cmds.FEED_LINE;
@@ -320,15 +328,19 @@ export default function ReportesDashboard({ sales, issuers }) {
         facturasSales.forEach(sale => {
           const items = sale.productos || sale.items || [];
           const payMethod = sale.paymentMethod || 'EFECTIVO';
-          const cajero = getCajeroName(sale);
           const saleTot = sale.totals?.total || 0;
           
           totalFacturas += saleTot;
-          if (payMethod === 'EFECTIVO') {
+          const isEfectivo = payMethod === 'EFECTIVO';
+          if (isEfectivo) {
             totalEfectivo += saleTot;
           } else {
             totalTransf += saleTot;
           }
+
+          const infoCobro = isEfectivo 
+            ? `EFEC / ${getCajeroName(sale)}` 
+            : `TRANSF / ${sale.transferRecipient || 'Otro'}`;
 
           items.forEach(item => {
             html += `
@@ -336,7 +348,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                 <td>${item.qty || item.cantidad || 1}</td>
                 <td>${item.name || item.nombre || 'Prenda'}</td>
                 <td class="text-right">$${((item.qty || 1) * (item.price || 0)).toFixed(0)}</td>
-                <td class="text-right">${payMethod.substring(0, 5)}/${cajero.substring(0, 6)}</td>
+                <td class="text-right">${infoCobro}</td>
               </tr>
             `;
           });
@@ -367,15 +379,19 @@ export default function ReportesDashboard({ sales, issuers }) {
         notasSales.forEach(sale => {
           const items = sale.productos || sale.items || [];
           const payMethod = sale.paymentMethod || 'EFECTIVO';
-          const cajero = getCajeroName(sale);
           const saleTot = sale.totals?.total || 0;
           
           totalNotas += saleTot;
-          if (payMethod === 'EFECTIVO') {
+          const isEfectivo = payMethod === 'EFECTIVO';
+          if (isEfectivo) {
             totalEfectivo += saleTot;
           } else {
             totalTransf += saleTot;
           }
+
+          const infoCobro = isEfectivo 
+            ? `EFEC / ${getCajeroName(sale)}` 
+            : `TRANSF / ${sale.transferRecipient || 'Otro'}`;
 
           items.forEach(item => {
             html += `
@@ -383,7 +399,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                 <td>${item.qty || item.cantidad || 1}</td>
                 <td>${item.name || item.nombre || 'Prenda'}</td>
                 <td class="text-right">$${((item.qty || 1) * (item.price || 0)).toFixed(0)}</td>
-                <td class="text-right">${payMethod.substring(0, 5)}/${cajero.substring(0, 6)}</td>
+                <td class="text-right">${infoCobro}</td>
               </tr>
             `;
           });
