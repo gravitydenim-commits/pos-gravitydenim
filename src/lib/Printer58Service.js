@@ -165,8 +165,15 @@ class Printer58Service {
 
     // Datos del comprobante
     raw += this.cmds.ALIGN_LEFT;
-    raw += (invoiceData.isNotaVenta ? "NOTA DE VENTA" : "FACTURA") + this.cmds.FEED_LINE;
-    raw += "Ref: " + (invoiceData.numeroComprobante || 'S/N') + this.cmds.FEED_LINE;
+    if (invoiceData.isNotaVenta) {
+      raw += "NOTA DE VENTA" + this.cmds.FEED_LINE;
+      raw += this.cmds.ALIGN_CENTER;
+      raw += "*** DOCUMENTO SIN VALOR TRIBUTARIO ***" + this.cmds.FEED_LINE;
+      raw += this.cmds.ALIGN_LEFT;
+    } else {
+      raw += "FACTURA ELECTRONICA" + this.cmds.FEED_LINE;
+    }
+    raw += "No. " + (invoiceData.numeroComprobante || 'S/N') + this.cmds.FEED_LINE;
     raw += "Fecha: " + new Date().toLocaleString('es-EC') + this.cmds.FEED_LINE;
     raw += "Cliente: " + this.normalizeText(invoiceData.customerName) + this.cmds.FEED_LINE;
     raw += "RUC/CI: " + invoiceData.customerId + this.cmds.FEED_LINE;

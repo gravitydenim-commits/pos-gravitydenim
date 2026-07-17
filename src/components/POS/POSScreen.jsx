@@ -949,14 +949,36 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
               <div className="modal-body" style={{ background: '#f8fafc', color: '#0f172a', padding: '1.5rem', overflowY: 'auto', maxHeight: '60vh', fontFamily: 'monospace' }}>
                 
                 <div style={{ textAlign: 'center', borderBottom: '1px dashed #94a3b8', paddingBottom: '1rem', marginBottom: '1rem' }}>
-                  <h2 style={{ fontSize: '1.2rem', margin: 0, textTransform: 'uppercase' }}>{isNotaVenta ? 'GRAVITY DENIM' : issuerData?.name}</h2>
-                  <p style={{ margin: '4px 0' }}>RUC: {issuerData?.ruc}</p>
-                  <p style={{ margin: '4px 0', fontSize: '11px' }}>{issuerData?.direccionMatriz || 'Dirección Matriz'}</p>
-                  {!isNotaVenta && <p style={{ margin: '4px 0', fontSize: '11px' }}>OBLIGADO CONTABILIDAD: {issuerData?.obligadoContabilidad ? 'SI' : 'NO'}</p>}
-                  <p style={{ fontWeight: 'bold', marginTop: '8px' }}>GRAVITY DENIM POS</p>
+                  <h2 style={{ fontSize: '1.2rem', margin: 0, textTransform: 'uppercase', color: '#0f172a' }}>{isNotaVenta ? 'GRAVITY DENIM' : issuerData?.name}</h2>
+                  <p style={{ margin: '4px 0', fontSize: '11px', color: '#334155' }}>RUC: {issuerData?.ruc}</p>
+                  <p style={{ margin: '4px 0', fontSize: '11px', color: '#334155' }}>Matriz: {issuerData?.direccionMatriz || 'Dirección Matriz'}</p>
+                  {!isNotaVenta && <p style={{ margin: '4px 0', fontSize: '11px', color: '#334155' }}>OBLIGADO CONTABILIDAD: {issuerData?.obligadoContabilidad ? 'SI' : 'NO'}</p>}
+                  
+                  <div style={{ margin: '10px 0', borderTop: '1px dashed #cbd5e1', borderBottom: '1px dashed #cbd5e1', padding: '6px 0' }}>
+                    <div style={{ fontWeight: 'bold', fontSize: '13px', color: '#0f172a' }}>
+                      {isNotaVenta ? 'NOTA DE VENTA' : 'FACTURA ELECTRÓNICA'}
+                    </div>
+                    {isNotaVenta ? (
+                      <div style={{ fontSize: '10px', color: '#b91c1c', fontWeight: 'bold', border: '1px dashed #ef4444', padding: '4px', marginTop: '4px', background: '#fef2f2' }}>
+                        *** DOCUMENTO SIN VALOR TRIBUTARIO ***
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '10px', color: '#475569', marginTop: '4px' }}>
+                        No. {issuerData?.establecimiento || '001'}-{issuerData?.puntoEmision || '001'}-XXXXXXXXX<br/>
+                        <span style={{ fontSize: '9px', color: '#64748b' }}>(Se asignará secuencial al emitir)</span>
+                      </div>
+                    )}
+                    {isNotaVenta && (
+                      <div style={{ fontSize: '10px', color: '#475569', marginTop: '4px' }}>
+                        No. NV-{issuerData?.establecimiento || '001'}-{issuerData?.puntoEmision || '001'}-XXXXXXXXX<br/>
+                        <span style={{ fontSize: '9px', color: '#64748b' }}>(Se asignará secuencial al emitir)</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <div style={{ fontSize: '11px', borderBottom: '1px dashed #94a3b8', paddingBottom: '1rem', marginBottom: '1rem' }}>
+                <div style={{ fontSize: '11px', borderBottom: '1px dashed #94a3b8', paddingBottom: '1rem', marginBottom: '1rem', color: '#334155' }}>
+                  <p style={{ margin: '2px 0' }}><b>FECHA:</b> {new Date().toLocaleString('es-EC')}</p>
                   <p style={{ margin: '2px 0' }}><b>CLIENTE:</b> {customer.nombre}</p>
                   <p style={{ margin: '2px 0' }}><b>CI/RUC:</b> {customer.numeroIdentificacion}</p>
                   <p style={{ margin: '2px 0' }}><b>CORREO:</b> {customer.correo}</p>

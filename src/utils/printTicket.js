@@ -120,6 +120,11 @@ export const imprimirTicket = (issuerData, cartData, totalsData, customerData, c
             <div class="font-bold" style="font-size: ${is58 ? '11px' : '14px'}; margin-top: 4px;">
               ${isNotaVentaActual ? 'NOTA DE VENTA' : 'FACTURA ELECTRÓNICA'}
             </div>
+            ${isNotaVentaActual ? `
+              <div style="font-size: 10px; font-weight: bold; border: 1px dashed black; padding: 4px; margin: 4px 0; text-align: center;">
+                *** DOCUMENTO SIN VALOR TRIBUTARIO ***
+              </div>
+            ` : ''}
             ${!isNotaVentaActual ? `
               <div class="font-bold">No. ${claveAcceso.substring(24, 27)}-${claveAcceso.substring(27, 30)}-${claveAcceso.substring(30, 39)}</div>
               <div style="font-size: 9px; text-align: left; margin-top: 4px;">
@@ -130,7 +135,7 @@ export const imprimirTicket = (issuerData, cartData, totalsData, customerData, c
                 <div style="word-break: break-all; font-size: 8px;">${claveAcceso}</div>
               </div>
             ` : `
-              <div class="font-bold">Ref: ${claveAcceso}</div>
+              <div class="font-bold">No. ${claveAcceso}</div>
               <div style="font-size: 9px; text-align: left; margin-top: 4px;">
                 <div><b>Fecha:</b> ${new Date().toLocaleString('es-EC')}</div>
               </div>
