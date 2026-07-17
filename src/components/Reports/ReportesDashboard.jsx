@@ -113,6 +113,173 @@ export default function ReportesDashboard({ sales, issuers }) {
     }
   };
 
+  const handleImprimirReporteDelDia = async () => {
+    // 1. Filtrar ventas de hoy
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const currentDate = now.getDate();
+
+    const salesToday = sales.filter(sale => {
+      const saleDate = parseSaleDate(sale);
+      if (!saleDate) return false;
+      return saleDate.getMonth() === currentMonth && 
+             saleDate.getFullYear() === currentYear && 
+             saleDate.getDate() === currentDate;
+    });
+
+    if (salesToday.length === 0) {
+      alert("⚠️ No hay ventas registradas el día de hoy para imprimir.");
+      return;
+    }
+
+    // 2. Obtener formato del operador
+    const format = localStorage.getItem('printerFormat') || '80mm';
+    const method = localStorage.getItem('printerMethod') || 'sistema';
+
+    if (format === '58mm' && method === 'bluetooth_58') {
+      try {
+        const { printer58Service } = await import('../../lib/Printer58Service');
+        
+        let raw = printer58Service.cmds.INIT;
+        raw += printer58Service.cmds.ALIGN_CENTER;
+        raw += printer58Service.cmds.BOLD_ON;
+        raw += printer58Service.cmds.DOUBLE_BOTH;
+        raw += "GRAVITY DENIM" + printer58Service.cmds.FEED_LINE;
+        raw += printer58Service.cmds.NORMAL_SIZE;
+        raw += "REPORTE DE VENTAS DIARIAS" + printer58Service.cmds.FEED_LINE;
+        raw += "Fecha: " + now.toLocaleDateString('es-EC') + printer58Service.cmds.FEED_LINE;
+        raw += printer58Service.cmds.BOLD_OFF;
+        raw += "--------------------------------" + printer58Service.cmds.FEED_LINE;
+        
+        raw += printer58Service.cmds.ALIGN_LEFT;
+        raw += "CANT DETALLE      TOTAL PAGO/CAJ" + printer58Service.cmds.FEED_LINE;
+        raw += "--------------------------------" + printer58Service.cmds.FEED_LINE;
+        
+        let totalGeneral = 0;
+        let totalEfectivo = 0;
+        let totalTransf = 0;
+
+        salesToday.forEach(sale => {
+          const items = sale.productos || sale.items || [];
+          const payMethod = (sale.paymentMethod || 'EFECTIVO').substring(0, 5);
+          const cajero = (sale.cajeroNombre || sale.usuarioNombre || 'Edgar').substring(0, 6);
+          
+          items.forEach(item => {
+            const qty = String(item.qty || item.cantidad || 1);
+            const desc = printer58Service.normalizeText(item.name || item.nombre || 'Prenda').substring(0, 12).padEnd(12, ' ');
+            const val = Number((item.qty || item.cantidad || 1) * (item.price || item.precio || 0));
+            const valStr = "$" + val.toFixed(0);
+            
+            raw += `${qty} ${desc} ${valStr.padStart(4, ' ')} ${payMethod}/${cajero}` + printer58Service.cmds.FEED_LINE;
+          });
+          const saleTot = sale.totals?.total || 0;
+          totalGeneral += saleTot;
+          if ((sale.paymentMethod || 'EFECTIVO') === 'EFECTIVO') {
+            totalEfectivo += saleTot;
+          } else {
+            totalTransf += saleTot;
+          }
+        });
+        
+        raw += "--------------------------------" + printer58Service.cmds.FEED_LINE;
+        raw += printer58Service.cmds.ALIGN_RIGHT;
+        raw += `Efec: $${totalEfectivo.toFixed(2)}` + printer58Service.cmds.FEED_LINE;
+        raw += `Transf: $${totalTransf.toFixed(2)}` + printer58Service.cmds.FEED_LINE;
+        raw += printer58Service.cmds.BOLD_ON;
+        raw += `GRAN TOTAL: $${totalGeneral.toFixed(2)}` + printer58Service.cmds.FEED_LINE;
+        raw += printer58Service.cmds.BOLD_OFF;
+        raw += printer58Service.cmds.FEED_LINE + printer58Service.cmds.FEED_LINE + printer58Service.cmds.FEED_LINE;
+        
+        await printer58Service.connect();
+        await printer58Service.sendBuffer(Buffer.from(raw, 'binary'));
+        alert("✅ Reporte diario enviado a la CRM-03.");
+      } catch (err) {
+        alert("Error al imprimir en 58mm: " + err.message);
+      }
+    } else {
+      // Impresión de sistema (HTML) de 80mm o 58mm
+      const win = window.open('', '_blank');
+      let html = `
+        <html>
+        <head>
+          <title>Reporte de Ventas Diarias</title>
+          <style>
+            body { font-family: 'Courier New', monospace; font-size: 12px; width: ${format === '58mm' ? '58mm' : '80mm'}; margin: 0 auto; padding: 10px; color: black; }
+            .text-center { text-align: center; }
+            .text-right { text-align: right; }
+            .bold { font-weight: bold; }
+            .divider { border-bottom: 1px dashed black; margin: 8px 0; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { text-align: left; vertical-align: top; font-size: 11px; }
+          </style>
+        </head>
+        <body onload="window.print(); window.close();">
+          <div class="text-center">
+            <h2 style="margin: 0;">GRAVITY DENIM</h2>
+            <h3 style="margin: 4px 0 0 0; font-size: 13px;">REPORTE DE VENTAS DIARIAS</h3>
+            <div>Fecha: ${now.toLocaleDateString('es-EC')}</div>
+          </div>
+          <div class="divider"></div>
+          <table>
+            <thead>
+              <tr style="border-bottom: 1px dashed black;">
+                <th style="width: 10%;">CANT</th>
+                <th style="width: 45%;">DETALLE</th>
+                <th style="width: 15%; text-align: right;">VAL</th>
+                <th style="width: 30%; text-align: right;">PAGO/CAJ</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      let totalGeneral = 0;
+      let totalEfectivo = 0;
+      let totalTransf = 0;
+
+      salesToday.forEach(sale => {
+        const items = sale.productos || sale.items || [];
+        const payMethod = sale.paymentMethod || 'EFECTIVO';
+        const cajero = sale.cajeroNombre || sale.usuarioNombre || 'Edgar';
+        const saleTot = sale.totals?.total || 0;
+        
+        totalGeneral += saleTot;
+        if (payMethod === 'EFECTIVO') {
+          totalEfectivo += saleTot;
+        } else {
+          totalTransf += saleTot;
+        }
+
+        items.forEach(item => {
+          html += `
+            <tr>
+              <td>${item.qty || item.cantidad || 1}</td>
+              <td>${item.name || item.nombre || 'Prenda'}</td>
+              <td class="text-right">$${((item.qty || 1) * (item.price || 0)).toFixed(0)}</td>
+              <td class="text-right">${payMethod.substring(0, 5)}/${cajero.substring(0, 6)}</td>
+            </tr>
+          `;
+        });
+      });
+
+      html += `
+            </tbody>
+          </table>
+          <div class="divider"></div>
+          <div class="text-right">
+            <div>Efectivo: $${totalEfectivo.toFixed(2)}</div>
+            <div>Transferencias: $${totalTransf.toFixed(2)}</div>
+            <div class="bold" style="font-size: 13px; margin-top: 4px;">GRAN TOTAL: $${totalGeneral.toFixed(2)}</div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      win.document.write(html);
+      win.document.close();
+    }
+  };
+
   // Procesar datos para el mes actual y el día de hoy
   const { currentMonthTotal, currentMonthIVA, salesByIssuer, topProducts, todayTotal, todayEfectivo, todayTransferencia, monthEfectivo, monthTransferencia, todayTransferDetails, monthTransferDetails } = useMemo(() => {
     let currentMonthTotal = 0;
@@ -563,6 +730,13 @@ export default function ReportesDashboard({ sales, issuers }) {
               <span style={{ color: '#10b981' }}>💵 Efec: ${todayEfectivo.toFixed(2)}</span>
               <span style={{ color: '#3b82f6', marginLeft: '10px' }}>🏦 Transf: ${todayTransferencia.toFixed(2)}</span>
             </div>
+            <button 
+              onClick={handleImprimirReporteDelDia}
+              className="btn-primary" 
+              style={{ marginTop: '1rem', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.85rem', padding: '8px 12px', borderRadius: '6px' }}
+            >
+              <Printer size={16} /> Imprimir Cierre del Día
+            </button>
           </div>
 
           <div className="glass-panel" style={{ padding: '1.5rem', borderLeft: '4px solid #3b82f6' }}>
