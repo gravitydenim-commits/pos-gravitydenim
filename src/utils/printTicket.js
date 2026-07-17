@@ -104,15 +104,15 @@ export const imprimirTicket = (issuerData, cartData, totalsData, customerData, c
             <img src="/logo.jpg" alt="Logo" style="width: ${logoWidth}; margin-bottom: 5px; filter: grayscale(100%);" onerror="this.style.display='none'" />
             
             <!-- Datos del Emisor -->
-            <h2 style="margin:0; font-size: ${is58 ? '12px' : '16px'};">${issuerData?.razonSocial || issuerData?.name || ''}</h2>
-            ${issuerData?.nombreComercial ? `<div style="font-size: ${is58 ? '9px' : '11px'}; font-style: italic;">${issuerData.nombreComercial}</div>` : ''}
+            <h2 style="margin:0; font-size: ${is58 ? '12px' : '16px'};">${isNotaVentaActual ? 'GRAVITY DENIM' : (issuerData?.razonSocial || issuerData?.name || '')}</h2>
+            ${!isNotaVentaActual && issuerData?.nombreComercial ? `<div style="font-size: ${is58 ? '9px' : '11px'}; font-style: italic;">${issuerData.nombreComercial}</div>` : ''}
             <div class="mt-2">RUC: ${issuerData?.ruc || ''}</div>
             <div>Matriz: ${issuerData?.direccionMatriz || 'N/A'}</div>
-            ${issuerData?.direccionEstablecimiento && issuerData.direccionEstablecimiento !== issuerData.direccionMatriz ? `<div>Establ: ${issuerData.direccionEstablecimiento}</div>` : ''}
+            ${!isNotaVentaActual && issuerData?.direccionEstablecimiento && issuerData.direccionEstablecimiento !== issuerData.direccionMatriz ? `<div>Establ: ${issuerData.direccionEstablecimiento}</div>` : ''}
             ${issuerData?.telefono ? `<div>Telf: ${issuerData.telefono}</div>` : ''}
             ${issuerData?.correo ? `<div>Email: ${issuerData.correo}</div>` : ''}
-            <div>Obligado Contabilidad: ${issuerData?.obligadoContabilidad ? 'SI' : 'NO'}</div>
-            ${issuerData?.contribuyenteRegimen ? `<div style="font-size: 9px; font-weight: bold;">Régimen: ${issuerData.contribuyenteRegimen}</div>` : ''}
+            ${!isNotaVentaActual ? `<div>Obligado Contabilidad: ${issuerData?.obligadoContabilidad ? 'SI' : 'NO'}</div>` : ''}
+            ${!isNotaVentaActual && issuerData?.contribuyenteRegimen ? `<div style="font-size: 9px; font-weight: bold;">Régimen: ${issuerData.contribuyenteRegimen}</div>` : ''}
 
             <div class="divider"></div>
 

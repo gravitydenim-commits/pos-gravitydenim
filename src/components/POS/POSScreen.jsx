@@ -949,10 +949,10 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
               <div className="modal-body" style={{ background: '#f8fafc', color: '#0f172a', padding: '1.5rem', overflowY: 'auto', maxHeight: '60vh', fontFamily: 'monospace' }}>
                 
                 <div style={{ textAlign: 'center', borderBottom: '1px dashed #94a3b8', paddingBottom: '1rem', marginBottom: '1rem' }}>
-                  <h2 style={{ fontSize: '1.2rem', margin: 0, textTransform: 'uppercase' }}>{issuerData?.name}</h2>
+                  <h2 style={{ fontSize: '1.2rem', margin: 0, textTransform: 'uppercase' }}>{isNotaVenta ? 'GRAVITY DENIM' : issuerData?.name}</h2>
                   <p style={{ margin: '4px 0' }}>RUC: {issuerData?.ruc}</p>
                   <p style={{ margin: '4px 0', fontSize: '11px' }}>{issuerData?.direccionMatriz || 'Dirección Matriz'}</p>
-                  <p style={{ margin: '4px 0', fontSize: '11px' }}>OBLIGADO CONTABILIDAD: {issuerData?.obligadoContabilidad ? 'SI' : 'NO'}</p>
+                  {!isNotaVenta && <p style={{ margin: '4px 0', fontSize: '11px' }}>OBLIGADO CONTABILIDAD: {issuerData?.obligadoContabilidad ? 'SI' : 'NO'}</p>}
                   <p style={{ fontWeight: 'bold', marginTop: '8px' }}>GRAVITY DENIM POS</p>
                 </div>
 

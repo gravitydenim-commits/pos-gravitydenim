@@ -183,8 +183,8 @@ export default async function handler(req, res) {
       infoTributaria: {
         ambiente: 1,
         tipoEmision: 1,
-        razonSocial: emisor.razonSocial || emisor.name || 'Sin Razón Social',
-        nombreComercial: emisor.nombreComercial || emisor.razonSocial || emisor.name || 'Sin Nombre Comercial',
+        razonSocial: isNotaVenta ? 'GRAVITY DENIM' : (emisor.razonSocial || emisor.name || 'Sin Razón Social'),
+        nombreComercial: isNotaVenta ? 'GRAVITY DENIM' : (emisor.nombreComercial || emisor.razonSocial || emisor.name || 'Sin Nombre Comercial'),
         ruc: emisor.ruc,
         claveAcceso: 'GENERADA_AUTOMATICAMENTE_POR_OSODREAMER',
         codDoc: '01',
