@@ -150,6 +150,21 @@ export default function ReportesDashboard({ sales, issuers }) {
       return 'Edgar';
     };
 
+    const getAbreviaturaMetodo = (method) => {
+      const m = (method || '').toUpperCase();
+      if (m.includes('TRANSFERENCIA') || m.includes('TRANS')) return 'TR';
+      return 'EF';
+    };
+
+    const getAbreviaturaNombre = (name) => {
+      const n = (name || '').toLowerCase();
+      if (n.includes('ampar')) return 'AMP';
+      if (n.includes('fabian') || n.includes('junior') || n.includes('jr')) return 'JR';
+      if (n.includes('edgar') || n.includes('geovanny') || n.includes('toli')) return 'TOLI';
+      if (n.includes('diana') || n.includes('dia')) return 'DIA';
+      return name.substring(0, 4).toUpperCase();
+    };
+
     // 1. Filtrar ventas de hoy
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -217,9 +232,9 @@ export default function ReportesDashboard({ sales, issuers }) {
               totalTransf += saleTot;
             }
 
-            const infoCobro = isEfectivo 
-              ? `EFC/${getCajeroName(sale).substring(0, 5)}` 
-              : `TRF/${(sale.transferRecipient || 'Otro').substring(0, 5)}`;
+            const payAbbr = getAbreviaturaMetodo(payMethod);
+            const nameAbbr = getAbreviaturaNombre(isEfectivo ? getCajeroName(sale) : (sale.transferRecipient || 'Otro'));
+            const infoCobro = `${payAbbr}/${nameAbbr}`;
 
             items.forEach(item => {
               const qty = String(item.qty || item.cantidad || 1);
@@ -253,9 +268,9 @@ export default function ReportesDashboard({ sales, issuers }) {
               totalTransf += saleTot;
             }
 
-            const infoCobro = isEfectivo 
-              ? `EFC/${getCajeroName(sale).substring(0, 5)}` 
-              : `TRF/${(sale.transferRecipient || 'Otro').substring(0, 5)}`;
+            const payAbbr = getAbreviaturaMetodo(payMethod);
+            const nameAbbr = getAbreviaturaNombre(isEfectivo ? getCajeroName(sale) : (sale.transferRecipient || 'Otro'));
+            const infoCobro = `${payAbbr}/${nameAbbr}`;
 
             items.forEach(item => {
               const qty = String(item.qty || item.cantidad || 1);
@@ -350,9 +365,9 @@ export default function ReportesDashboard({ sales, issuers }) {
             totalTransf += saleTot;
           }
 
-          const infoCobro = isEfectivo 
-            ? `EFEC / ${getCajeroName(sale)}` 
-            : `TRANSF / ${sale.transferRecipient || 'Otro'}`;
+          const payAbbr = getAbreviaturaMetodo(payMethod);
+          const nameAbbr = getAbreviaturaNombre(isEfectivo ? getCajeroName(sale) : (sale.transferRecipient || 'Otro'));
+          const infoCobro = `${payAbbr} / ${nameAbbr}`;
 
           items.forEach(item => {
             html += `
@@ -401,9 +416,9 @@ export default function ReportesDashboard({ sales, issuers }) {
             totalTransf += saleTot;
           }
 
-          const infoCobro = isEfectivo 
-            ? `EFEC / ${getCajeroName(sale)}` 
-            : `TRANSF / ${sale.transferRecipient || 'Otro'}`;
+          const payAbbr = getAbreviaturaMetodo(payMethod);
+          const nameAbbr = getAbreviaturaNombre(isEfectivo ? getCajeroName(sale) : (sale.transferRecipient || 'Otro'));
+          const infoCobro = `${payAbbr} / ${nameAbbr}`;
 
           items.forEach(item => {
             html += `
