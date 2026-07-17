@@ -152,42 +152,86 @@ export default function ReportesDashboard({ sales, issuers }) {
         raw += printer58Service.cmds.BOLD_OFF;
         raw += "--------------------------------" + printer58Service.cmds.FEED_LINE;
         
-        raw += printer58Service.cmds.ALIGN_LEFT;
-        raw += "CANT DETALLE      TOTAL PAGO/CAJ" + printer58Service.cmds.FEED_LINE;
-        raw += "--------------------------------" + printer58Service.cmds.FEED_LINE;
-        
-        let totalGeneral = 0;
+        let totalFacturas = 0;
+        let totalNotas = 0;
         let totalEfectivo = 0;
         let totalTransf = 0;
 
-        salesToday.forEach(sale => {
-          const items = sale.productos || sale.items || [];
-          const payMethod = (sale.paymentMethod || 'EFECTIVO').substring(0, 5);
-          const cajero = (sale.cajeroNombre || sale.usuarioNombre || 'Edgar').substring(0, 6);
-          
-          items.forEach(item => {
-            const qty = String(item.qty || item.cantidad || 1);
-            const desc = printer58Service.normalizeText(item.name || item.nombre || 'Prenda').substring(0, 12).padEnd(12, ' ');
-            const val = Number((item.qty || item.cantidad || 1) * (item.price || item.precio || 0));
-            const valStr = "$" + val.toFixed(0);
-            
-            raw += `${qty} ${desc} ${valStr.padStart(4, ' ')} ${payMethod}/${cajero}` + printer58Service.cmds.FEED_LINE;
+        const facturasSales = salesToday.filter(s => !s.isNotaVenta && s.estadoSri !== 'NOTA_DE_VENTA' && s.status !== 'NOTA_DE_VENTA');
+        const notasSales = salesToday.filter(s => s.isNotaVenta || s.estadoSri === 'NOTA_DE_VENTA' || s.status === 'NOTA_DE_VENTA');
+
+        // Renderizar Facturas
+        if (facturasSales.length > 0) {
+          raw += printer58Service.cmds.ALIGN_CENTER;
+          raw += printer58Service.cmds.BOLD_ON;
+          raw += "=== FACTURAS ===" + printer58Service.cmds.FEED_LINE;
+          raw += printer58Service.cmds.BOLD_OFF;
+          raw += printer58Service.cmds.ALIGN_LEFT;
+
+          facturasSales.forEach(sale => {
+            const items = sale.productos || sale.items || [];
+            const payMethod = (sale.paymentMethod || 'EFECTIVO').substring(0, 5);
+            const cajero = (sale.cajeroNombre || sale.usuarioNombre || 'Edgar').substring(0, 6);
+            const saleTot = sale.totals?.total || 0;
+            totalFacturas += saleTot;
+
+            if (payMethod === 'EFECTI') {
+              totalEfectivo += saleTot;
+            } else {
+              totalTransf += saleTot;
+            }
+
+            items.forEach(item => {
+              const qty = String(item.qty || item.cantidad || 1);
+              const desc = printer58Service.normalizeText(item.name || item.nombre || 'Prenda').substring(0, 12).padEnd(12, ' ');
+              const val = Number((item.qty || item.cantidad || 1) * (item.price || item.precio || 0));
+              const valStr = "$" + val.toFixed(0);
+              raw += `${qty} ${desc} ${valStr.padStart(4, ' ')} ${payMethod}/${cajero}` + printer58Service.cmds.FEED_LINE;
+            });
           });
-          const saleTot = sale.totals?.total || 0;
-          totalGeneral += saleTot;
-          if ((sale.paymentMethod || 'EFECTIVO') === 'EFECTIVO') {
-            totalEfectivo += saleTot;
-          } else {
-            totalTransf += saleTot;
-          }
-        });
+          raw += "--------------------------------" + printer58Service.cmds.FEED_LINE;
+        }
+
+        // Renderizar Notas de Venta
+        if (notasSales.length > 0) {
+          raw += printer58Service.cmds.ALIGN_CENTER;
+          raw += printer58Service.cmds.BOLD_ON;
+          raw += "=== NOTAS DE VENTA ===" + printer58Service.cmds.FEED_LINE;
+          raw += printer58Service.cmds.BOLD_OFF;
+          raw += printer58Service.cmds.ALIGN_LEFT;
+
+          notasSales.forEach(sale => {
+            const items = sale.productos || sale.items || [];
+            const payMethod = (sale.paymentMethod || 'EFECTIVO').substring(0, 5);
+            const cajero = (sale.cajeroNombre || sale.usuarioNombre || 'Edgar').substring(0, 6);
+            const saleTot = sale.totals?.total || 0;
+            totalNotas += saleTot;
+
+            if (payMethod === 'EFECTI' || payMethod === 'EFECT') {
+              totalEfectivo += saleTot;
+            } else {
+              totalTransf += saleTot;
+            }
+
+            items.forEach(item => {
+              const qty = String(item.qty || item.cantidad || 1);
+              const desc = printer58Service.normalizeText(item.name || item.nombre || 'Prenda').substring(0, 12).padEnd(12, ' ');
+              const val = Number((item.qty || item.cantidad || 1) * (item.price || item.precio || 0));
+              const valStr = "$" + val.toFixed(0);
+              raw += `${qty} ${desc} ${valStr.padStart(4, ' ')} ${payMethod}/${cajero}` + printer58Service.cmds.FEED_LINE;
+            });
+          });
+          raw += "--------------------------------" + printer58Service.cmds.FEED_LINE;
+        }
         
-        raw += "--------------------------------" + printer58Service.cmds.FEED_LINE;
         raw += printer58Service.cmds.ALIGN_RIGHT;
+        raw += `Tot. Facturado: $${totalFacturas.toFixed(2)}` + printer58Service.cmds.FEED_LINE;
+        raw += `Tot. Notas Venta: $${totalNotas.toFixed(2)}` + printer58Service.cmds.FEED_LINE;
+        raw += "--------------------------------" + printer58Service.cmds.FEED_LINE;
         raw += `Efec: $${totalEfectivo.toFixed(2)}` + printer58Service.cmds.FEED_LINE;
         raw += `Transf: $${totalTransf.toFixed(2)}` + printer58Service.cmds.FEED_LINE;
         raw += printer58Service.cmds.BOLD_ON;
-        raw += `GRAN TOTAL: $${totalGeneral.toFixed(2)}` + printer58Service.cmds.FEED_LINE;
+        raw += `GRAN TOTAL: $${(totalFacturas + totalNotas).toFixed(2)}` + printer58Service.cmds.FEED_LINE;
         raw += printer58Service.cmds.BOLD_OFF;
         raw += printer58Service.cmds.FEED_LINE + printer58Service.cmds.FEED_LINE + printer58Service.cmds.FEED_LINE;
         
@@ -200,6 +244,15 @@ export default function ReportesDashboard({ sales, issuers }) {
     } else {
       // Impresión de sistema (HTML) de 80mm o 58mm
       const win = window.open('', '_blank');
+      
+      const facturasSales = salesToday.filter(s => !s.isNotaVenta && s.estadoSri !== 'NOTA_DE_VENTA' && s.status !== 'NOTA_DE_VENTA');
+      const notasSales = salesToday.filter(s => s.isNotaVenta || s.estadoSri === 'NOTA_DE_VENTA' || s.status === 'NOTA_DE_VENTA');
+
+      let totalFacturas = 0;
+      let totalNotas = 0;
+      let totalEfectivo = 0;
+      let totalTransf = 0;
+
       let html = `
         <html>
         <head>
@@ -210,8 +263,9 @@ export default function ReportesDashboard({ sales, issuers }) {
             .text-right { text-align: right; }
             .bold { font-weight: bold; }
             .divider { border-bottom: 1px dashed black; margin: 8px 0; }
-            table { width: 100%; border-collapse: collapse; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
             th, td { text-align: left; vertical-align: top; font-size: 11px; }
+            .section-title { font-weight: bold; text-align: center; margin: 8px 0; border-top: 1px dashed black; border-bottom: 1px dashed black; padding: 2px 0; }
           </style>
         </head>
         <body onload="window.print(); window.close();">
@@ -221,6 +275,12 @@ export default function ReportesDashboard({ sales, issuers }) {
             <div>Fecha: ${now.toLocaleDateString('es-EC')}</div>
           </div>
           <div class="divider"></div>
+      `;
+
+      // Tabla Facturas
+      if (facturasSales.length > 0) {
+        html += `
+          <div class="section-title">=== FACTURAS ===</div>
           <table>
             <thead>
               <tr style="border-bottom: 1px dashed black;">
@@ -231,45 +291,95 @@ export default function ReportesDashboard({ sales, issuers }) {
               </tr>
             </thead>
             <tbody>
-      `;
+        `;
 
-      let totalGeneral = 0;
-      let totalEfectivo = 0;
-      let totalTransf = 0;
+        facturasSales.forEach(sale => {
+          const items = sale.productos || sale.items || [];
+          const payMethod = sale.paymentMethod || 'EFECTIVO';
+          const cajero = sale.cajeroNombre || sale.usuarioNombre || 'Edgar';
+          const saleTot = sale.totals?.total || 0;
+          
+          totalFacturas += saleTot;
+          if (payMethod === 'EFECTIVO') {
+            totalEfectivo += saleTot;
+          } else {
+            totalTransf += saleTot;
+          }
 
-      salesToday.forEach(sale => {
-        const items = sale.productos || sale.items || [];
-        const payMethod = sale.paymentMethod || 'EFECTIVO';
-        const cajero = sale.cajeroNombre || sale.usuarioNombre || 'Edgar';
-        const saleTot = sale.totals?.total || 0;
-        
-        totalGeneral += saleTot;
-        if (payMethod === 'EFECTIVO') {
-          totalEfectivo += saleTot;
-        } else {
-          totalTransf += saleTot;
-        }
-
-        items.forEach(item => {
-          html += `
-            <tr>
-              <td>${item.qty || item.cantidad || 1}</td>
-              <td>${item.name || item.nombre || 'Prenda'}</td>
-              <td class="text-right">$${((item.qty || 1) * (item.price || 0)).toFixed(0)}</td>
-              <td class="text-right">${payMethod.substring(0, 5)}/${cajero.substring(0, 6)}</td>
-            </tr>
-          `;
+          items.forEach(item => {
+            html += `
+              <tr>
+                <td>${item.qty || item.cantidad || 1}</td>
+                <td>${item.name || item.nombre || 'Prenda'}</td>
+                <td class="text-right">$${((item.qty || 1) * (item.price || 0)).toFixed(0)}</td>
+                <td class="text-right">${payMethod.substring(0, 5)}/${cajero.substring(0, 6)}</td>
+              </tr>
+            `;
+          });
         });
-      });
 
-      html += `
+        html += `
             </tbody>
           </table>
+        `;
+      }
+
+      // Tabla Notas de Venta
+      if (notasSales.length > 0) {
+        html += `
+          <div class="section-title">=== NOTAS DE VENTA ===</div>
+          <table>
+            <thead>
+              <tr style="border-bottom: 1px dashed black;">
+                <th style="width: 10%;">CANT</th>
+                <th style="width: 45%;">DETALLE</th>
+                <th style="width: 15%; text-align: right;">VAL</th>
+                <th style="width: 30%; text-align: right;">PAGO/CAJ</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        notasSales.forEach(sale => {
+          const items = sale.productos || sale.items || [];
+          const payMethod = sale.paymentMethod || 'EFECTIVO';
+          const cajero = sale.cajeroNombre || sale.usuarioNombre || 'Edgar';
+          const saleTot = sale.totals?.total || 0;
+          
+          totalNotas += saleTot;
+          if (payMethod === 'EFECTIVO') {
+            totalEfectivo += saleTot;
+          } else {
+            totalTransf += saleTot;
+          }
+
+          items.forEach(item => {
+            html += `
+              <tr>
+                <td>${item.qty || item.cantidad || 1}</td>
+                <td>${item.name || item.nombre || 'Prenda'}</td>
+                <td class="text-right">$${((item.qty || 1) * (item.price || 0)).toFixed(0)}</td>
+                <td class="text-right">${payMethod.substring(0, 5)}/${cajero.substring(0, 6)}</td>
+              </tr>
+            `;
+          });
+        });
+
+        html += `
+            </tbody>
+          </table>
+        `;
+      }
+
+      html += `
           <div class="divider"></div>
-          <div class="text-right">
+          <div class="text-right" style="line-height: 1.6;">
+            <div>Tot. Facturado: $${totalFacturas.toFixed(2)}</div>
+            <div>Tot. Notas Venta: $${totalNotas.toFixed(2)}</div>
+            <div class="divider"></div>
             <div>Efectivo: $${totalEfectivo.toFixed(2)}</div>
             <div>Transferencias: $${totalTransf.toFixed(2)}</div>
-            <div class="bold" style="font-size: 13px; margin-top: 4px;">GRAN TOTAL: $${totalGeneral.toFixed(2)}</div>
+            <div class="bold" style="font-size: 13px; margin-top: 4px;">GRAN TOTAL: $${(totalFacturas + totalNotas).toFixed(2)}</div>
           </div>
         </body>
         </html>
