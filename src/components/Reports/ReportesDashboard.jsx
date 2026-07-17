@@ -130,12 +130,24 @@ export default function ReportesDashboard({ sales, issuers }) {
 
   const handleImprimirReporteDelDia = async () => {
     const getCajeroName = (sale) => {
+      const emisorId = sale.emisorId || sale.issuerId;
+      if (emisorId && issuers) {
+        const found = issuers.find(i => i.id === emisorId);
+        if (found) {
+          const name = found.name || found.razonSocial || '';
+          if (name.toLowerCase().includes('ampar')) return 'Amparito';
+          if (name.toLowerCase().includes('geovanny') || name.toLowerCase().includes('edgar')) return 'Edgar';
+          return name;
+        }
+      }
       const uid = sale.cajeroUid || sale.usuarioUid;
       if (uid) {
         const found = usersList.find(u => u.id === uid);
-        if (found) return found.name || found.username || 'Edgar';
+        if (found && found.name && !found.name.toLowerCase().includes('caja')) {
+          return found.name;
+        }
       }
-      return sale.cajeroNombre || sale.usuarioNombre || 'Edgar';
+      return 'Edgar';
     };
 
     // 1. Filtrar ventas de hoy
