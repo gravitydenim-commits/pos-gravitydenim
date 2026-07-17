@@ -449,7 +449,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                 subtotal, 
                 ivaAmount, 
                 total, 
-                { numeroComprobante: isNotaVenta ? 'S/N' : sriData.numeroComprobante || '', claveAcceso, isNotaVenta },
+                { numeroComprobante: sriData.numeroComprobante || '', claveAcceso, isNotaVenta },
                 paymentMethod
               );
             } catch (err) {
