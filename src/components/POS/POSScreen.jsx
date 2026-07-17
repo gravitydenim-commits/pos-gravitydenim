@@ -1006,16 +1006,20 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
 
                 <div style={{ fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>SUB-TOTAL:</span> <span>${subtotal.toFixed(2)}</span></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}><span>BASE IMPONIBLE (15%):</span> <span>${baseImponible.toFixed(2)}</span></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}><span>IVA (15%):</span> <span>${ivaAmount.toFixed(2)}</span></div>
+                  {!isNotaVenta && (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}><span>BASE IMPONIBLE (15%):</span> <span>${baseImponible.toFixed(2)}</span></div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}><span>IVA (15%):</span> <span>${ivaAmount.toFixed(2)}</span></div>
+                    </>
+                  )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '11px', fontWeight: 'bold' }}><span>MÉTODO DE PAGO:</span> <span>{paymentMethod}</span></div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.2rem', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #0f172a' }}>
-                    <span>TOTAL NETO:</span> <span>${total.toFixed(2)}</span>
+                    <span>TOTAL:</span> <span>${total.toFixed(2)}</span>
                   </div>
                 </div>
 
                 <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '10px', color: '#64748b' }}>
-                  <p>-- Vista previa antes de transmisión SRI --</p>
+                  <p>-- Vista previa antes de transmisión --</p>
                 </div>
               </div>
 
