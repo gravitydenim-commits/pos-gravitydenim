@@ -9,13 +9,16 @@ export default function ConfiguracionGeneral() {
   const [printFormat, setPrintFormat] = useState('80mm');
   const [printMethod, setPrintMethod] = useState('sistema');
   const [showPassword, setShowPassword] = useState(false);
+  const [printer58Name, setPrinter58Name] = useState('');
 
   useEffect(() => {
     // Cargar preferencias
     const savedFormat = localStorage.getItem('printerFormat');
     const savedMethod = localStorage.getItem('printerMethod');
+    const savedPrinter58 = localStorage.getItem('printer58_device_name');
     if (savedFormat) setPrintFormat(savedFormat);
     if (savedMethod) setPrintMethod(savedMethod);
+    if (savedPrinter58) setPrinter58Name(savedPrinter58);
   }, []);
 
   const handlePrintPreferenceChange = (key, value) => {
@@ -25,6 +28,27 @@ export default function ConfiguracionGeneral() {
     } else {
       setPrintMethod(value);
       localStorage.setItem('printerMethod', value);
+    }
+  };
+
+  const handlePairPrinter58 = async () => {
+    try {
+      const { printer58Service } = await import('../../lib/Printer58Service');
+      const device = await printer58Service.requestDevice();
+      setPrinter58Name(device.name || 'Print001');
+      alert(`Impresora "${device.name}" vinculada correctamente.`);
+    } catch (e) {
+      alert(`Error al vincular:\n${e.message}`);
+    }
+  };
+
+  const handleTestPrinter58 = async () => {
+    try {
+      const { printer58Service } = await import('../../lib/Printer58Service');
+      await printer58Service.printTest();
+      alert("✅ Comando de prueba enviado a la CRM-03.");
+    } catch (e) {
+      alert(`❌ Error al imprimir prueba 58mm:\n${e.message}`);
     }
   };
 
@@ -730,34 +754,94 @@ export default function ConfiguracionGeneral() {
         {/* --- PREFERENCIAS DE IMPRESIÓN --- */}
         <div className="glass-panel" style={{ padding: '2rem', marginTop: '2rem' }}>
           <h3 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            🖨️ Impresión de Sistema (80 mm)
+            🖨️ Preferencias de Impresión
           </h3>
-          
-          <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem', lineHeight: '1.6' }}>
-            La impresión se gestiona a través del diálogo clásico del navegador web. Optimizado para ticketeras térmicas estándar de escritorio (80 mm).
-          </p>
 
-          <button 
-            onClick={() => {
-              import('../../utils/printTicket').then(module => {
-                module.imprimirTicket(
-                  { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001' }, 
-                  [{ name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
-                  { subtotal: 25.00, ivaAmount: 0, total: 25.00 }, 
-                  { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
-                  '1234567890', 
-                  'EFECTIVO', 
-                  null, 
-                  false, 
-                  '80mm'
-                );
-              });
-            }}
-            className="btn-primary"
-            style={{ width: '100%', padding: '14px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontSize: '1rem' }}
-          >
-            🖨️ Imprimir Ticket de Prueba
-          </button>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Formato de Papel</label>
+              <select 
+                value={printFormat} 
+                onChange={(e) => handlePrintPreferenceChange('format', e.target.value)}
+                style={{ width: '100%', padding: '12px', background: 'var(--input-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', borderRadius: '8px' }}
+              >
+                <option value="80mm">80 mm (Estándar de Escritorio)</option>
+                <option value="58mm">58 mm (Portátil CRM-03)</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Método de Conexión</label>
+              <select 
+                value={printMethod} 
+                onChange={(e) => handlePrintPreferenceChange('method', e.target.value)}
+                style={{ width: '100%', padding: '12px', background: 'var(--input-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', borderRadius: '8px' }}
+                disabled={printFormat === '80mm'}
+              >
+                {printFormat === '80mm' ? (
+                  <option value="sistema">Impresión de Sistema (Navegador)</option>
+                ) : (
+                  <>
+                    <option value="bluetooth_58">Web Bluetooth Directo (CRM-03)</option>
+                    <option value="sistema">Impresión de Sistema (Navegador)</option>
+                  </>
+                )}
+              </select>
+            </div>
+          </div>
+
+          {printFormat === '58mm' && printMethod === 'bluetooth_58' && (
+            <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid var(--accent)', padding: '1.2rem', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
+              <strong style={{ color: 'var(--accent)', display: 'block', marginBottom: '0.5rem' }}>ℹ️ Impresora Portátil 58mm (CRM-03 / Print001)</strong>
+              La impresora de 58 mm se conecta mediante la API Web Bluetooth. La primera vez se abrirá el selector pequeño del navegador para vincular el dispositivo <strong>Print001</strong>.
+              <br/><br/>
+              <strong>Estado de Vinculación:</strong>{' '}
+              {printer58Name ? (
+                <span style={{ color: 'var(--success)', fontWeight: 'bold' }}>Vinculada a: {printer58Name}</span>
+              ) : (
+                <span style={{ color: 'var(--warning)' }}>No vinculada (se solicitará al imprimir o probar)</span>
+              )}
+              <div style={{ display: 'flex', gap: '10px', marginTop: '1rem' }}>
+                <button 
+                  onClick={handlePairPrinter58}
+                  className="btn-primary"
+                  style={{ padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}
+                >
+                  🔍 Vincular Print001
+                </button>
+                <button 
+                  onClick={handleTestPrinter58}
+                  className="btn-success"
+                  style={{ padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}
+                >
+                  🖨️ Imprimir Ticket de Prueba (58mm)
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!(printFormat === '58mm' && printMethod === 'bluetooth_58') && (
+            <button 
+              onClick={() => {
+                import('../../utils/printTicket').then(module => {
+                  module.imprimirTicket(
+                    { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001' }, 
+                    [{ name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
+                    { subtotal: 25.00, ivaAmount: 0, total: 25.00 }, 
+                    { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
+                    '1234567890', 
+                    'EFECTIVO', 
+                    null, 
+                    false, 
+                    printFormat
+                  );
+                });
+              }}
+              className="btn-primary"
+              style={{ width: '100%', padding: '14px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontSize: '1rem' }}
+            >
+              🖨️ Imprimir Ticket de Prueba ({printFormat} por Sistema)
+            </button>
+          )}
         </div>
 
         {/* Propietarios de Mercadería */}

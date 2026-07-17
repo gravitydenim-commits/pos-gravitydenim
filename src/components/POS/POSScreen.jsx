@@ -436,19 +436,44 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
 
       // 3. Imprimir si corresponde
       if (withPrint) {
-        import('../../utils/printTicket').then(module => {
-          module.imprimirTicket(
-            issuerData, 
-            cart, 
-            totalsData, 
-            customer, 
-            claveAcceso, 
-            paymentMethod, 
-            paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, 
-            isNotaVenta, 
-            '80mm'
-          );
-        });
+        const format = localStorage.getItem('printerFormat') || '80mm';
+        const method = localStorage.getItem('printerMethod') || 'sistema';
+
+        if (format === '58mm' && method === 'bluetooth_58') {
+          import('../../lib/Printer58Service').then(async (module) => {
+            try {
+              await module.printer58Service.printTicket(
+                issuerData, 
+                customer, 
+                cart, 
+                subtotal, 
+                ivaAmount, 
+                total, 
+                { numeroComprobante: isNotaVenta ? 'S/N' : sriData.numeroComprobante || '', claveAcceso, isNotaVenta },
+                paymentMethod
+              );
+            } catch (err) {
+              console.error("Fallo impresión 58mm Web Bluetooth, usando sistema:", err);
+              import('../../utils/printTicket').then(fallbackMod => {
+                fallbackMod.imprimirTicket(issuerData, cart, totalsData, customer, claveAcceso, paymentMethod, paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, isNotaVenta, format);
+              });
+            }
+          });
+        } else {
+          import('../../utils/printTicket').then(module => {
+            module.imprimirTicket(
+              issuerData, 
+              cart, 
+              totalsData, 
+              customer, 
+              claveAcceso, 
+              paymentMethod, 
+              paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, 
+              isNotaVenta, 
+              format
+            );
+          });
+        }
       } else {
         console.log("🖨️ [RIDE] Impresión física omitida por el operador.");
       }
