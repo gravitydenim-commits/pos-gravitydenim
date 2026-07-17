@@ -196,13 +196,15 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
   };
 
   const updateQuantity = (id, delta) => {
-    setCart((prev) => prev.map(item => {
-      if (item.id === id) {
-        const newQty = item.qty + delta;
-        return newQty > 0 ? { ...item, qty: newQty } : item;
-      }
-      return item;
-    }));
+    setCart((prev) => {
+      const updated = prev.map(item => {
+        if (item.id === id) {
+          return { ...item, qty: item.qty + delta };
+        }
+        return item;
+      });
+      return updated.filter(item => item.qty > 0);
+    });
   };
 
   const removeRow = (id) => {

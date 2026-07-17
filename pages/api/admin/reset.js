@@ -18,33 +18,43 @@ export default async function handler(req, res) {
     const idToken = authHeader.split('Bearer ')[1];
     await adminAuth.verifyIdToken(idToken);
     
-    const collectionsToDelete = ['ventas', 'products', 'customers', 'sri_logs', 'idempotency_keys'];
+    const collectionsToDelete = ['ventas', 'productos', 'clientes', 'sri_logs', 'idempotency_keys'];
 
     // --- RESPALDO AUTOMÁTICO ANTES DE ELIMINAR ---
-    const fs = require('fs');
-    const path = require('path');
-    const backupDir = path.join(process.cwd(), 'backups');
-    if (!fs.existsSync(backupDir)) {
-      fs.mkdirSync(backupDir);
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      let backupDir = path.join(process.cwd(), 'backups');
+      
+      const backupData = {
+        timestamp: new Date().toISOString(),
+        data: {}
+      };
+
+      for (const coll of collectionsToDelete) {
+        const snapshot = await adminDb.collection(coll).get();
+        backupData.data[coll] = [];
+        snapshot.forEach(doc => {
+          backupData.data[coll].push({ id: doc.id, ...doc.data() });
+        });
+      }
+
+      // Intentar escribir en backups, si falla (como en Vercel), usar /tmp
+      try {
+        if (!fs.existsSync(backupDir)) {
+          fs.mkdirSync(backupDir);
+        }
+      } catch (fsErr) {
+        console.warn('Directorio backups no escribible, usando /tmp:', fsErr.message);
+        backupDir = '/tmp';
+      }
+
+      const backupFile = path.join(backupDir, `backup_auto_reset_${Date.now()}.json`);
+      fs.writeFileSync(backupFile, JSON.stringify(backupData, null, 2));
+      console.log(`✅ Respaldo automático guardado en: ${backupFile}`);
+    } catch (backupErr) {
+      console.error('No se pudo generar el backup local (continuando con el reset igualmente):', backupErr);
     }
-
-    const backupData = {
-      timestamp: new Date().toISOString(),
-      data: {}
-    };
-
-    for (const coll of collectionsToDelete) {
-      const snapshot = await adminDb.collection(coll).get();
-      backupData.data[coll] = [];
-      snapshot.forEach(doc => {
-        backupData.data[coll].push({ id: doc.id, ...doc.data() });
-      });
-    }
-
-    const backupFile = path.join(backupDir, `backup_auto_reset_${Date.now()}.json`);
-    fs.writeFileSync(backupFile, JSON.stringify(backupData, null, 2));
-    console.log(`✅ Respaldo automático guardado en: ${backupFile}`);
-
     // --- FIN RESPALDO AUTOMÁTICO ---
 
     // Borrado por lotes para evitar timeout o fallos de memoria
