@@ -181,7 +181,7 @@ export default async function handler(req, res) {
 
     const invoiceData = {
       infoTributaria: {
-        ambiente: 1,
+        ambiente: process.env.SRI_ENVIRONMENT === 'production' ? 2 : 1,
         tipoEmision: 1,
         razonSocial: isNotaVenta ? 'GRAVITY DENIM' : (emisor.razonSocial || emisor.name || 'Sin Razón Social'),
         nombreComercial: isNotaVenta ? 'GRAVITY DENIM' : (emisor.nombreComercial || emisor.razonSocial || emisor.name || 'Sin Nombre Comercial'),
@@ -322,7 +322,7 @@ export default async function handler(req, res) {
         try {
           // 8.3 Enviar (validar) y Autorizar SRI (Red/Internet)
           // Mapear ambiente (1 = 'test', 2 = 'prod') para la librería osodreamer
-          const sriEnv = invoiceData.infoTributaria.ambiente === 1 ? 'test' : 'prod';
+          const sriEnv = invoiceData.infoTributaria.ambiente === 2 ? 'prod' : 'test';
           await validateXml({ env: sriEnv, xml: Buffer.from(signedXml, 'utf8') });
           authResult = await authorizeXml({ claveAcceso: invoiceData.infoTributaria.claveAcceso, env: sriEnv });
         } catch (e) {
@@ -363,7 +363,7 @@ export default async function handler(req, res) {
       timestamp: new Date().toISOString(),
       emisorId,
       cajeroUid: decodedToken.uid || 'UNKNOWN',
-      ambiente: '1',
+      ambiente: String(invoiceData.infoTributaria.ambiente),
       latenciaMs: latencyMs,
       numeroComprobante: numeroComprobanteCompleto,
       secuencial: secStr,

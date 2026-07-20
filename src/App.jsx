@@ -349,6 +349,20 @@ function App() {
             {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
           </button>
 
+          <span style={{ 
+            fontSize: '0.8rem', 
+            background: process.env.SRI_ENVIRONMENT === 'production' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)', 
+            color: process.env.SRI_ENVIRONMENT === 'production' ? '#f87171' : '#f59e0b', 
+            padding: '4px 10px', 
+            borderRadius: '6px', 
+            fontWeight: '900',
+            border: process.env.SRI_ENVIRONMENT === 'production' ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(245, 158, 11, 0.4)',
+            letterSpacing: '0.5px',
+            marginRight: '0.25rem'
+          }}>
+            {process.env.SRI_ENVIRONMENT === 'production' ? 'SRI PRODUCCIÓN' : 'SRI PRUEBAS'}
+          </span>
+
           <span style={{ fontSize: '0.8rem', background: 'rgba(59, 130, 246, 0.2)', color: 'var(--accent)', padding: '4px 10px', borderRadius: '6px', fontWeight: 'bold' }}>
             {isAdmin ? '🛡️ Admin' : '👤 Ventas'}
           </span>

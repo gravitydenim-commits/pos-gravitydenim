@@ -24,10 +24,28 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Acción no válida.' });
     }
 
-    // 2. Obtener y filtrar ventas
+    // 2. Comprobar ambiente y bloqueo definitivo de Producción
+    const isProduction = process.env.SRI_ENVIRONMENT === 'production';
+    
+    // Obtener y filtrar ventas
     const ventasRef = adminDb.collection('ventas');
     const allSalesSnap = await ventasRef.get();
     const targetSales = [];
+
+    // Validar de forma preliminar si existen facturas oficiales
+    let hasOfficialInvoices = false;
+    allSalesSnap.forEach(doc => {
+      const data = doc.data();
+      if (!data.isNotaVenta && data.estadoSri && ['AUTORIZADO', 'RECIBIDO', 'PENDIENTE_ENVIO', 'EN_PROCESO', 'CONTINGENCIA_LOCAL'].includes(data.estadoSri)) {
+        hasOfficialInvoices = true;
+      }
+    });
+
+    if (isProduction || hasOfficialInvoices) {
+      return res.status(403).json({ 
+        error: 'Operación prohibida. No se permite reiniciar ventas cuando el ambiente es de Producción o existen facturas reales registradas ante el SRI.' 
+      });
+    }
 
     allSalesSnap.forEach(doc => {
       const data = doc.data();

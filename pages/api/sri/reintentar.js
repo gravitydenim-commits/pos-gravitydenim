@@ -53,9 +53,8 @@ export default async function handler(req, res) {
     }
     
     const issuerData = issuerDoc.data();
-    // 1 para pruebas, 2 para producción (asumiendo que viene del frontend o por defecto 1)
-    const ambiente = issuerData.ambiente || 1;
-    const sriEnv = ambiente === 1 ? 'test' : 'prod';
+    const ambiente = process.env.SRI_ENVIRONMENT === 'production' ? 2 : (issuerData.ambiente || 1);
+    const sriEnv = ambiente === 2 ? 'prod' : 'test';
 
     let errorTecnico = null;
     let authResult = null;
