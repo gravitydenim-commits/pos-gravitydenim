@@ -11,7 +11,7 @@ import LoginScreen from './components/Auth/LoginScreen';
 import FacturasSRI from './components/Contingencia/FacturasSRI';
 import AdminScreen from './components/Admin/AdminScreen';
 import { usePermissions } from './hooks/usePermissions';
-import { LayoutDashboard, Receipt, PackagePlus, Settings, LogOut, Loader2, Package, Users, AlertTriangle, Truck, Moon, Sun, Shield } from 'lucide-react';
+import { LayoutDashboard, Receipt, PackagePlus, Settings, LogOut, Loader2, Package, Users, AlertTriangle, Truck, Moon, Sun, Shield, Menu, X, Maximize2, Minimize2, Eye, EyeOff } from 'lucide-react';
 import { auth, db } from './firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, onSnapshot, addDoc, doc, setDoc, deleteDoc, query, where } from 'firebase/firestore';
@@ -24,6 +24,10 @@ function App() {
   const [userRole, setUserRole] = useState(null); // 'admin' o 'ventas'
   const [authLoading, setAuthLoading] = useState(true);
   const [isLightTheme, setIsLightTheme] = useState(false);
+
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [isConcentrationMode, setIsConcentrationMode] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const [currentView, setCurrentView] = useState('pos'); // 'pos', 'report', 'settings', 'inventory'
   const [salesDB, setSalesDB] = useState([]); 
@@ -63,6 +67,46 @@ function App() {
 
     return () => unsubscribeAuth();
   }, []);
+
+  // --- CONTROLES DE INTERFAZ (SIDEBAR, PANTALLA COMPLETA, CONCENTRACIÓN) ---
+  useEffect(() => {
+    // Detectar tamaño de pantalla al iniciar
+    const isDesktop = window.innerWidth >= 1024;
+    if (isDesktop) {
+      const savedState = localStorage.getItem('sidebar_collapsed');
+      setIsSidebarCollapsed(savedState === 'true');
+    } else {
+      setIsSidebarCollapsed(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(prev => {
+      const newState = !prev;
+      localStorage.setItem('sidebar_collapsed', String(newState));
+      return newState;
+    });
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.error('Error al entrar en pantalla completa:', err);
+      });
+    } else {
+      document.exitFullscreen().catch(err => {
+        console.error('Error al salir de pantalla completa:', err);
+      });
+    }
+  };
 
   // 🔴 INYECTAR HOOK DE PERMISOS AQUI PARA USARLO EN LAS SUSCRIPCIONES
   const { permissions, isAdmin, loading: permissionsLoading, modulesConfig, hasPermission } = usePermissions(currentUser);
@@ -159,7 +203,8 @@ function App() {
     try {
       await setDoc(doc(db, 'clientes', customerData.numeroIdentificacion), customerData);
     } catch (error) {
-      console.error("Error al guardar cliente en venta", error);
+      console.error("Error al guardar cliente:", error);
+      throw error;
     }
   };
 
@@ -233,164 +278,266 @@ function App() {
   }
 
   return (
-    <div className="app-layout">
-      {/* Sidebar Navigation */}
-      <nav className="sidebar glass-panel">
-        <div className="sidebar-main-nav">
-          <div className="sidebar-logo">
-            <img src="/logo.jpg" alt="GD" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }} />
-          </div>
-          
+    <div className={`app-layout ${isConcentrationMode ? 'concentration-active' : ''}`}>
+      
+      {/* HEADER GLOBAL */}
+      <header className="desktop-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <button 
-            className={`nav-btn ${currentView === 'pos' ? 'active' : ''}`}
-            onClick={() => setCurrentView('pos')}
+            onClick={toggleSidebar}
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '6px',
+              color: 'var(--text-main)',
+              padding: '6px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              outline: 'none'
+            }}
+            title={isSidebarCollapsed ? "Mostrar Menú" : "Ocultar Menú"}
           >
-            <Receipt size={24} />
-            <span className="nav-btn-text">Caja</span>
+            {isSidebarCollapsed ? <Menu size={20} /> : <X size={20} />}
           </button>
-          
-          {isAdmin && (
-            <>
-              <button 
-                className={`nav-btn ${currentView === 'inventory' ? 'active' : ''}`}
-                onClick={() => setCurrentView('inventory')}
-              >
-                <Package size={24} />
-                <span className="nav-btn-text">Inventario</span>
-              </button>
-
-              <button 
-                className={`nav-btn ${currentView === 'customers' ? 'active' : ''}`}
-                onClick={() => setCurrentView('customers')}
-              >
-                <Users size={24} />
-                <span className="nav-btn-text">Clientes</span>
-              </button>
-
-              <button 
-                className={`nav-btn ${currentView === 'report' ? 'active' : ''}`}
-                onClick={() => setCurrentView('report')}
-              >
-                <LayoutDashboard size={24} />
-                <span className="nav-btn-text">Reportes</span>
-              </button>
-            </>
-          )}
-
-          <button 
-            className={`nav-btn ${currentView === 'sri' ? 'active' : ''}`}
-            onClick={() => setCurrentView('sri')}
-          >
-            <AlertTriangle size={24} />
-            <span className="nav-btn-text">Facturas SRI</span>
-          </button>
-
-
-
-          {isAdmin && (
-            <>
-              <button 
-                className={`nav-btn ${currentView === 'admin' ? 'active' : ''}`}
-                onClick={() => setCurrentView('admin')}
-              >
-                <Shield size={24} />
-                <span className="nav-btn-text">Admin</span>
-              </button>
-
-              <button 
-                className={`nav-btn ${currentView === 'settings' ? 'active' : ''}`}
-                onClick={() => setCurrentView('settings')}
-              >
-                <Settings size={24} />
-                <span className="nav-btn-text">Ajustes</span>
-              </button>
-
-              <hr className="sidebar-divider" />
-
-              <button 
-                className="nav-btn nav-btn-add"
-                onClick={() => { setProductToEdit(null); setIsModalOpen(true); }}
-              >
-                <PackagePlus size={24} />
-                <span className="nav-btn-text">+ Producto</span>
-              </button>
-            </>
-          )}
+          <h2 style={{ fontSize: '1.15rem', margin: 0, fontWeight: '800', color: 'var(--accent)', letterSpacing: '0.5px' }}>
+            GRAVITY DENIM POS
+          </h2>
         </div>
 
-        {/* User Info, Theme & Logout */}
-        <div className="sidebar-user-nav" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: 'auto' }}>
-          <div className="user-role-badge">
-            <span>{isAdmin ? '🛡️ Admin' : '👤 Ventas'}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          {/* Botón Modo Concentración */}
+          <button
+            onClick={() => setIsConcentrationMode(true)}
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '6px',
+              color: '#94a3b8',
+              padding: '6px 12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.8rem',
+              fontWeight: 'bold',
+              outline: 'none'
+            }}
+            title="Ocultar menú y cabecera"
+          >
+            <EyeOff size={16} /> Modo Concentración
+          </button>
+
+          {/* Botón Pantalla Completa */}
+          <button
+            onClick={toggleFullscreen}
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '6px',
+              color: '#cbd5e1',
+              padding: '6px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              outline: 'none'
+            }}
+            title={isFullscreen ? "Salir de Pantalla Completa" : "Pantalla Completa"}
+          >
+            {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+          </button>
+
+          <span style={{ fontSize: '0.8rem', background: 'rgba(59, 130, 246, 0.2)', color: 'var(--accent)', padding: '4px 10px', borderRadius: '6px', fontWeight: 'bold' }}>
+            {isAdmin ? '🛡️ Admin' : '👤 Ventas'}
+          </span>
+        </div>
+      </header>
+
+      {/* BOTÓN FLOTANTE DISCRETO PARA SALIR DEL MODO CONCENTRACIÓN */}
+      {isConcentrationMode && (
+        <button
+          onClick={() => setIsConcentrationMode(false)}
+          style={{
+            position: 'fixed',
+            top: '10px',
+            left: '10px',
+            zIndex: 9999,
+            background: 'rgba(15, 23, 42, 0.8)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '20px',
+            color: '#3b82f6',
+            padding: '6px 14px',
+            cursor: 'pointer',
+            fontSize: '0.75rem',
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(5px)'
+          }}
+        >
+          <Eye size={14} /> Salir Modo Concentración
+        </button>
+      )}
+
+      {/* CONTENEDOR INFERIOR DE LAYOUT */}
+      <div className={`app-body ${isConcentrationMode ? 'concentration-active' : ''}`}>
+        
+        {/* Sidebar Navigation */}
+        <nav className={`sidebar glass-panel ${isSidebarCollapsed || isConcentrationMode ? 'collapsed' : ''}`}>
+          <div className="sidebar-main-nav">
+            <div className="sidebar-logo">
+              <img src="/logo.jpg" alt="GD" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }} />
+            </div>
+            
+            <button 
+              className={`nav-btn ${currentView === 'pos' ? 'active' : ''}`}
+              onClick={() => setCurrentView('pos')}
+            >
+              <Receipt size={24} />
+              <span className="nav-btn-text">Caja</span>
+            </button>
+            
+            {isAdmin && (
+              <>
+                <button 
+                  className={`nav-btn ${currentView === 'inventory' ? 'active' : ''}`}
+                  onClick={() => setCurrentView('inventory')}
+                >
+                  <Package size={24} />
+                  <span className="nav-btn-text">Inventario</span>
+                </button>
+
+                <button 
+                  className={`nav-btn ${currentView === 'customers' ? 'active' : ''}`}
+                  onClick={() => setCurrentView('customers')}
+                >
+                  <Users size={24} />
+                  <span className="nav-btn-text">Clientes</span>
+                </button>
+
+                <button 
+                  className={`nav-btn ${currentView === 'report' ? 'active' : ''}`}
+                  onClick={() => setCurrentView('report')}
+                >
+                  <LayoutDashboard size={24} />
+                  <span className="nav-btn-text">Reportes</span>
+                </button>
+              </>
+            )}
+
+            <button 
+              className={`nav-btn ${currentView === 'sri' ? 'active' : ''}`}
+              onClick={() => setCurrentView('sri')}
+            >
+              <AlertTriangle size={24} />
+              <span className="nav-btn-text">Facturas SRI</span>
+            </button>
+
+            {isAdmin && (
+              <>
+                <button 
+                  className={`nav-btn ${currentView === 'admin' ? 'active' : ''}`}
+                  onClick={() => setCurrentView('admin')}
+                >
+                  <Shield size={24} />
+                  <span className="nav-btn-text">Admin</span>
+                </button>
+
+                <button 
+                  className={`nav-btn ${currentView === 'settings' ? 'active' : ''}`}
+                  onClick={() => setCurrentView('settings')}
+                >
+                  <Settings size={24} />
+                  <span className="nav-btn-text">Ajustes</span>
+                </button>
+
+                <hr className="sidebar-divider" />
+
+                <button 
+                  className="nav-btn nav-btn-add"
+                  onClick={() => { setProductToEdit(null); setIsModalOpen(true); }}
+                >
+                  <PackagePlus size={24} />
+                  <span className="nav-btn-text">+ Producto</span>
+                </button>
+              </>
+            )}
           </div>
 
-          <button 
-            className="nav-btn"
-            onClick={toggleTheme}
-            style={{ color: 'var(--text-muted)' }}
-          >
-            {isLightTheme ? <Moon size={24} /> : <Sun size={24} />}
-            <span className="nav-btn-text">{isLightTheme ? 'Tema Noche' : 'Tema Día'}</span>
-          </button>
+          {/* User Info, Theme & Logout */}
+          <div className="sidebar-user-nav" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: 'auto' }}>
+            <button 
+              className="nav-btn"
+              onClick={toggleTheme}
+              style={{ color: 'var(--text-muted)' }}
+            >
+              {isLightTheme ? <Moon size={24} /> : <Sun size={24} />}
+              <span className="nav-btn-text">{isLightTheme ? 'Tema Noche' : 'Tema Día'}</span>
+            </button>
 
-          <button 
-            className="nav-btn nav-btn-logout"
-            onClick={() => signOut(auth)}
-            title="Cerrar Sesión"
-          >
-            <LogOut size={24} />
-            <span className="nav-btn-text">Salir</span>
-          </button>
-        </div>
-      </nav>
+            <button 
+              className="nav-btn nav-btn-logout"
+              onClick={() => signOut(auth)}
+              title="Cerrar Sesión"
+            >
+              <LogOut size={24} />
+              <span className="nav-btn-text">Salir</span>
+            </button>
+          </div>
+        </nav>
 
-      {/* Main Content Area */}
-      <main className="main-content">
-        {currentView === 'pos' && (
-          <POSScreen 
-            issuers={issuers} 
-            productsDB={productsDB}
-            salesDB={salesDB}
-            recordSale={recordSale} 
-            customersDB={customersDB}
-            recordCustomer={recordCustomer}
-          />
-        )}
-        {currentView === 'admin' && isAdmin && (
-          <AdminScreen permissions={permissions} modulesConfig={modulesConfig} isSuperAdmin={isAdmin} />
-        )}
-        {(currentView === 'report' && hasPermission('reportes', 'ver_ventas')) && (
-          <ReportesDashboard issuers={issuers} sales={salesDB} />
-        )}
-        {(currentView === 'sri' && isAdmin) && (
-          <FacturasSRI />
-        )}
+        {/* Main Content Area */}
+        <main className="main-content">
+          {currentView === 'pos' && (
+            <POSScreen 
+              issuers={issuers} 
+              productsDB={productsDB}
+              salesDB={salesDB}
+              recordSale={recordSale} 
+              customersDB={customersDB}
+              recordCustomer={recordCustomer}
+            />
+          )}
+          {currentView === 'admin' && isAdmin && (
+            <AdminScreen permissions={permissions} modulesConfig={modulesConfig} isSuperAdmin={isAdmin} />
+          )}
+          {(currentView === 'report' && hasPermission('reportes', 'ver_ventas')) && (
+            <ReportesDashboard issuers={issuers} sales={salesDB} />
+          )}
+          {(currentView === 'sri' && isAdmin) && (
+            <FacturasSRI />
+          )}
 
-        {(currentView === 'settings' && isAdmin) && (
-          <ConfiguracionGeneral 
-            companyData={companyData} 
-            saveCompanyData={saveCompanyData} 
-            issuers={issuers} 
-            updateIssuer={updateIssuer} 
-          />
-        )}
-        {(currentView === 'inventory' && hasPermission('inventario', 'ver')) && (
-          <InventarioScreen 
-            productsDB={productsDB}
-            onEdit={(prod) => { setProductToEdit(prod); setIsModalOpen(true); }}
-            onDelete={eliminarProducto}
-            onAdd={() => { setProductToEdit(null); setIsModalOpen(true); }}
-          />
-        )}
-        {(currentView === 'customers' && hasPermission('clientes', 'ver')) && (
-          <ClientesScreen 
-            customersDB={customersDB}
-            onAdd={() => { setCustomerToEdit(null); setIsCustomerModalOpen(true); }}
-            onEdit={(cliente) => { setCustomerToEdit(cliente); setIsCustomerModalOpen(true); }}
-            onDelete={eliminarCliente}
-          />
-        )}
-      </main>
+          {(currentView === 'settings' && isAdmin) && (
+            <ConfiguracionGeneral 
+              companyData={companyData} 
+              saveCompanyData={saveCompanyData} 
+              issuers={issuers} 
+              updateIssuer={updateIssuer} 
+            />
+          )}
+          {(currentView === 'inventory' && hasPermission('inventario', 'ver')) && (
+            <InventarioScreen 
+              productsDB={productsDB}
+              onEdit={(prod) => { setProductToEdit(prod); setIsModalOpen(true); }}
+              onDelete={eliminarProducto}
+              onAdd={() => { setProductToEdit(null); setIsModalOpen(true); }}
+            />
+          )}
+          {(currentView === 'customers' && hasPermission('clientes', 'ver')) && (
+            <ClientesScreen 
+              customersDB={customersDB}
+              onAdd={() => { setCustomerToEdit(null); setIsCustomerModalOpen(true); }}
+              onEdit={(cliente) => { setCustomerToEdit(cliente); setIsCustomerModalOpen(true); }}
+              onDelete={eliminarCliente}
+            />
+          )}
+        </main>
+      </div>
 
       {/* Modal Agregar/Editar Producto */}
       {(isModalOpen && isAdmin) && (

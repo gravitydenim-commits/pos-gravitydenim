@@ -162,27 +162,15 @@ export default function FacturasSRI() {
 
   const handleReimprimirClick = (venta) => {
     const estado = venta.status || venta.estadoSri;
-    if (estado !== 'AUTORIZADO' && estado !== 'AUTORIZADA') {
+    const isNota = venta.isNotaVenta || (estado === 'NOTA_DE_VENTA');
+    if (!isNota && estado !== 'AUTORIZADO' && estado !== 'AUTORIZADA') {
       alert(`⚠️ NO SE PUEDE REIMPRIMIR:\nEl comprobante no está autorizado por el SRI. Estado actual: ${estado || 'PENDIENTE'}`);
       return;
     }
 
-    const choice = window.prompt(
-      "Selecciona el formato de reimpresión:\n\n" +
-      "1 - Ticket Térmico de 58 mm\n" +
-      "2 - Ticket Térmico de 80 mm\n" +
-      "3 - Descargar PDF\n\n" +
-      "Ingresa el número de tu opción:",
-      "2"
-    );
-
-    if (choice === "1") {
-      handleReimprimir(venta, '58mm');
-    } else if (choice === "2") {
-      handleReimprimir(venta, '80mm');
-    } else if (choice === "3") {
-      window.open(`/api/sri/pdf?claveAcceso=${venta.claveAcceso || venta.id}`, '_blank');
-    }
+    // Auto-detectar formato configurado en localStorage
+    const printerFormat = localStorage.getItem('printerFormat') || '80mm';
+    handleReimprimir(venta, printerFormat);
   };
 
   const contingencyCount = React.useMemo(() => {

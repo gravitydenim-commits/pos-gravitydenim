@@ -135,16 +135,16 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
 
   // --- BÚSQUEDA AUTOMÁTICA DE CLIENTES ---
   const manejarBuscarCliente = async () => {
-    const { numeroIdentificacion } = customer;
-    if (!numeroIdentificacion || numeroIdentificacion.length < 10) return;
+    const numId = (customer.numeroIdentificacion || '').trim();
+    if (!numId || numId.length < 5) return;
     if (customer.tipoDocumento === 'CONSUMIDOR_FINAL') return;
 
     setIsSearchingClient(true);
-    console.log(`🔍 Buscando cliente con CI/RUC: ${numeroIdentificacion}...`);
+    console.log(`🔍 Buscando cliente con CI/RUC: ${numId}...`);
 
     try {
       // Búsqueda directa en la colección 'clientes' usando el ID del documento
-      const docRef = doc(db, 'clientes', numeroIdentificacion);
+      const docRef = doc(db, 'clientes', numId);
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
@@ -610,15 +610,29 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
               <div key={item.id} className="cart-item">
                 <div className="cart-item-info">
                   <h4>{item.name}</h4>
-                  <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem'}}>
+                  <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.4rem'}}>
+                    <span style={{ color: 'var(--accent)', fontWeight: 'bold', fontSize: '1.25rem' }}>$</span>
                     <input 
                       type="number" 
                       value={item.price === 0 ? '' : item.price} 
                       onChange={(e) => updateCustomPrice(item.id, e.target.value)}
-                      style={{width: '70px', padding: '4px', textAlign: 'right', background: 'var(--input-bg)', border: '1px solid var(--panel-border)', borderRadius: '4px', color: 'var(--text-main)'}}
+                      style={{
+                        width: '130px', 
+                        padding: '12px 14px', 
+                        textAlign: 'right', 
+                        background: '#090d16', 
+                        border: '2px solid var(--accent)', 
+                        borderRadius: '8px', 
+                        color: '#10b981', 
+                        fontSize: '1.15rem', 
+                        fontWeight: '900',
+                        outline: 'none',
+                        transition: 'all 0.2s',
+                        boxShadow: '0 0 10px rgba(59, 130, 246, 0.15)'
+                      }}
                       step="0.01"
                     />
-                    <span style={{color: 'var(--text-muted)', fontSize: '0.8rem'}}>c/u</span>
+                    <span style={{color: 'var(--text-muted)', fontSize: '0.85rem', marginLeft: '4px'}}>c/u</span>
                   </div>
                 </div>
                 

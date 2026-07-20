@@ -1,6 +1,7 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 
 // 1. Inicializar la aplicación solo si no existe
 if (!getApps().length) {
@@ -46,7 +47,11 @@ if (!getApps().length) {
       );
     }
 
-    initializeApp({ credential });
+    const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || (process.env.FIREBASE_PROJECT_ID ? `${process.env.FIREBASE_PROJECT_ID}.appspot.com` : 'gravitydenimpos.appspot.com');
+    initializeApp({ 
+      credential,
+      storageBucket: bucketName
+    });
   } catch (error) {
     console.error('Firebase admin initialization error:', error.message);
     throw error;
@@ -60,4 +65,8 @@ export function getAdminAuth() {
 
 export function getAdminDb() {
   return getFirestore();
+}
+
+export function getAdminStorage() {
+  return getStorage();
 }

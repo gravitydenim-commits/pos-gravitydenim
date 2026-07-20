@@ -162,9 +162,43 @@ h1, h2, h3 {
 
 /* App Layout */
 .app-layout {
+  min-height: 100dvh;
+  height: 100dvh;
   display: flex;
-  height: 100vh;
+  flex-direction: column;
+  background: var(--bg-color);
+  overflow: hidden;
   width: 100vw;
+}
+
+.desktop-header {
+  height: 50px;
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--panel-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+  flex-shrink: 0;
+}
+
+/* Modo concentración en escritorio: oculta el header global */
+.app-layout.concentration-active .desktop-header {
+  display: none !important;
+}
+
+.app-body {
+  display: flex;
+  flex: 1;
+  height: calc(100dvh - 50px);
+  width: 100vw;
+  overflow: hidden;
+}
+
+.app-body.concentration-active {
+  height: 100dvh !important;
 }
 
 .sidebar {
@@ -183,6 +217,14 @@ h1, h2, h3 {
   /* Scrollbar delgado y elegante para la sidebar */
   scrollbar-width: thin;
   scrollbar-color: var(--accent) transparent;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s ease, opacity 0.25s ease;
+  flex-shrink: 0;
+}
+
+.sidebar.collapsed {
+  width: 0 !important;
+  padding: 0 !important;
+  opacity: 0 !important;
 }
 
 .sidebar::-webkit-scrollbar {
@@ -228,7 +270,9 @@ h1, h2, h3 {
 
 .main-content {
   flex: 1;
-  overflow: hidden;
+  width: 100%;
+  min-width: 0;
+  overflow: auto;
   padding: 1rem;
 }
 
@@ -546,79 +590,111 @@ input:checked + .slider:before {
 }
 
 
-/* Responsive Layout ONLY for Tablet & Mobile in Portrait (Orientation: Portrait) */
-@media (orientation: portrait) {
+/* Responsive Layout ONLY for Tablet & Mobile (< 1024px) */
+@media (max-width: 1024px) {
   .app-layout {
-    flex-direction: column-reverse;
-    height: 100dvh;
-    overflow: hidden;
+    flex-direction: column-reverse !important;
+    height: 100dvh !important;
   }
+  
   .sidebar {
+    display: flex !important;
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    height: 65px !important;
+    min-height: 65px !important;
     width: 100vw !important;
-    height: 72px !important;
-    min-height: 72px !important;
-    flex-direction: row !important;
-    padding: 0 0.5rem !important;
-    padding-bottom: max(env(safe-area-inset-bottom), 12px) !important;
+    background: #0f172a !important;
     border-right: none !important;
     border-top: 1px solid var(--panel-border) !important;
-    justify-content: flex-start !important;
+    justify-content: space-around !important;
     align-items: center !important;
-    background: #0f172a !important;
-    z-index: 100 !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    -webkit-overflow-scrolling: touch !important;
-    scrollbar-width: none !important;
-    gap: 1rem !important;
-    display: flex !important;
+    opacity: 1 !important;
+    z-index: 1000 !important;
+    flex-direction: row !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    overflow: hidden !important;
   }
+
+  .sidebar.collapsed {
+    width: 100vw !important;
+    padding: 0 !important;
+    opacity: 1 !important;
+  }
+
   .sidebar::-webkit-scrollbar {
     display: none !important;
   }
+
   .sidebar-main-nav {
     flex-direction: row !important;
     display: flex !important;
-    width: auto !important;
-    gap: 0.5rem !important;
+    width: 100% !important;
+    justify-content: space-around !important;
+    align-items: center !important;
     height: 100% !important;
     margin-bottom: 0 !important;
-    flex-wrap: nowrap !important;
-    flex-shrink: 0 !important;
   }
+
   .sidebar-user-nav {
-    flex-direction: row !important;
-    display: flex !important;
-    width: auto !important;
-    gap: 0.5rem !important;
-    height: 100% !important;
-    margin-top: 0 !important;
-    margin-left: auto !important;
-    flex-wrap: nowrap !important;
-    flex-shrink: 0 !important;
+    display: none !important;
   }
+
   .sidebar-logo, .sidebar-divider, .nav-btn-text, .user-role-badge {
     display: none !important;
   }
+
   .nav-btn {
     width: auto !important;
-    padding: 0.5rem 0.75rem !important;
-    border-radius: 8px !important;
     height: 100% !important;
+    padding: 0.25rem 0.5rem !important;
+    border-radius: 8px !important;
     justify-content: center !important;
-    flex-direction: row !important;
-    gap: 0.35rem !important;
+    align-items: center !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    background: transparent !important;
+    flex: 1 !important;
   }
+
+  .nav-btn.active {
+    background: rgba(59, 130, 246, 0.15) !important;
+    color: var(--accent) !important;
+  }
+
+  /* Ocultar botón de menú hamburguesa en la barra superior en pantallas pequeñas */
+  header button[title="Mostrar Menú"], header button[title="Ocultar Menú"] {
+    display: none !important;
+  }
+
+  /* Header siempre sticky arriba */
+  .desktop-header {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 50 !important;
+    width: 100vw !important;
+  }
+
+  .app-body {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+  }
+
   .main-content {
-    height: calc(100dvh - 72px) !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    padding: 0.5rem !important;
-    padding-bottom: calc(4rem + env(safe-area-inset-bottom)) !important;
+    width: 100% !important;
+    padding-bottom: 76px !important;
+    overflow-x: hidden !important;
+    height: auto !important;
   }
   
-  /* POS Screen Redesign for Portrait Mode */
+  /* POS Screen Redesign for Portrait Mode - Una sola columna fluida */
   .pos-container {
+    display: flex !important;
     flex-direction: column !important;
     height: auto !important;
     gap: 1rem !important;
@@ -635,6 +711,7 @@ input:checked + .slider:before {
     gap: 0.75rem !important;
     height: auto !important;
     max-height: none !important;
+    overflow: visible !important;
   }
   .product-card {
     height: 110px !important;
@@ -667,7 +744,7 @@ input:checked + .slider:before {
     justify-content: center !important;
   }
   
-  /* Cart fixes */
+  /* Cart fixes - Se muestra en fila del flujo vertical */
   .cart-section {
     flex: none !important;
     height: auto !important;
@@ -677,23 +754,33 @@ input:checked + .slider:before {
   }
   .cart-container {
     height: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
   .cart-items {
     max-height: none !important;
     overflow-y: visible !important;
   }
   .cart-item {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 0.5rem !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 1rem 0.5rem !important;
+    gap: 0.75rem !important;
+  }
+  .cart-item-info {
+    flex: 1 1 100% !important;
   }
   .cart-item-controls {
-    justify-content: space-between !important;
+    flex: 1 1 auto !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
   }
   .btn-primary {
-    padding: 14px 20px !important;
-    font-size: 1rem !important;
-    width: 100% !important;
+    padding: 8px 12px !important;
+    font-size: 0.9rem !important;
+    width: auto !important;
   }
   .cart-summary {
     max-height: none !important;
@@ -706,6 +793,11 @@ input:checked + .slider:before {
   }
   .summary-row.total {
     font-size: 1.2rem !important;
+  }
+
+  /* Modo concentración en pantallas pequeñas */
+  .app-layout.concentration-active .sidebar {
+    display: none !important;
   }
 }
 

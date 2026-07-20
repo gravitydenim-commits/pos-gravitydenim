@@ -31,6 +31,7 @@ export default function ReportesDashboard({ sales, issuers }) {
   const [filterSriState, setFilterSriState] = useState('');
   const [selectedVenta, setSelectedVenta] = useState(null);
   const [usersList, setUsersList] = useState([]);
+  const [openMenuId, setOpenMenuId] = useState(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -104,27 +105,40 @@ export default function ReportesDashboard({ sales, issuers }) {
 
   const handleReimprimirClick = (venta) => {
     const estado = venta.estadoSri || venta.status;
-    const isNota = (estado === 'NOTA_DE_VENTA');
+    const isNota = venta.isNotaVenta || (estado === 'NOTA_DE_VENTA');
     if (!isNota && estado !== 'AUTORIZADO' && estado !== 'AUTORIZADA') {
       alert(`⚠️ NO SE PUEDE REIMPRIMIR:\nEl comprobante no está autorizado por el SRI. Estado actual: ${estado || 'PENDIENTE'}`);
       return;
     }
 
-    const choice = window.prompt(
-      "Selecciona el formato de reimpresión:\n\n" +
-      "1 - Ticket Térmico de 58 mm\n" +
-      "2 - Ticket Térmico de 80 mm\n" +
-      "3 - Descargar PDF\n\n" +
-      "Ingresa el número de tu opción:",
-      "2"
-    );
+    // Auto-detectar formato configurado en localStorage
+    const printerFormat = localStorage.getItem('printerFormat') || '80mm';
+    handleReimprimir(venta, printerFormat);
+  };
 
-    if (choice === "1") {
-      handleReimprimir(venta, '58mm');
-    } else if (choice === "2") {
-      handleReimprimir(venta, '80mm');
-    } else if (choice === "3") {
-      window.open(`/api/sri/pdf?claveAcceso=${venta.claveAcceso || venta.id}`, '_blank');
+  const handleAnularVenta = async (sale) => {
+    const isNota = sale.isNotaVenta || sale.estadoSri === 'NOTA_DE_VENTA' || sale.status === 'NOTA_DE_VENTA';
+    const docTypeStr = isNota ? 'NOTA DE VENTA' : 'FACTURA';
+
+    const proceed = window.confirm(
+      `⚠️ ANULACIÓN DE COMPROBANTE\n\n` +
+      `¿Seguro que deseas anular esta ${docTypeStr} (ID: ${sale.id})?\n` +
+      `Esta acción no modificará el inventario pero cambiará su estado a ANULADA.`
+    );
+    if (!proceed) return;
+
+    try {
+      const { doc, updateDoc } = await import('firebase/firestore');
+      const { db } = await import('../../firebase/config');
+      await updateDoc(doc(db, 'ventas', sale.id), {
+        estadoVenta: 'ANULADA',
+        estadoSri: 'ANULADA',
+        status: 'ANULADA'
+      });
+      alert(`${docTypeStr} marcada como ANULADA con éxito.`);
+      window.location.reload();
+    } catch (err) {
+      alert('Error al anular: ' + err.message);
     }
   };
 
@@ -458,9 +472,26 @@ export default function ReportesDashboard({ sales, issuers }) {
   };
 
   // Procesar datos para el mes actual y el día de hoy
-  const { currentMonthTotal, currentMonthIVA, salesByIssuer, topProducts, todayTotal, todayEfectivo, todayTransferencia, monthEfectivo, monthTransferencia, todayTransferDetails, monthTransferDetails } = useMemo(() => {
+  const { 
+    currentMonthTotal, 
+    currentMonthIVA, 
+    numFacturasMes,
+    numNotasMes,
+    promedioVentaMes,
+    salesByIssuer, 
+    topProducts, 
+    todayTotal, 
+    todayEfectivo, 
+    todayTransferencia, 
+    monthEfectivo, 
+    monthTransferencia, 
+    todayTransferDetails, 
+    monthTransferDetails 
+  } = useMemo(() => {
     let currentMonthTotal = 0;
     let currentMonthIVA = 0;
+    let numFacturasMes = 0;
+    let numNotasMes = 0;
     let todayTotal = 0;
     let todayEfectivo = 0;
     let todayTransferencia = 0;
@@ -478,17 +509,26 @@ export default function ReportesDashboard({ sales, issuers }) {
 
     sales.forEach(sale => {
       const saleDate = parseSaleDate(sale);
-      if (!saleDate) return; // Saltar si no tiene ninguna fecha válida
+      if (!saleDate) return; 
       const isCurrentMonth = saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
       const isToday = isCurrentMonth && saleDate.getDate() === currentDate;
 
       const total = sale.totals?.total || 0;
-      const iva = sale.totals?.ivaAmount || 0;
       const method = sale.paymentMethod || 'EFECTIVO';
+      const isNota = sale.isNotaVenta || sale.estadoSri === 'NOTA_DE_VENTA' || sale.status === 'NOTA_DE_VENTA';
+
+      // Usar estrictamente el valor de IVA guardado
+      const iva = isNota ? 0 : (sale.totals?.ivaAmount || 0);
 
       if (isCurrentMonth) {
         currentMonthTotal += total;
         currentMonthIVA += iva;
+        if (isNota) {
+          numNotasMes += 1;
+        } else {
+          numFacturasMes += 1;
+        }
+
         if (method === 'EFECTIVO') {
           monthEfectivo += total;
         } else {
@@ -517,7 +557,6 @@ export default function ReportesDashboard({ sales, issuers }) {
         }
       }
 
-      // Tabla multi-RUC (Acumulado general o mensual, lo haremos general)
       const issuerId = sale.issuerId || 'Desconocido';
       if (!issuerTotals[issuerId]) {
         issuerTotals[issuerId] = {
@@ -529,7 +568,6 @@ export default function ReportesDashboard({ sales, issuers }) {
       issuerTotals[issuerId].total += total;
       issuerTotals[issuerId].ventas += 1;
 
-      // Ranking de productos (Solo para el mes actual)
       if (isCurrentMonth && (sale.productos || sale.items || []) && Array.isArray((sale.productos || sale.items || []))) {
         (sale.productos || sale.items || []).forEach(item => {
           if (!productSales[item.name]) {
@@ -541,9 +579,15 @@ export default function ReportesDashboard({ sales, issuers }) {
       }
     });
 
+    const totalTransaccionesMes = numFacturasMes + numNotasMes;
+    const promedioVentaMes = totalTransaccionesMes > 0 ? (currentMonthTotal / totalTransaccionesMes) : 0;
+
     return { 
       currentMonthTotal, 
       currentMonthIVA, 
+      numFacturasMes,
+      numNotasMes,
+      promedioVentaMes,
       todayTotal,
       todayEfectivo,
       todayTransferencia,
@@ -701,27 +745,60 @@ export default function ReportesDashboard({ sales, issuers }) {
       {activeTab === 'sri' && (
         <>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         
-        {/* KPI: Recaudación Mes */}
-        <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ padding: '15px', background: 'rgba(59, 130, 246, 0.2)', borderRadius: '50%', color: '#3b82f6' }}>
-            <DollarSign size={32} />
+        {/* KPI: Facturas Emitidas */}
+        <div className="glass-panel" style={{ padding: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+          <div style={{ padding: '12px', background: 'rgba(59, 130, 246, 0.15)', borderRadius: '50%', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <FileText size={24} />
           </div>
           <div>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.2rem' }}>Recaudación Mes Actual</p>
-            <h3 style={{ fontSize: '1.8rem', margin: 0 }}>${currentMonthTotal.toFixed(2)}</h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0 0 0.2rem 0' }}>Facturas Emitidas</p>
+            <h3 style={{ fontSize: '1.4rem', margin: 0, fontWeight: 'bold', color: 'white' }}>{numFacturasMes}</h3>
           </div>
         </div>
 
-        {/* KPI: IVA Acumulado */}
-        <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ padding: '15px', background: 'rgba(239, 68, 68, 0.2)', borderRadius: '50%', color: '#ef4444' }}>
-            <Percent size={32} />
+        {/* KPI: Notas de Venta */}
+        <div className="glass-panel" style={{ padding: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+          <div style={{ padding: '12px', background: 'rgba(245, 158, 11, 0.15)', borderRadius: '50%', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <FileText size={24} />
           </div>
           <div>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.2rem' }}>IVA Acumulado (15%) SRI</p>
-            <h3 style={{ fontSize: '1.8rem', margin: 0 }}>${currentMonthIVA.toFixed(2)}</h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0 0 0.2rem 0' }}>Notas de Venta</p>
+            <h3 style={{ fontSize: '1.4rem', margin: 0, fontWeight: 'bold', color: 'white' }}>{numNotasMes}</h3>
+          </div>
+        </div>
+
+        {/* KPI: Ventas del Mes */}
+        <div className="glass-panel" style={{ padding: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+          <div style={{ padding: '12px', background: 'rgba(16, 185, 129, 0.15)', borderRadius: '50%', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <DollarSign size={24} />
+          </div>
+          <div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0 0 0.2rem 0' }}>Ventas del Mes</p>
+            <h3 style={{ fontSize: '1.4rem', margin: 0, fontWeight: 'bold', color: 'white' }}>${currentMonthTotal.toFixed(2)}</h3>
+          </div>
+        </div>
+
+        {/* KPI: IVA Declarado */}
+        <div className="glass-panel" style={{ padding: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+          <div style={{ padding: '12px', background: 'rgba(239, 68, 68, 0.15)', borderRadius: '50%', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Percent size={24} />
+          </div>
+          <div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0 0 0.2rem 0' }}>IVA Declarado</p>
+            <h3 style={{ fontSize: '1.4rem', margin: 0, fontWeight: 'bold', color: 'white' }}>${currentMonthIVA.toFixed(2)}</h3>
+          </div>
+        </div>
+
+        {/* KPI: Promedio por Venta */}
+        <div className="glass-panel" style={{ padding: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+          <div style={{ padding: '12px', background: 'rgba(168, 85, 247, 0.15)', borderRadius: '50%', color: '#a855f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <TrendingUp size={24} />
+          </div>
+          <div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0 0 0.2rem 0' }}>Promedio por Venta</p>
+            <h3 style={{ fontSize: '1.4rem', margin: 0, fontWeight: 'bold', color: 'white' }}>${promedioVentaMes.toFixed(2)}</h3>
           </div>
         </div>
 
@@ -756,65 +833,78 @@ export default function ReportesDashboard({ sales, issuers }) {
                 </tr>
               </thead>
               <tbody>
-                {sales.filter(s => (s.estadoSri || s.status) !== 'NOTA_DE_VENTA').sort((a, b) => {
-                  const dateA = parseSaleDate(a);
-                  const dateB = parseSaleDate(b);
-                  if (!dateA && !dateB) return 0;
-                  if (!dateA) return 1;
-                  if (!dateB) return -1;
-                  return dateB - dateA;
-                }).map((sale, idx) => {
-                  const saleDate = parseSaleDate(sale);
-                  if (!saleDate) return <tr key={idx}><td colSpan="15" style={{textAlign: 'center', color: 'var(--text-muted)'}}>Sin fecha</td></tr>;
-                  const isAutorizado = (sale.estadoSri || sale.status) === 'AUTORIZADO';
-                  const issuer = issuers?.find(i => i.id === sale.issuerId) || {};
+                {(() => {
+                  const facturasSri = sales.filter(s => !s.isNotaVenta && (s.estadoSri || s.status) !== 'NOTA_DE_VENTA');
+                  if (facturasSri.length === 0) {
+                    return (
+                      <tr>
+                        <td colSpan="15" style={{ textAlign: 'center', color: '#f87171', padding: '3rem', fontWeight: 'bold', fontSize: '1.1rem' }}>
+                          No existen facturas electrónicas emitidas.
+                        </td>
+                      </tr>
+                    );
+                  }
                   
-                  return (
-                    <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <td>{saleDate.toLocaleDateString('sv-SE')}</td>
-                      <td>{isAutorizado ? saleDate.toLocaleString('sv-SE', {hour12: false}) : ''}</td>
-                      <td>{issuer.establecimiento || '001'}</td>
-                      <td>{issuer.puntoEmision || '100'}</td>
-                      <td style={{ background: '#3b82f6', color: 'white', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', margin: '4px' }}>
-                        {sale.numeroComprobante ? sale.numeroComprobante.split('-')[2] : (sale.secuencial || '000')}
-                      </td>
-                      <td>{(sale.cliente || sale.customer)?.nombre || 'CONSUMIDOR FINAL'}</td>
-                      <td>{(sale.cliente || sale.customer)?.numeroIdentificacion || '9999999999999'}</td>
-                      <td className="text-right">0.00</td>
-                      <td className="text-right">{(sale.totals?.baseImponible || 0).toFixed(2)}</td>
-                      <td className="text-right">{(sale.totals?.ivaAmount || 0).toFixed(2)}</td>
-                      <td className="text-right font-bold" style={{ color: 'var(--accent)' }}>{(sale.totals?.total || 0).toFixed(2)}</td>
-                      <td>
-                        <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.1)', padding: '2px 4px', borderRadius: '4px' }}>
-                          {sale.paymentMethod || 'EFECTIVO'} {sale.transferRecipient ? `(${sale.transferRecipient})` : ''}
-                        </span>
-                      </td>
-                      <td style={{ color: isAutorizado ? '#10b981' : 'var(--text-muted)', fontWeight: 'bold' }}>
-                        {(sale.estadoSri || sale.status)}
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '0.7rem' }}>{sale.claveAcceso || sale.id}</span>
-                          <div style={{ display: 'flex', gap: '4px' }}>
-                            <button 
-                              onClick={() => generarFacturaA4(sale, issuer)}
-                              style={{ background: '#10b981', border: 'none', padding: '4px', borderRadius: '4px', color: 'white', cursor: 'pointer' }}
-                              title="Descargar PDF (RIDE A4)"
-                            >
-                              <FileText size={14} />
-                            </button>
-                            <button 
-                              style={{ background: '#ef4444', border: 'none', padding: '4px', borderRadius: '4px', color: 'white', cursor: 'pointer', opacity: 0.7 }}
-                              title="Descargar XML"
-                            >
-                              <FileCode2 size={14} />
-                            </button>
+                  return facturasSri.sort((a, b) => {
+                    const dateA = parseSaleDate(a);
+                    const dateB = parseSaleDate(b);
+                    if (!dateA && !dateB) return 0;
+                    if (!dateA) return 1;
+                    if (!dateB) return -1;
+                    return dateB - dateA;
+                  }).map((sale, idx) => {
+                    const saleDate = parseSaleDate(sale);
+                    if (!saleDate) return <tr key={idx}><td colSpan="15" style={{textAlign: 'center', color: 'var(--text-muted)'}}>Sin fecha</td></tr>;
+                    const isAutorizado = (sale.estadoSri || sale.status) === 'AUTORIZADO';
+                    const issuer = issuers?.find(i => i.id === sale.issuerId) || {};
+                    
+                    return (
+                      <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <td>{saleDate.toLocaleDateString('sv-SE')}</td>
+                        <td>{isAutorizado ? saleDate.toLocaleString('sv-SE', {hour12: false}) : ''}</td>
+                        <td>{issuer.establecimiento || '001'}</td>
+                        <td>{issuer.puntoEmision || '100'}</td>
+                        <td style={{ background: '#3b82f6', color: 'white', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', margin: '4px' }}>
+                          {sale.numeroComprobante ? sale.numeroComprobante.split('-')[2] : (sale.secuencial || '000')}
+                        </td>
+                        <td>{(sale.cliente || sale.customer)?.nombre || 'CONSUMIDOR FINAL'}</td>
+                        <td>{(sale.cliente || sale.customer)?.numeroIdentificacion || '9999999999999'}</td>
+                        <td className="text-right">0.00</td>
+                        <td className="text-right">{(sale.totals?.baseImponible || 0).toFixed(2)}</td>
+                        <td className="text-right">{(sale.totals?.ivaAmount || 0).toFixed(2)}</td>
+                        <td className="text-right font-bold" style={{ color: 'var(--accent)' }}>{(sale.totals?.total || 0).toFixed(2)}</td>
+                        <td>
+                          <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.1)', padding: '2px 4px', borderRadius: '4px' }}>
+                            {sale.paymentMethod || 'EFECTIVO'} {sale.transferRecipient ? `(${sale.transferRecipient})` : ''}
+                          </span>
+                        </td>
+                        <td style={{ color: isAutorizado ? '#10b981' : 'var(--text-muted)', fontWeight: 'bold' }}>
+                          {(sale.estadoSri || sale.status)}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ fontSize: '0.7rem' }}>{sale.claveAcceso || sale.id}</span>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button 
+                                onClick={() => generarFacturaA4(sale, issuer)}
+                                style={{ background: '#10b981', border: 'none', padding: '4px', borderRadius: '4px', color: 'white', cursor: 'pointer' }}
+                                title="Descargar PDF (RIDE A4)"
+                              >
+                                <FileText size={14} />
+                              </button>
+                              <button 
+                                style={{ background: '#ef4444', border: 'none', padding: '4px', borderRadius: '4px', color: 'white', cursor: 'pointer', opacity: 0.7 }}
+                                title="Descargar XML"
+                              >
+                                <FileCode2 size={14} />
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                        </td>
+                      </tr>
+                    );
+                  });
+                })()}
               </tbody>
             </table>
           </div>
@@ -1105,37 +1195,63 @@ export default function ReportesDashboard({ sales, issuers }) {
                       </td>
                       <td>${(sale.totals?.subtotal || 0).toFixed(2)}</td>
                       <td style={{ color: 'var(--success)', fontWeight: 'bold', fontSize: '1.1rem' }}>${(sale.totals?.total || 0).toFixed(2)}</td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                          <button 
-                            onClick={() => setSelectedVenta(sale)}
-                            style={{ padding: '6px 10px', background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.4)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
-                          >
-                            Ver
-                          </button>
-                          {(isAutorizada || isNota) ? (
-                            <>
+                      <td style={{ textAlign: 'right', position: 'relative' }}>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenMenuId(openMenuId === sale.id ? null : sale.id);
+                          }}
+                          style={{ padding: '6px 12px', background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.4)', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}
+                        >
+                          Acciones ▾
+                        </button>
+                        
+                        {openMenuId === sale.id && (
+                          <div style={{
+                            position: 'absolute',
+                            right: 0,
+                            top: '100%',
+                            zIndex: 1000,
+                            background: '#1e293b',
+                            border: '1px solid #334155',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                            padding: '6px 0',
+                            minWidth: '150px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'stretch'
+                          }}>
+                            <button 
+                              onClick={() => { setSelectedVenta(sale); setOpenMenuId(null); }}
+                              style={{ padding: '8px 16px', background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', textAlign: 'left', fontSize: '0.85rem', width: '100%', outline: 'none' }}
+                            >
+                              🔍 Ver detalle
+                            </button>
+                            <button 
+                              onClick={() => { handleReimprimirClick(sale); setOpenMenuId(null); }}
+                              style={{ padding: '8px 16px', background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', textAlign: 'left', fontSize: '0.85rem', width: '100%', outline: 'none' }}
+                            >
+                              🖨️ Reimprimir
+                            </button>
+                            {!isNota && (
                               <button 
-                                onClick={() => handleReimprimirClick(sale)}
-                                style={{ padding: '6px 10px', background: 'rgba(255, 255, 255, 0.1)', color: 'white', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                                onClick={() => { window.open(`/api/sri/pdf?claveAcceso=${sale.claveAcceso || sale.id}`, '_blank'); setOpenMenuId(null); }}
+                                style={{ padding: '8px 16px', background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', textAlign: 'left', fontSize: '0.85rem', width: '100%', outline: 'none' }}
                               >
-                                Reimprimir
+                                📄 Descargar PDF
                               </button>
-                              {!isNota && (
-                                <button 
-                                  onClick={() => window.open(`/api/sri/pdf?claveAcceso=${sale.claveAcceso || sale.id}`, '_blank')}
-                                  style={{ padding: '6px 10px', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.4)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
-                                >
-                                  PDF
-                                </button>
-                              )}
-                            </>
-                          ) : (
-                            <span style={{ fontSize: '0.75rem', color: '#ef4444', fontStyle: 'italic', padding: '4px 8px' }}>
-                              {sale.estadoSri || sale.status || 'PENDIENTE'}
-                            </span>
-                          )}
-                        </div>
+                            )}
+                            {(sale.estadoSri !== 'ANULADA' && sale.status !== 'ANULADA' && sale.estadoVenta !== 'ANULADA') && (
+                              <button 
+                                onClick={() => { handleAnularVenta(sale); setOpenMenuId(null); }}
+                                style={{ padding: '8px 16px', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', textAlign: 'left', fontSize: '0.85rem', width: '100%', fontWeight: 'bold', outline: 'none' }}
+                              >
+                                🚫 Anular
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );

@@ -10,6 +10,9 @@ export default function ConfiguracionGeneral() {
   const [printMethod, setPrintMethod] = useState('sistema');
   const [showPassword, setShowPassword] = useState(false);
   const [printer58Name, setPrinter58Name] = useState('');
+  const [resetSequentials, setResetSequentials] = useState(false);
+  const [resetMonth, setResetMonth] = useState('');
+  const [resetYear, setResetYear] = useState('');
 
   useEffect(() => {
     // Cargar preferencias
@@ -928,32 +931,153 @@ export default function ConfiguracionGeneral() {
               📥 Respaldar Toda la Información
             </button>
 
-            <button 
-              onClick={async () => {
-                const conf = prompt('⚠️ PELIGRO ⚠️\nEsta acción eliminará todas las Ventas, Productos y Clientes de la base de datos (se conservarán las firmas electrónicas).\n\nEscribe la palabra BORRAR en mayúsculas para confirmar:');
-                if (conf === 'BORRAR') {
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1rem', background: '#1e293b', borderRadius: '8px', border: '1px solid #334155' }}>
+              <h4 style={{ margin: '0 0 0.5rem 0', color: '#f87171' }}>🗑️ Reiniciar Ventas</h4>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Mes a reiniciar:</label>
+                  <select 
+                    value={resetMonth} 
+                    onChange={(e) => {
+                      setResetMonth(e.target.value);
+                      if (e.target.value !== '') setResetSequentials(false);
+                    }}
+                    style={{ width: '100%', padding: '6px', background: '#0f172a', color: 'white', border: '1px solid #475569', borderRadius: '6px' }}
+                  >
+                    <option value="">Todo el Historial (Todos los meses)</option>
+                    <option value="1">Enero</option>
+                    <option value="2">Febrero</option>
+                    <option value="3">Marzo</option>
+                    <option value="4">Abril</option>
+                    <option value="5">Mayo</option>
+                    <option value="6">Junio</option>
+                    <option value="7">Julio</option>
+                    <option value="8">Agosto</option>
+                    <option value="9">Septiembre</option>
+                    <option value="10">Octubre</option>
+                    <option value="11">Noviembre</option>
+                    <option value="12">Diciembre</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Año a reiniciar:</label>
+                  <select 
+                    value={resetYear} 
+                    onChange={(e) => {
+                      setResetYear(e.target.value);
+                      if (e.target.value !== '') setResetSequentials(false);
+                    }}
+                    style={{ width: '100%', padding: '6px', background: '#0f172a', color: 'white', border: '1px solid #475569', borderRadius: '6px' }}
+                  >
+                    <option value="">Todos los años</option>
+                    <option value="2025">2025</option>
+                    <option value="2026">2026</option>
+                    <option value="2027">2027</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+                <input 
+                  type="checkbox" 
+                  id="chkResetSeq"
+                  checked={resetSequentials} 
+                  disabled={resetMonth !== '' || resetYear !== ''}
+                  onChange={(e) => setResetSequentials(e.target.checked)}
+                  style={{ cursor: 'pointer' }}
+                />
+                <label htmlFor="chkResetSeq" style={{ fontSize: '0.85rem', color: resetMonth !== '' || resetYear !== '' ? '#64748b' : '#cbd5e1', cursor: 'pointer' }}>
+                  Reiniciar secuenciales a 0 (Solo disponible para Historial Completo)
+                </label>
+              </div>
+
+              <button 
+                onClick={async () => {
                   try {
                     const { getAuth } = await import('firebase/auth');
                     const auth = getAuth();
+                    if (!auth.currentUser) throw new Error('Debes iniciar sesión.');
+
                     const token = await auth.currentUser.getIdToken();
-                    const res = await fetch('/api/admin/reset', {
+                    
+                    // 1. Simular para mostrar el conteo
+                    const simRes = await fetch('/api/admin/reset', {
                       method: 'POST',
-                      headers: { 'Authorization': `Bearer ${token}` }
+                      headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` 
+                      },
+                      body: JSON.stringify({
+                        action: 'simulate',
+                        targetMonth: resetMonth || null,
+                        targetYear: resetYear || null
+                      })
                     });
-                    if (!res.ok) throw new Error('Fallo al limpiar la base de datos');
-                    alert('Base de datos reiniciada con éxito. El sistema está limpio.');
-                    window.location.reload();
+
+                    if (!simRes.ok) {
+                      const errData = await simRes.json();
+                      throw new Error(errData.error || 'Fallo en la simulación.');
+                    }
+
+                    const { summary } = await simRes.json();
+                    
+                    const proceed = window.confirm(
+                      `📊 SIMULACIÓN DE REINICIO DE VENTAS\n\n` +
+                      `Se eliminarán permanentemente los siguientes documentos:\n` +
+                      `- Facturas emitidas: ${summary.facturas}\n` +
+                      `- Notas de venta: ${summary.notasVenta}\n` +
+                      `- Registros de pagos/ventas: ${summary.totalVentas}\n` +
+                      `- SRI Logs vinculados: ${summary.sriLogs}\n` +
+                      `- Idempotency Keys vinculadas: ${summary.idempotencyKeys}\n\n` +
+                      `¿Desea continuar con la confirmación de seguridad?`
+                    );
+
+                    if (!proceed) return;
+
+                    // 2. Prompt de confirmación de seguridad
+                    const conf = prompt(
+                      '⚠️ PELIGRO ⚠️\n' +
+                      'Esta acción eliminará todas las facturas y notas de venta emitidas, pero conservará productos, inventario, clientes y configuraciones. Esta acción no se puede deshacer.\n\n' +
+                      'Escribe la frase exacta en mayúsculas para confirmar:\n' +
+                      'ELIMINAR DOCUMENTOS'
+                    );
+
+                    if (conf === 'ELIMINAR DOCUMENTOS') {
+                      const executeRes = await fetch('/api/admin/reset', {
+                        method: 'POST',
+                        headers: { 
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${token}` 
+                        },
+                        body: JSON.stringify({
+                          action: 'execute',
+                          targetMonth: resetMonth || null,
+                          targetYear: resetYear || null,
+                          resetSequentials: resetSequentials
+                        })
+                      });
+
+                      if (!executeRes.ok) {
+                        const errData = await executeRes.json();
+                        throw new Error(errData.error || 'Error al ejecutar el reinicio.');
+                      }
+
+                      alert('Base de datos de ventas reiniciada con éxito.');
+                      window.location.reload();
+                    } else if (conf !== null) {
+                      alert('Frase de confirmación incorrecta. Acción cancelada.');
+                    }
                   } catch (error) {
-                    alert('Error al reiniciar: ' + error.message);
+                    alert('Error: ' + error.message);
                   }
-                } else if (conf !== null) {
-                  alert('Palabra de confirmación incorrecta. Acción cancelada.');
-                }
-              }}
-              style={{ padding: '10px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
-            >
-              🗑️ Reiniciar Sistema de Cero
-            </button>
+                }}
+                style={{ padding: '10px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', marginTop: '0.5rem' }}
+              >
+                🗑️ Reiniciar ventas
+              </button>
+            </div>
           </div>
         </div>
 
