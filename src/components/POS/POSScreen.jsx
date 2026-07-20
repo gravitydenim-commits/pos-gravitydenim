@@ -558,38 +558,90 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
           </div>
         </div>
         <div className="products-grid">
-          {sortedProducts.map((prod) => (
-            <div key={prod.id} className="product-card" onClick={() => addToCart(prod)}>
-              <div className="product-icon">
-                {(() => {
-                  if (prod.icono) {
-                    if (prod.icono === 'Shirt') return <Shirt size={32}/>;
-                    if (prod.icono === 'ShoppingBag') return <ShoppingBag size={32}/>;
-                    if (prod.icono === 'Tag') return <Tag size={32}/>;
-                    if (prod.icono === 'Scissors') return <Scissors size={32}/>;
-                    if (prod.icono === 'Package') return <Package size={32}/>;
-                    if (prod.icono === 'Briefcase') return <Briefcase size={32}/>;
-                    if (prod.icono === 'Glasses') return <Glasses size={32}/>;
-                    if (prod.icono === 'Watch') return <Watch size={32}/>;
-                    if (prod.icono === 'Gem') return <Gem size={32}/>;
-                    // Si no es ninguno de los anteriores, asumimos que es un emoji
-                    return <span style={{ fontSize: '32px', lineHeight: 1 }}>{prod.icono}</span>;
-                  }
-                  
-                  // Fallback para productos antiguos
-                  const cat = (prod.categoria || '').toLowerCase();
-                  if (cat.includes('jeans')) return <Shirt size={32}/>;
-                  if (cat.includes('chaqueta')) return <ShoppingBag size={32}/>;
-                  if (cat.includes('camisa')) return <Shirt size={32}/>;
-                  if (cat.includes('accesorio')) return <Tag size={32}/>;
-                  if (cat.includes('sastreria') || cat.includes('costura')) return <Scissors size={32}/>;
-                  return <Package size={32}/>;
-                })()}
+          {sortedProducts.map((prod) => {
+            const cat = (prod.categoria || '').trim().toLowerCase();
+            let label = 'OTROS';
+            let badgeBg = 'rgba(16, 185, 129, 0.15)';
+            let badgeColor = '#34d399';
+            let img3d = '/images/3d/default.png';
+
+            if (cat.includes('jean') || cat.includes('pantal')) {
+              label = 'JEAN';
+              badgeBg = 'rgba(59, 130, 246, 0.15)';
+              badgeColor = '#60a5fa';
+              img3d = '/images/3d/jean.png';
+            } else if (cat.includes('camisa')) {
+              label = 'CAMISA';
+              badgeBg = 'rgba(6, 182, 212, 0.15)';
+              badgeColor = '#22d3ee';
+              img3d = '/images/3d/camisa.png';
+            } else if (cat.includes('polo')) {
+              label = 'POLO';
+              badgeBg = 'rgba(239, 68, 68, 0.15)';
+              badgeColor = '#f87171';
+              img3d = '/images/3d/polo.png';
+            } else if (cat.includes('blusa')) {
+              label = 'BLUSA';
+              badgeBg = 'rgba(168, 85, 247, 0.15)';
+              badgeColor = '#c084fc';
+              img3d = '/images/3d/blusa.png';
+            } else if (cat.includes('chaqueta')) {
+              label = 'CHAQUETA';
+              badgeBg = 'rgba(249, 115, 22, 0.15)';
+              badgeColor = '#fb923c';
+              img3d = '/images/3d/chaqueta.png';
+            } else if (cat.includes('short')) {
+              label = 'SHORT';
+              badgeBg = 'rgba(59, 130, 246, 0.12)';
+              badgeColor = '#93c5fd';
+              img3d = '/images/3d/jean.png';
+            } else if (cat.includes('falda')) {
+              label = 'FALDA';
+              badgeBg = 'rgba(168, 85, 247, 0.12)';
+              badgeColor = '#d8b4fe';
+              img3d = '/images/3d/default.png';
+            } else if (cat.includes('jogger')) {
+              label = 'JOGGER';
+              badgeBg = 'rgba(59, 130, 246, 0.1)';
+              badgeColor = '#a5f3fc';
+              img3d = '/images/3d/jean.png';
+            } else if (cat.includes('bermuda')) {
+              label = 'BERMUDA';
+              badgeBg = 'rgba(249, 115, 22, 0.12)';
+              badgeColor = '#ffedd5';
+              img3d = '/images/3d/jean.png';
+            } else if (cat.includes('camiseta')) {
+              label = 'CAMISETA';
+              badgeBg = 'rgba(239, 68, 68, 0.12)';
+              badgeColor = '#fca5a5';
+              img3d = '/images/3d/polo.png';
+            } else if (cat.includes('tactical') || cat.includes('tactico')) {
+              label = 'TACTICAL';
+              badgeBg = 'rgba(16, 185, 129, 0.2)';
+              badgeColor = '#10b981';
+              img3d = '/images/3d/default.png';
+            }
+
+            const activeImage = prod.imageUrl || prod.image || img3d;
+
+            return (
+              <div key={prod.id} className="product-card" onClick={() => addToCart(prod)}>
+                <span className="product-category-badge" style={{ backgroundColor: badgeBg, color: badgeColor }}>
+                  {label}
+                </span>
+                <div className="product-image-container">
+                  <img 
+                    src={activeImage} 
+                    alt={prod.nombre || prod.name} 
+                    className="product-card-image"
+                    loading="lazy"
+                  />
+                </div>
+                <div className="product-name">{prod.nombre || prod.name}</div>
+                <div className="product-price">${(prod.precioBase || prod.price || 0).toFixed(2)}</div>
               </div>
-              <div className="product-name">{prod.nombre || prod.name}</div>
-              <div className="product-price">${(prod.precioBase || prod.price || 0).toFixed(2)}</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
