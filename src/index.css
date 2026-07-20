@@ -593,8 +593,12 @@ input:checked + .slider:before {
 /* Responsive Layout ONLY for Tablet & Mobile (< 1024px) */
 @media (max-width: 1024px) {
   .app-layout {
-    flex-direction: column-reverse !important;
-    height: 100dvh !important;
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
   
   .sidebar {
