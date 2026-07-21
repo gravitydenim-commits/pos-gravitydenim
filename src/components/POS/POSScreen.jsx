@@ -559,69 +559,163 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         </div>
         <div className="products-grid">
           {sortedProducts.map((prod) => {
-            const cat = (prod.categoria || '').trim().toLowerCase();
-            let label = 'OTROS';
+            const nombreLower = (prod.nombre || prod.name || '').trim().toLowerCase();
+            const catLower = (prod.categoria || '').trim().toLowerCase();
+            
+            // 1. Resolver tipo de prenda de forma dinámica (Priorizar campo tipoPrenda si existe en DB)
+            let tipo = (prod.tipoPrenda || prod.tipo_prenda || '').trim();
+            
+            // Fallback: Autodetectar tipo de prenda a partir del nombre o categoría para compatibilidad
+            if (!tipo) {
+              if (nombreLower.includes('baggy')) {
+                tipo = 'Jean Baggy';
+              } else if (nombreLower.includes('slim')) {
+                tipo = 'Jean Slim';
+              } else if (nombreLower.includes('recto')) {
+                tipo = 'Jean Recto';
+              } else if (nombreLower.includes('tactico') || nombreLower.includes('táctico') || nombreLower.includes('tactical')) {
+                tipo = 'Jean Táctico';
+              } else if (nombreLower.includes('polo')) {
+                tipo = 'Polo';
+              } else if (nombreLower.includes('camiseta') && (nombreLower.includes('mujer') || nombreLower.includes('dama'))) {
+                tipo = 'Camiseta Mujer';
+              } else if (nombreLower.includes('camiseta')) {
+                tipo = 'Camiseta';
+              } else if (nombreLower.includes('camisa') && (nombreLower.includes('manga corta') || nombreLower.includes('mc') || nombreLower.includes('corta'))) {
+                tipo = 'Camisa Manga Corta';
+              } else if (nombreLower.includes('camisa') && (nombreLower.includes('manga larga') || nombreLower.includes('ml') || nombreLower.includes('larga'))) {
+                tipo = 'Camisa Manga Larga';
+              } else if (nombreLower.includes('camisa') && nombreLower.includes('cuadros')) {
+                tipo = 'Camisa Cuadros';
+              } else if (nombreLower.includes('camisa') && nombreLower.includes('gabardina')) {
+                tipo = 'Camisa Gabardina';
+              } else if (nombreLower.includes('camisa')) {
+                tipo = 'Camisa Manga Corta';
+              } else if (nombreLower.includes('jogger')) {
+                tipo = 'Jogger';
+              } else if (nombreLower.includes('cargo')) {
+                tipo = 'Cargo';
+              } else if (nombreLower.includes('short')) {
+                tipo = 'Short';
+              } else if (nombreLower.includes('bermuda')) {
+                tipo = 'Bermuda';
+              } else if (nombreLower.includes('blusa')) {
+                tipo = 'Blusa';
+              } else if (nombreLower.includes('chaqueta')) {
+                tipo = 'Chaqueta Jean';
+              } else if (nombreLower.includes('chaleco')) {
+                tipo = 'Chaleco';
+              } else if (nombreLower.includes('overol')) {
+                tipo = 'Overol';
+              } else if (nombreLower.includes('falda')) {
+                tipo = 'Falda';
+              } else if (nombreLower.includes('vestido')) {
+                tipo = 'Vestido';
+              } else {
+                // Fallback final basado en categoría general
+                if (catLower.includes('jean') || catLower.includes('pantal')) {
+                  tipo = 'Jean Recto';
+                } else if (catLower.includes('camisa')) {
+                  tipo = 'Camisa Manga Corta';
+                } else if (catLower.includes('polo')) {
+                  tipo = 'Polo';
+                } else if (catLower.includes('blusa')) {
+                  tipo = 'Blusa';
+                } else if (catLower.includes('chaqueta')) {
+                  tipo = 'Chaqueta Jean';
+                } else if (catLower.includes('short')) {
+                  tipo = 'Short';
+                } else if (catLower.includes('jogger')) {
+                  tipo = 'Jogger';
+                } else if (catLower.includes('bermuda')) {
+                  tipo = 'Bermuda';
+                } else if (catLower.includes('falda')) {
+                  tipo = 'Falda';
+                } else {
+                  tipo = 'Otros';
+                }
+              }
+            }
+
+            // 2. Diccionario de Mapeo de Ilustraciones y Colores
+            let label = tipo.toUpperCase();
             let badgeBg = 'rgba(16, 185, 129, 0.15)';
             let badgeColor = '#34d399';
             let img3d = '/images/3d/default.png';
 
-            if (cat.includes('jean') || cat.includes('pantal')) {
-              label = 'JEAN';
+            const tipoLower = tipo.toLowerCase();
+
+            if (tipoLower.includes('jean') || tipoLower.includes('pantalón') || tipoLower.includes('pantalon') || tipoLower.includes('cargo') || tipoLower.includes('jogger') || tipoLower.includes('short') || tipoLower.includes('bermuda')) {
               badgeBg = 'rgba(59, 130, 246, 0.15)';
               badgeColor = '#60a5fa';
               img3d = '/images/3d/jean.png';
-            } else if (cat.includes('camisa')) {
-              label = 'CAMISA';
+              
+              if (tipoLower.includes('táctico') || tipoLower.includes('tactico') || tipoLower.includes('tactical')) {
+                label = 'TACTICAL';
+                badgeBg = 'rgba(16, 185, 129, 0.2)';
+                badgeColor = '#10b981';
+                img3d = '/images/3d/default.png';
+              } else if (tipoLower.includes('short')) {
+                label = 'SHORT';
+                badgeBg = 'rgba(59, 130, 246, 0.12)';
+                badgeColor = '#93c5fd';
+              } else if (tipoLower.includes('bermuda')) {
+                label = 'BERMUDA';
+                badgeBg = 'rgba(249, 115, 22, 0.12)';
+                badgeColor = '#ffedd5';
+              } else if (tipoLower.includes('jogger')) {
+                label = 'JOGGER';
+                badgeBg = 'rgba(59, 130, 246, 0.1)';
+                badgeColor = '#a5f3fc';
+              }
+            } else if (tipoLower.includes('camisa')) {
               badgeBg = 'rgba(6, 182, 212, 0.15)';
               badgeColor = '#22d3ee';
-              img3d = '/images/3d/camisa.png';
-            } else if (cat.includes('polo')) {
+              
+              if (tipoLower.includes('corta') || tipoLower.includes('mc')) {
+                img3d = '/images/3d/camisa_mc.png';
+                label = 'CAMISA M.C.';
+              } else if (tipoLower.includes('larga') || tipoLower.includes('ml')) {
+                img3d = '/images/3d/camisa_ml.png';
+                label = 'CAMISA M.L.';
+              } else if (tipoLower.includes('cuadros')) {
+                img3d = '/images/3d/camisa_cuadros.png';
+                label = 'CAMISA CUADROS';
+              } else if (tipoLower.includes('gabardina')) {
+                img3d = '/images/3d/camisa_gabardina.png';
+                label = 'GABARDINA';
+              } else {
+                img3d = '/images/3d/camisa.png';
+              }
+            } else if (tipoLower.includes('polo')) {
               label = 'POLO';
               badgeBg = 'rgba(239, 68, 68, 0.15)';
               badgeColor = '#f87171';
               img3d = '/images/3d/polo.png';
-            } else if (cat.includes('blusa')) {
+            } else if (tipoLower.includes('camiseta')) {
+              badgeBg = 'rgba(239, 68, 68, 0.12)';
+              badgeColor = '#fca5a5';
+              
+              if (tipoLower.includes('mujer') || tipoLower.includes('dama')) {
+                img3d = '/images/3d/camiseta_mujer.png';
+                label = 'CAMISETA MUJER';
+              } else {
+                img3d = '/images/3d/camiseta.png';
+                label = 'CAMISETA';
+              }
+            } else if (tipoLower.includes('blusa')) {
               label = 'BLUSA';
               badgeBg = 'rgba(168, 85, 247, 0.15)';
               badgeColor = '#c084fc';
               img3d = '/images/3d/blusa.png';
-            } else if (cat.includes('chaqueta')) {
+            } else if (tipoLower.includes('chaqueta')) {
               label = 'CHAQUETA';
               badgeBg = 'rgba(249, 115, 22, 0.15)';
               badgeColor = '#fb923c';
               img3d = '/images/3d/chaqueta.png';
-            } else if (cat.includes('short')) {
-              label = 'SHORT';
-              badgeBg = 'rgba(59, 130, 246, 0.12)';
-              badgeColor = '#93c5fd';
-              img3d = '/images/3d/jean.png';
-            } else if (cat.includes('falda')) {
-              label = 'FALDA';
-              badgeBg = 'rgba(168, 85, 247, 0.12)';
-              badgeColor = '#d8b4fe';
-              img3d = '/images/3d/default.png';
-            } else if (cat.includes('jogger')) {
-              label = 'JOGGER';
-              badgeBg = 'rgba(59, 130, 246, 0.1)';
-              badgeColor = '#a5f3fc';
-              img3d = '/images/3d/jean.png';
-            } else if (cat.includes('bermuda')) {
-              label = 'BERMUDA';
-              badgeBg = 'rgba(249, 115, 22, 0.12)';
-              badgeColor = '#ffedd5';
-              img3d = '/images/3d/jean.png';
-            } else if (cat.includes('camiseta')) {
-              label = 'CAMISETA';
-              badgeBg = 'rgba(239, 68, 68, 0.12)';
-              badgeColor = '#fca5a5';
-              img3d = '/images/3d/polo.png';
-            } else if (cat.includes('tactical') || cat.includes('tactico')) {
-              label = 'TACTICAL';
-              badgeBg = 'rgba(16, 185, 129, 0.2)';
-              badgeColor = '#10b981';
-              img3d = '/images/3d/default.png';
             }
 
+            // 3. Priorizar fotografía real del producto si existe
             const activeImage = prod.imageUrl || prod.image || img3d;
 
             return (
