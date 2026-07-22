@@ -349,19 +349,26 @@ function App() {
             {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
           </button>
 
-          <span style={{ 
-            fontSize: '0.8rem', 
-            background: process.env.NEXT_PUBLIC_SRI_ENVIRONMENT === 'production' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)', 
-            color: process.env.NEXT_PUBLIC_SRI_ENVIRONMENT === 'production' ? '#f87171' : '#f59e0b', 
-            padding: '4px 10px', 
-            borderRadius: '6px', 
-            fontWeight: '900',
-            border: process.env.NEXT_PUBLIC_SRI_ENVIRONMENT === 'production' ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(245, 158, 11, 0.4)',
-            letterSpacing: '0.5px',
-            marginRight: '0.25rem'
-          }}>
-            {process.env.NEXT_PUBLIC_SRI_ENVIRONMENT === 'production' ? 'SRI PRODUCCIÓN' : 'SRI PRUEBAS'}
-          </span>
+          {(() => {
+            const envVal = process.env.NEXT_PUBLIC_SRI_ENVIRONMENT;
+            console.log('[SRI ENV CHECK] process.env.NEXT_PUBLIC_SRI_ENVIRONMENT:', envVal);
+            const isProd = envVal === 'production';
+            return (
+              <span style={{ 
+                fontSize: '0.8rem', 
+                background: isProd ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)', 
+                color: isProd ? '#f87171' : '#f59e0b', 
+                padding: '4px 10px', 
+                borderRadius: '6px', 
+                fontWeight: '900',
+                border: isProd ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(245, 158, 11, 0.4)',
+                letterSpacing: '0.5px',
+                marginRight: '0.25rem'
+              }}>
+                {isProd ? 'SRI PRODUCCIÓN' : 'SRI PRUEBAS'}
+              </span>
+            );
+          })()}
 
           <span style={{ fontSize: '0.8rem', background: 'rgba(59, 130, 246, 0.2)', color: 'var(--accent)', padding: '4px 10px', borderRadius: '6px', fontWeight: 'bold' }}>
             {isAdmin ? '🛡️ Admin' : '👤 Ventas'}
