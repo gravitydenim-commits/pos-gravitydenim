@@ -1,0 +1,27 @@
+{
+  "illustrations": [
+    { "id": "polo_cuello_3d",         "name": "Polo con Cuello",       "category": "Polo",    "path": "/product-illustrations/3d/polo_cuello_3d.png" },
+    { "id": "camiseta_basica_3d",     "name": "Camiseta Básica",       "category": "Camiseta","path": "/product-illustrations/3d/camiseta_basica_3d.png" },
+    { "id": "camiseta_mujer_3d",      "name": "Camiseta de Mujer",     "category": "Camiseta","path": "/product-illustrations/3d/camiseta_mujer_3d.png" },
+    { "id": "camisa_manga_corta_3d",  "name": "Camisa Manga Corta",    "category": "Camisa",  "path": "/product-illustrations/3d/camisa_manga_corta_3d.png" },
+    { "id": "camisa_manga_larga_3d",  "name": "Camisa Manga Larga",    "category": "Camisa",  "path": "/product-illustrations/3d/camisa_manga_larga_3d.png" },
+    { "id": "camisa_cuadros_3d",      "name": "Camisa a Cuadros",      "category": "Camisa",  "path": "/product-illustrations/3d/camisa_cuadros_3d.png" },
+    { "id": "camisa_gabardina_3d",    "name": "Camisa de Gabardina",   "category": "Camisa",  "path": "/product-illustrations/3d/camisa_gabardina_3d.png" },
+    { "id": "blusa_3d",               "name": "Blusa",                 "category": "Blusa",   "path": "/product-illustrations/3d/blusa_3d.png" },
+    { "id": "jean_recto_3d",          "name": "Jean Recto",            "category": "Jean",    "path": "/product-illustrations/3d/jean_recto_3d.png" },
+    { "id": "jean_semitubo_3d",       "name": "Jean Semitubo",         "category": "Jean",    "path": "/product-illustrations/3d/jean_semitubo_3d.png" },
+    { "id": "jean_baggy_3d",          "name": "Jean Baggy",            "category": "Jean",    "path": "/product-illustrations/3d/jean_baggy_3d.png" },
+    { "id": "jean_nino_3d",           "name": "Jean de Niño",          "category": "Jean",    "path": "/product-illustrations/3d/jean_nino_3d.png" },
+    { "id": "pantalon_tactico_3d",    "name": "Pantalón Táctico",      "category": "Pantalón","path": "/product-illustrations/3d/pantalon_tactico_3d.png" },
+    { "id": "pantalon_cargo_3d",      "name": "Pantalón Cargo",        "category": "Pantalón","path": "/product-illustrations/3d/pantalon_cargo_3d.png" },
+    { "id": "jogger_3d",              "name": "Jogger",                "category": "Pantalón","path": "/product-illustrations/3d/jogger_3d.png" },
+    { "id": "short_3d",               "name": "Short",                 "category": "Short",   "path": "/product-illustrations/3d/short_3d.png" },
+    { "id": "bermuda_3d",             "name": "Bermuda",               "category": "Short",   "path": "/product-illustrations/3d/bermuda_3d.png" },
+    { "id": "chaqueta_jean_3d",       "name": "Chaqueta de Jean",      "category": "Chaqueta","path": "/product-illustrations/3d/chaqueta_jean_3d.png" },
+    { "id": "chaqueta_gabardina_3d",  "name": "Chaqueta de Gabardina", "category": "Chaqueta","path": "/product-illustrations/3d/chaqueta_gabardina_3d.png" },
+    { "id": "chaleco_3d",             "name": "Chaleco",               "category": "Chaleco", "path": "/product-illustrations/3d/chaleco_3d.png" },
+    { "id": "falda_3d",               "name": "Falda",                 "category": "Falda",   "path": "/product-illustrations/3d/falda_3d.png" },
+    { "id": "vestido_3d",             "name": "Vestido",               "category": "Vestido", "path": "/product-illustrations/3d/vestido_3d.png" },
+    { "id": "overol_3d",              "name": "Overol",                "category": "Overol",  "path": "/product-illustrations/3d/overol_3d.png" }
+  ]
+}
