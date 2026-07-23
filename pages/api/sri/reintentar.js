@@ -1,4 +1,6 @@
 import { getAdminAuth, getAdminDb } from '../../../src/lib/firebaseAdmin';
+import { sendInvoiceEmail } from '../../../src/lib/mailer';
+import { generateRidePdf } from '../../../src/lib/pdfGenerator';
 const { validateXml, authorizeXml } = require('osodreamer-sri-xml-signer');
 import { sanitizeFirestorePayload } from '../../../src/utils/sanitize';
 
@@ -236,6 +238,67 @@ export default async function handler(req, res) {
     // Registrar el LOG del reintento
     const logRef = adminDb.collection('sri_logs').doc(`${claveAcceso}-reintento-${Date.now()}`);
     await logRef.set(logPayload);
+
+    // Envío automático de Email al cliente (Solo si la factura quedó AUTORIZADA)
+    if (estadoFinalSri === 'AUTORIZADO') {
+      const clienteData = ventaData.cliente || ventaData.customer || {};
+      const customerEmail = clienteData.correo || clienteData.email;
+      if (customerEmail && customerEmail !== 'N/A' && customerEmail.trim() !== '' && !customerEmail.toLowerCase().includes('consumidorfinal')) {
+        console.log(`📧 [SRI REINTENTO] Factura AUTORIZADA. Enviando correo a ${customerEmail}...`);
+        try {
+          const pdfBuffer = await generateRidePdf({
+            issuerData,
+            customer: clienteData,
+            cart: (ventaData.productos || ventaData.items || []).map(p => ({
+              id: p.id || p.codigo,
+              sku: p.codigoBarras || p.sku || p.codigo || '',
+              name: p.name || p.nombre,
+              qty: p.qty || p.cantidad || 1,
+              price: p.precioUnitario !== undefined ? p.precioUnitario : (p.price || p.precio || 0),
+              precioTotalSinImpuesto: p.precioTotalSinImpuesto || ((p.price || p.precio || 0) * (p.qty || p.cantidad || 1))
+            })),
+            totalsData: ventaData.totals || { subtotal: ventaData.subtotal || 0, ivaAmount: ventaData.ivaAmount || 0, total: ventaData.total || 0 },
+            claveAcceso,
+            numeroComprobante: ventaData.numeroComprobante,
+            fecha: new Date(ventaData.fechaTransaccion || Date.now())
+          });
+
+          const xmlContent = (authResult && (authResult.comprobante || authResult.xmlAutorizado)) || ventaData.xmlAutorizado || ventaData.xmlFirmado || '';
+
+          const mailRes = await sendInvoiceEmail({
+            customerEmail,
+            pdfBuffer,
+            xmlBuffer: xmlContent,
+            claveAcceso,
+            issuerName: issuerData.name || issuerData.razonSocial || 'GRAVITY DENIM',
+            numeroComprobante: ventaData.numeroComprobante
+          });
+
+          const estadoEmail = mailRes.success ? 'ENVIADO' : 'ERROR_ENVIO';
+          await ventaRef.update({
+            estadoEmail,
+            emailStatus: estadoEmail,
+            emailResult: mailRes,
+            emailError: mailRes.success ? null : (mailRes.error || 'Fallo de envío SMTP'),
+            ultimoEnvioEmail: new Date().toISOString()
+          });
+        } catch (emailErr) {
+          console.error("❌ [SRI REINTENTO] Excepción al enviar correo electrónico:", emailErr);
+          await ventaRef.update({
+            estadoEmail: 'ERROR_ENVIO',
+            emailStatus: 'ERROR_ENVIO',
+            emailError: emailErr.message,
+            ultimoEnvioEmail: new Date().toISOString()
+          });
+        }
+      } else {
+        console.log("ℹ️ [SRI REINTENTO] Cliente sin correo válido. Omitiendo envío de email.");
+        await ventaRef.update({
+          estadoEmail: 'SIN_CORREO_VALIDO',
+          emailStatus: 'SIN_CORREO_VALIDO'
+        });
+      }
+    }
 
     if (sriTimeout) {
       return res.status(200).json({ 

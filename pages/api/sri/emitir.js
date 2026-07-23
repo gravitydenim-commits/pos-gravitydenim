@@ -1,4 +1,6 @@
 import { getAdminAuth, getAdminDb } from '../../../src/lib/firebaseAdmin';
+import { sendInvoiceEmail } from '../../../src/lib/mailer';
+import { generateRidePdf } from '../../../src/lib/pdfGenerator';
 
 // CRITICAL: Forzar zona horaria Ecuador ANTES de importar osodreamer.
 // La librería osodreamer usa getTimezoneOffset() para calcular el SigningTime XAdES.
@@ -547,6 +549,71 @@ export default async function handler(req, res) {
     }
 
     await batch.commit();
+
+    // 11. Envío automático de Email al cliente (Solo si la factura fue AUTORIZADA)
+    if (estadoFinalSri === 'AUTORIZADO') {
+      const customerEmail = cliente?.correo || cliente?.email;
+      if (customerEmail && customerEmail !== 'N/A' && customerEmail.trim() !== '' && !customerEmail.toLowerCase().includes('consumidorfinal')) {
+        console.log(`📧 [SRI EMITIR] Factura AUTORIZADA. Iniciando envío de correo a ${customerEmail}...`);
+        try {
+          const pdfBuffer = await generateRidePdf({
+            issuerData: emisor,
+            customer: cliente || { nombre: 'CONSUMIDOR FINAL', numeroIdentificacion: '9999999999999' },
+            cart: totalsCalc.detalles.map(d => ({
+              id: d.id,
+              sku: d.sku || '',
+              name: d.nombre,
+              qty: d.qty,
+              price: d.precioUnitario,
+              precioTotalSinImpuesto: d.precioTotalSinImpuesto
+            })),
+            totalsData: {
+              subtotal: totalsCalc.subtotal,
+              baseImponible: totalsCalc.baseImponible,
+              ivaAmount: totalsCalc.ivaAmount,
+              total: totalsCalc.total
+            },
+            claveAcceso: finalClaveAcceso,
+            numeroComprobante: numeroComprobanteCompleto,
+            fecha: new Date()
+          });
+
+          const xmlContent = (authResult && (authResult.comprobante || authResult.xmlAutorizado)) || signedXml || '';
+
+          const mailRes = await sendInvoiceEmail({
+            customerEmail,
+            pdfBuffer,
+            xmlBuffer: xmlContent,
+            claveAcceso: finalClaveAcceso,
+            issuerName: emisor.name || emisor.razonSocial || 'GRAVITY DENIM',
+            numeroComprobante: numeroComprobanteCompleto
+          });
+
+          const estadoEmail = mailRes.success ? 'ENVIADO' : 'ERROR_ENVIO';
+          await adminDb.collection('ventas').doc(finalClaveAcceso).update({
+            estadoEmail,
+            emailStatus: estadoEmail,
+            emailResult: mailRes,
+            emailError: mailRes.success ? null : (mailRes.error || 'Fallo de envío SMTP'),
+            ultimoEnvioEmail: new Date().toISOString()
+          });
+        } catch (emailErr) {
+          console.error("❌ [SRI EMITIR] Excepción al procesar correo electrónico:", emailErr);
+          await adminDb.collection('ventas').doc(finalClaveAcceso).update({
+            estadoEmail: 'ERROR_ENVIO',
+            emailStatus: 'ERROR_ENVIO',
+            emailError: emailErr.message,
+            ultimoEnvioEmail: new Date().toISOString()
+          });
+        }
+      } else {
+        console.log("ℹ️ [SRI EMITIR] Cliente no tiene email o es Consumidor Final. Omitiendo correo.");
+        await adminDb.collection('ventas').doc(finalClaveAcceso).update({
+          estadoEmail: 'SIN_CORREO_VALIDO',
+          emailStatus: 'SIN_CORREO_VALIDO'
+        });
+      }
+    }
 
     if (internalCrash) {
       return res.status(500).json({
