@@ -244,7 +244,12 @@ export default async function handler(req, res) {
     let sriTimeout = false;
     let internalCrash = false;
     let finalClaveAcceso = isNotaVenta ? numeroComprobanteCompleto : `NV-${Date.now()}`;
-    let estadoFinalSri = 'NOTA_DE_VENTA';
+    let estadoFinalSri = isNotaVenta ? 'NOTA_DE_VENTA' : 'PENDIENTE_ENVIO';
+    let rawSriResponse = null;
+    let mensajesSri = [];
+    let errorStack = null;
+    let httpStatus = null;
+    let soapFault = null;
 
     const startMs = performance.now(); // Medir tiempo de respuesta
     
@@ -258,7 +263,7 @@ export default async function handler(req, res) {
         // Asignar clave generada para que no quede como FAIL-... si hay error después
         invoiceData.infoTributaria.claveAcceso = claveAccesoGenerada;
 
-        // --- DIAGNÓSTICO P12 SOLICITADO ---
+        // --- DIAGNÓSTICO P12 ---
         console.log(`--- INICIO DIAGNÓSTICO P12 ---`);
         console.log(`Tamaño del archivo P12 recibido: ${p12Buffer ? p12Buffer.length : 'UNDEFINED'} bytes`);
         if (p12Buffer) {
@@ -279,14 +284,13 @@ export default async function handler(req, res) {
               console.log('Alias encontrados dentro del P12:', aliases);
 
            } catch (diagErr) {
-              console.error('ERROR AL ABRIR EL CERTIFICADO DURANTE EL DIAGNÓSTICO (Posible clave incorrecta o archivo corrupto):', diagErr.message);
+              console.error('ERROR AL ABRIR EL CERTIFICADO DURANTE EL DIAGNÓSTICO:', diagErr.message);
               console.error('Stack trace del error de apertura del P12:', diagErr.stack);
            }
         }
         console.log(`--- FIN DIAGNÓSTICO P12 ---`);
 
         // 8.2 Firmar XML (CPU Local)
-        // --- LOG DE DIAGNÓSTICO DE ZONA HORARIA ---
         const _diagNow = new Date();
         const _diagOffset = _diagNow.getTimezoneOffset();
         const _diagEcuador = new Date(_diagNow.getTime() - 5 * 3600000);
@@ -295,7 +299,6 @@ export default async function handler(req, res) {
         console.log(`[TIMEZONE] getTimezoneOffset:  ${_diagOffset} min (esperado: 300 para ECU)`);
         console.log(`[TIMEZONE] process.env.TZ:     ${process.env.TZ || '(no definido)'}`);
         console.log(`[TIMEZONE] Hora Ecuador real:  ${_diagEcuador.toISOString().replace('Z', '-05:00')}`);
-        // --- FIN LOG ---
 
         signedXml = await signXml({
           p12Buffer: p12Buffer,
@@ -305,8 +308,8 @@ export default async function handler(req, res) {
       } catch (e) {
         console.error("Error interno generando/firmando XML:", e);
         errorTecnico = "Fallo de Generación/Firma: " + e.message;
+        errorStack = e.stack || null;
         
-        // Extraer detalles de validación de esquema o firma
         if (e.errors) {
           errorTecnico += " | Errores de esquema: " + (typeof e.errors === 'string' ? e.errors : JSON.stringify(e.errors));
         }
@@ -316,49 +319,97 @@ export default async function handler(req, res) {
         
         console.error("Stack trace de fallo interno:", e.stack);
         internalCrash = true;
+        estadoFinalSri = 'ERROR_INTERNO';
       }
 
       if (!internalCrash) {
+        const sriEnvConfig = (process.env.SRI_ENVIRONMENT || '').trim().toLowerCase();
+        const isProdEnv = sriEnvConfig === 'production';
+        const sriEnv = isProdEnv ? 'prod' : 'test';
+
+        console.log(`[SRI BACKEND] ==========================================`);
+        console.log(`[SRI BACKEND] SRI_ENVIRONMENT var: "${process.env.SRI_ENVIRONMENT}"`);
+        console.log(`[SRI BACKEND] Modo evaluado: ${isProdEnv ? 'PRODUCCIÓN (2)' : 'PRUEBAS/TEST (1)'}`);
+        console.log(`[SRI BACKEND] URL Recepción: https://${isProdEnv ? 'cel' : 'celcer'}.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl`);
+        console.log(`[SRI BACKEND] URL Autorización: https://${isProdEnv ? 'cel' : 'celcer'}.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl`);
+        console.log(`[SRI BACKEND] Clave de Acceso: ${invoiceData.infoTributaria.claveAcceso}`);
+        console.log(`[SRI BACKEND] ==========================================`);
+
         try {
           // 8.3 Enviar (validar) y Autorizar SRI (Red/Internet)
-          // Mapear ambiente (1 = 'test', 2 = 'prod') para la librería osodreamer
-          const sriEnv = invoiceData.infoTributaria.ambiente === 2 ? 'prod' : 'test';
-          await validateXml({ env: sriEnv, xml: Buffer.from(signedXml, 'utf8') });
+          console.log(`[SRI STEP 1/2] Enviando XML a Recepción SOAP...`);
+          const validateRes = await validateXml({ env: sriEnv, xml: Buffer.from(signedXml, 'utf8') });
+          console.log(`[SRI STEP 1/2] ✅ XML recibido exitosamente por el SRI:`, validateRes);
+
+          console.log(`[SRI STEP 2/2] Consultando Autorización SOAP...`);
           authResult = await authorizeXml({ claveAcceso: invoiceData.infoTributaria.claveAcceso, env: sriEnv });
+          console.log(`[SRI STEP 2/2] ✅ Respuesta Autorización SRI:`, authResult);
+
+          estadoFinalSri = authResult.estadoAutorizacion || authResult.estado || 'AUTORIZADO';
+          rawSriResponse = authResult;
+          mensajesSri = authResult.mensajes || [];
+
         } catch (e) {
-          console.error("Error técnico contactando al SRI o validando XML:", e);
-          errorTecnico = e.message;
-          if (e.errors) {
-             errorTecnico += ': ' + JSON.stringify(e.errors);
+          console.error("Excepción en comunicación SOAP con el SRI:", e);
+          errorStack = e.stack || null;
+          httpStatus = e.statusCode || e.status || e.response?.status || null;
+          soapFault = e.soapFault || e.fault || null;
+
+          // Clasificar tipo de error según respuesta del SRI
+          if (e.constructor?.name === 'SRIRejectedError' || e.estado === 'DEVUELTA') {
+            estadoFinalSri = 'DEVUELTA';
+            const idMsg = e.identificador || 'SIN_ID';
+            const mainMsg = e.mensaje || e.mensajeSRI || e.message || 'Comprobante devuelto por el SRI';
+            const extraMsg = e.informacionAdicional || '';
+            errorTecnico = `SRI DEVUELTA [${idMsg}]: ${mainMsg}${extraMsg ? ' - ' + extraMsg : ''}`;
+            mensajesSri = [{ identificador: idMsg, mensaje: mainMsg, informacionAdicional: extraMsg, tipo: e.tipo || 'ERROR' }];
+            rawSriResponse = { estado: 'DEVUELTA', identificador: idMsg, mensaje: mainMsg, informacionAdicional: extraMsg, tipo: e.tipo || 'ERROR', claveAcceso: e.claveAcceso || invoiceData.infoTributaria.claveAcceso, errorStack, httpStatus, soapFault };
+            sriTimeout = false;
+
+          } else if (e.constructor?.name === 'SRIAutorizacionError' || e.estado === 'NO AUTORIZADO' || e.estado === 'RECHAZADA') {
+            estadoFinalSri = e.estado || 'NO_AUTORIZADO';
+            const idMsg = e.identificador || 'SIN_ID';
+            const mainMsg = e.mensaje || e.mensajeSRI || e.message || 'Comprobante no autorizado por el SRI';
+            const extraMsg = e.informacionAdicional || '';
+            errorTecnico = `SRI ${estadoFinalSri} [${idMsg}]: ${mainMsg}${extraMsg ? ' - ' + extraMsg : ''}`;
+            mensajesSri = [{ identificador: idMsg, mensaje: mainMsg, informacionAdicional: extraMsg, tipo: e.tipo || 'ERROR' }];
+            rawSriResponse = { estado: estadoFinalSri, identificador: idMsg, mensaje: mainMsg, informacionAdicional: extraMsg, tipo: e.tipo || 'ERROR', comprobanteXml: e.comprobanteXml || null, errorStack, httpStatus, soapFault };
+            sriTimeout = false;
+
+          } else if (e.constructor?.name === 'SRIUnauthorizedError') {
+            estadoFinalSri = e.estado || 'NO_AUTORIZADO';
+            errorTecnico = `SRI Autorización incompleta: estado ${estadoFinalSri}`;
+            rawSriResponse = { estado: estadoFinalSri, error: errorTecnico, errorStack, httpStatus, soapFault };
+            sriTimeout = false;
+
+          } else {
+            // Falla real de red, conexión rehusada o timeout SOAP
+            sriTimeout = true;
+            estadoFinalSri = 'PENDIENTE_ENVIO';
+            errorTecnico = e.message || 'Sin respuesta del servidor SRI';
+            if (e.errors) {
+              errorTecnico += ' | Errores: ' + (typeof e.errors === 'string' ? e.errors : JSON.stringify(e.errors));
+            }
+            if (e.response && e.response.mensajes) {
+              errorTecnico += ' | Mensajes SRI: ' + JSON.stringify(e.response.mensajes);
+            }
+            rawSriResponse = { error: errorTecnico, errorName: e.name || 'Error', errorStack, httpStatus, soapFault, response: e.response || null };
           }
-          if (e.response && e.response.mensajes) {
-             errorTecnico = JSON.stringify(e.response.mensajes);
-          }
-          sriTimeout = true; // Asumimos falla de red o rechazo del WS
         }
       }
 
-      // Extraer Clave de Acceso generada (si existe) o usar una única
+      // Clave de Acceso final
       if (isNotaVenta) {
         finalClaveAcceso = `NV-${Date.now()}`;
       } else {
         finalClaveAcceso = (authResult && authResult.claveAcceso) ? authResult.claveAcceso : invoiceData.infoTributaria.claveAcceso !== 'GENERADA_AUTOMATICAMENTE_POR_OSODREAMER' ? invoiceData.infoTributaria.claveAcceso : `FAIL-${Date.now()}`;
-      }
-      
-      estadoFinalSri = 'EN_PROCESO';
-      if (authResult) {
-        estadoFinalSri = authResult.estadoAutorizacion || authResult.estado || 'RECIBIDA_SIN_ESTADO'; // Garantizar propiedad correcta del SRI
-      } else if (sriTimeout) {
-        estadoFinalSri = 'TIMEOUT';
-      } else if (internalCrash) {
-        estadoFinalSri = 'ERROR_INTERNO';
       }
     }
 
     const endMs = performance.now();
     const latencyMs = Math.round(endMs - startMs);
     
-    // 9. Construir y guardar LOG de intento en sri_logs SIEMPRE (incluso para Notas de Venta)
+    // 9. LOG de intento en sri_logs
     const logData = sanitizeFirestorePayload({
       timestamp: new Date().toISOString(),
       emisorId,
@@ -370,9 +421,12 @@ export default async function handler(req, res) {
       xmlFirmado: signedXml || xmlUnsigned || 'NO_GENERADO',
       estadoLocal: sriTimeout ? 'TIMEOUT' : 'PROCESADO',
       estadoSri: estadoFinalSri || 'PENDIENTE_ENVIO',
-      respuestaSri: authResult || {},
+      respuestaSri: rawSriResponse || authResult || {},
       errorTecnico: errorTecnico || '',
-      transactionId: transactionId // Llave de idempotencia guardada en el log
+      errorStack: errorStack || null,
+      httpStatus: httpStatus || null,
+      soapFault: soapFault || null,
+      transactionId: transactionId
     });
 
     console.log('--- LOG DATA QUE SE GUARDARÁ EN FIRESTORE ---');
@@ -382,11 +436,7 @@ export default async function handler(req, res) {
     const logRef = adminDb.collection('sri_logs').doc(finalClaveAcceso);
     batch.set(logRef, logData);
 
-    // 10. Actualizar Venta y Stock en Firestore (SIEMPRE se guarda la venta aunque el SRI falle)
-    let estadoSRIFinal = estadoFinalSri;
-    if (sriTimeout) estadoSRIFinal = 'PENDIENTE_ENVIO';
-    if (internalCrash) estadoSRIFinal = 'ERROR_INTERNO';
-
+    // 10. Actualizar Venta y Stock en Firestore
     const comprobanteData = sanitizeFirestorePayload({
       cliente,
       productos,
@@ -421,13 +471,17 @@ export default async function handler(req, res) {
       secuencial: isNotaVenta ? 'S/N' : secStr,
       claveAcceso: finalClaveAcceso,
       estadoVenta: 'FINALIZADA',
-      estadoSri: estadoSRIFinal || 'PENDIENTE_ENVIO', 
+      estadoSri: estadoFinalSri || 'PENDIENTE_ENVIO', 
       numeroAutorizacion: (authResult && authResult.numeroAutorizacion) || (authResult && authResult.estadoAutorizacion === 'AUTORIZADO' ? finalClaveAcceso : null) || null,
       fechaAutorizacion: (authResult && authResult.fechaAutorizacion && (typeof authResult.fechaAutorizacion === 'string' || authResult.fechaAutorizacion instanceof Date)) ? authResult.fechaAutorizacion.toString() : (authResult ? new Date().toISOString() : null),
-      mensajesSri: (authResult && authResult.mensajes) || [],
+      mensajesSri: mensajesSri.length > 0 ? mensajesSri : ((authResult && authResult.mensajes) || []),
       xmlFirmado: signedXml || xmlUnsigned || null,
       xmlAutorizado: (authResult && (authResult.comprobante || authResult.xmlAutorizado)) || null,
-      sriRawResponse: authResult || { error: errorTecnico || 'Desconocido' }, 
+      sriRawResponse: rawSriResponse || authResult || { error: errorTecnico || 'Desconocido' }, 
+      errorTecnico: errorTecnico || null,
+      errorStack: errorStack || null,
+      httpStatus: httpStatus || null,
+      soapFault: soapFault || null,
       fechaTransaccion: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       cajeroUid: decodedToken.uid || 'UNKNOWN',
@@ -441,12 +495,11 @@ export default async function handler(req, res) {
     const nuevaVentaRef = adminDb.collection('ventas').doc(finalClaveAcceso);
     batch.set(nuevaVentaRef, comprobanteData);
 
-    // REDUCCIÓN DE STOCK (SIEMPRE SE DESCUENTA)
+    // REDUCCIÓN DE STOCK (SIEMPRE SE DESCUENTA UNA SOLA VEZ)
     for (const prod of productos) {
       const prodId = prod.id || prod.codigo;
       if (prodId && prodId !== 'CUSTOM_PRODUCT') {
         const prodRef = adminDb.collection('productos').doc(prodId);
-        // Get the current stock first
         const pDoc = await prodRef.get();
         if (pDoc.exists) {
           const currentStock = pDoc.data().stock || 0;
@@ -459,16 +512,34 @@ export default async function handler(req, res) {
     await batch.commit();
 
     if (internalCrash) {
-      return res.status(500).json({ error: errorTecnico || 'Error fatal en la generación de la factura.' });
+      return res.status(500).json({
+        success: false,
+        claveAcceso: finalClaveAcceso,
+        estado: 'ERROR_INTERNO',
+        error: errorTecnico || 'Error fatal en la generación de la factura.',
+        numeroComprobante: numeroComprobanteCompleto
+      });
     }
 
     if (sriTimeout) {
       return res.status(200).json({ 
         success: false, 
         claveAcceso: finalClaveAcceso,
-        estado: 'CONTINGENCIA_LOCAL',
-        error: 'El servicio del SRI no respondió o rechazó la conexión. La factura quedó en estado PENDIENTE de recuperación.',
+        estado: 'PENDIENTE_ENVIO',
+        error: `Fallo de conexión SOAP con el SRI: ${errorTecnico || 'Sin respuesta'}. Se guardó localmente en estado PENDIENTE_ENVIO.`,
         numeroComprobante: numeroComprobanteCompleto
+      });
+    }
+
+    if (estadoFinalSri === 'DEVUELTA' || estadoFinalSri === 'NO_AUTORIZADO' || estadoFinalSri === 'RECHAZADA') {
+      return res.status(400).json({
+        success: false,
+        claveAcceso: finalClaveAcceso,
+        estado: estadoFinalSri,
+        error: errorTecnico || `La factura fue ${estadoFinalSri} por el SRI.`,
+        mensajes: mensajesSri,
+        numeroComprobante: numeroComprobanteCompleto,
+        sriRawResponse: rawSriResponse
       });
     }
 

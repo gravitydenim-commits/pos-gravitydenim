@@ -53,61 +53,104 @@ export default async function handler(req, res) {
     }
     
     const issuerData = issuerDoc.data();
-    const ambiente = process.env.SRI_ENVIRONMENT === 'production' ? 2 : (issuerData.ambiente || 1);
-    const sriEnv = ambiente === 2 ? 'prod' : 'test';
+    const sriEnvConfig = (process.env.SRI_ENVIRONMENT || '').trim().toLowerCase();
+    const isProdEnv = sriEnvConfig === 'production';
+    const sriEnv = isProdEnv ? 'prod' : 'test';
 
     let errorTecnico = null;
     let authResult = null;
     let sriTimeout = false;
+    let estadoFinalSri = 'PENDIENTE_ENVIO';
+    let rawSriResponse = null;
+    let mensajesSri = [];
+    let errorStack = null;
+    let httpStatus = null;
+    let soapFault = null;
 
-    console.log(`Reintentando envío SRI para clave: ${claveAcceso} en ambiente: ${sriEnv}`);
+    console.log(`[SRI REINTENTO] Clave: ${claveAcceso} | Modo: ${isProdEnv ? 'PRODUCCIÓN' : 'PRUEBAS'} (${sriEnv})`);
 
     try {
       try {
-        await validateXml({ env: sriEnv, xml: Buffer.from(ventaData.xmlFirmado, 'utf8') });
-        // El SRI a veces toma 1-2 segundos en procesar el XML encolado antes de autorizarlo.
-        await new Promise(r => setTimeout(r, 2500));
+        console.log(`[SRI REINTENTO STEP 1/2] Enviando XML a Recepción...`);
+        const validateRes = await validateXml({ env: sriEnv, xml: Buffer.from(ventaData.xmlFirmado, 'utf8') });
+        console.log(`[SRI REINTENTO STEP 1/2] ✅ XML recibido en Recepción SRI:`, validateRes);
+        await new Promise(r => setTimeout(r, 2000));
       } catch (valErr) {
-        console.warn("Advertencia en validateXml (intentando autorizar de todas formas):", valErr.message);
+        console.warn("[SRI REINTENTO STEP 1/2] Mensaje o rechazo en Recepción SRI:", valErr.message);
+        if (valErr.constructor?.name === 'SRIRejectedError' || valErr.estado === 'DEVUELTA') {
+          throw valErr;
+        }
       }
+
+      console.log(`[SRI REINTENTO STEP 2/2] Consultando Autorización SRI...`);
       authResult = await authorizeXml({ claveAcceso, env: sriEnv });
+      console.log(`[SRI REINTENTO STEP 2/2] ✅ Respuesta Autorización SRI:`, authResult);
+
+      estadoFinalSri = authResult.estadoAutorizacion || authResult.estado || 'AUTORIZADO';
+      rawSriResponse = authResult;
+      mensajesSri = authResult.mensajes || [];
+
     } catch (e) {
-      console.error("Error técnico contactando al SRI en REINTENTO:", e);
-      errorTecnico = e.message;
-      if (e.errors) {
-         errorTecnico += ': ' + JSON.stringify(e.errors);
+      console.error("[SRI REINTENTO ERROR] Excepción en comunicación SOAP:", e);
+      errorStack = e.stack || null;
+      httpStatus = e.statusCode || e.status || e.response?.status || null;
+      soapFault = e.soapFault || e.fault || null;
+
+      if (e.constructor?.name === 'SRIRejectedError' || e.estado === 'DEVUELTA') {
+        estadoFinalSri = 'DEVUELTA';
+        const idMsg = e.identificador || 'SIN_ID';
+        const mainMsg = e.mensaje || e.mensajeSRI || e.message || 'Comprobante devuelto por el SRI';
+        const extraMsg = e.informacionAdicional || '';
+        errorTecnico = `SRI DEVUELTA [${idMsg}]: ${mainMsg}${extraMsg ? ' - ' + extraMsg : ''}`;
+        mensajesSri = [{ identificador: idMsg, mensaje: mainMsg, informacionAdicional: extraMsg, tipo: e.tipo || 'ERROR' }];
+        rawSriResponse = { estado: 'DEVUELTA', identificador: idMsg, mensaje: mainMsg, informacionAdicional: extraMsg, tipo: e.tipo || 'ERROR', claveAcceso: e.claveAcceso || claveAcceso, errorStack, httpStatus, soapFault };
+        sriTimeout = false;
+
+      } else if (e.constructor?.name === 'SRIAutorizacionError' || e.estado === 'NO AUTORIZADO' || e.estado === 'RECHAZADA') {
+        estadoFinalSri = e.estado || 'NO_AUTORIZADO';
+        const idMsg = e.identificador || 'SIN_ID';
+        const mainMsg = e.mensaje || e.mensajeSRI || e.message || 'Comprobante no autorizado por el SRI';
+        const extraMsg = e.informacionAdicional || '';
+        errorTecnico = `SRI ${estadoFinalSri} [${idMsg}]: ${mainMsg}${extraMsg ? ' - ' + extraMsg : ''}`;
+        mensajesSri = [{ identificador: idMsg, mensaje: mainMsg, informacionAdicional: extraMsg, tipo: e.tipo || 'ERROR' }];
+        rawSriResponse = { estado: estadoFinalSri, identificador: idMsg, mensaje: mainMsg, informacionAdicional: extraMsg, tipo: e.tipo || 'ERROR', comprobanteXml: e.comprobanteXml || null, errorStack, httpStatus, soapFault };
+        sriTimeout = false;
+
+      } else if (e.constructor?.name === 'SRIUnauthorizedError') {
+        estadoFinalSri = e.estado || 'NO_AUTORIZADO';
+        errorTecnico = `SRI Autorización incompleta: estado ${estadoFinalSri}`;
+        rawSriResponse = { estado: estadoFinalSri, error: errorTecnico, errorStack, httpStatus, soapFault };
+        sriTimeout = false;
+
+      } else {
+        sriTimeout = true;
+        estadoFinalSri = 'PENDIENTE_ENVIO';
+        errorTecnico = e.message || 'Sin respuesta en reintento SRI';
+        rawSriResponse = { error: errorTecnico, errorName: e.name || 'Error', errorStack, httpStatus, soapFault, response: e.response || null };
       }
-      if (e.response && e.response.mensajes) {
-         errorTecnico = JSON.stringify(e.response.mensajes);
-      }
-      sriTimeout = true;
     }
 
-    let estadoFinalSri = 'EN_PROCESO';
-    if (authResult) {
-      estadoFinalSri = authResult.estadoAutorizacion || authResult.estado || 'PENDIENTE_ENVIO'; 
-    } else if (sriTimeout) {
-      estadoFinalSri = 'PENDIENTE_ENVIO'; // Se mantiene pendiente
-    }
-
-    const safeAuthResult = authResult || { estado: 'PENDIENTE_ENVIO' };
+    const safeAuthResult = rawSriResponse || authResult || { estado: estadoFinalSri };
     const safeErrorTecnico = errorTecnico || '';
 
-    // Prevenir undefined
+    // Actualizar el documento original
     const updatePayload = sanitizeFirestorePayload({
       estadoSri: estadoFinalSri || 'PENDIENTE_ENVIO',
       numeroAutorizacion: (authResult && authResult.numeroAutorizacion) || (authResult && authResult.estadoAutorizacion === 'AUTORIZADO' ? claveAcceso : null) || (ventaData.numeroAutorizacion || null),
       fechaAutorizacion: (authResult && authResult.fechaAutorizacion && (typeof authResult.fechaAutorizacion === 'string' || authResult.fechaAutorizacion instanceof Date)) ? authResult.fechaAutorizacion.toString() : (authResult ? new Date().toISOString() : (ventaData.fechaAutorizacion || null)),
-      mensajesSri: (authResult && authResult.mensajes) || [],
-      xmlAutorizado: (authResult && (authResult.comprobante || authResult.xmlAutorizado)) || null,
+      mensajesSri: mensajesSri.length > 0 ? mensajesSri : ((authResult && authResult.mensajes) || (ventaData.mensajesSri || [])),
+      xmlAutorizado: (authResult && (authResult.comprobante || authResult.xmlAutorizado)) || (ventaData.xmlAutorizado || null),
       sriRawResponse: safeAuthResult,
+      errorTecnico: safeErrorTecnico || null,
+      errorStack: errorStack || null,
+      httpStatus: httpStatus || null,
+      soapFault: soapFault || null,
       ultimoReintento: new Date().toISOString()
     });
 
     console.log('--- ACTUALIZANDO VENTA EN FIRESTORE ---');
     console.log(JSON.stringify(updatePayload, null, 2));
 
-    // Actualizar el documento original
     await ventaRef.update(updatePayload);
 
     const logPayload = sanitizeFirestorePayload({
@@ -122,6 +165,9 @@ export default async function handler(req, res) {
       estadoSri: estadoFinalSri || 'PENDIENTE_ENVIO',
       respuestaSri: safeAuthResult,
       errorTecnico: safeErrorTecnico,
+      errorStack: errorStack || null,
+      httpStatus: httpStatus || null,
+      soapFault: soapFault || null,
       esReintento: true,
       claveOriginal: claveAcceso
     });
@@ -135,7 +181,18 @@ export default async function handler(req, res) {
         success: false, 
         claveAcceso,
         estado: 'PENDIENTE_ENVIO',
-        error: errorTecnico || 'El SRI rechazó la conexión o no respondió en el reintento.'
+        error: `Fallo de conexión SOAP en el reintento: ${safeErrorTecnico || 'Sin respuesta'}`
+      });
+    }
+
+    if (estadoFinalSri === 'DEVUELTA' || estadoFinalSri === 'NO_AUTORIZADO' || estadoFinalSri === 'RECHAZADA') {
+      return res.status(400).json({
+        success: false,
+        claveAcceso,
+        estado: estadoFinalSri,
+        error: safeErrorTecnico || `La factura fue ${estadoFinalSri} por el SRI en el reintento.`,
+        mensajes: mensajesSri,
+        sriRawResponse: safeAuthResult
       });
     }
 
