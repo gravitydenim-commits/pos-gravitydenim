@@ -1,5 +1,6 @@
 import { getAdminDb } from '../../../src/lib/firebaseAdmin';
 import { generateRidePdf } from '../../../src/lib/pdfGenerator';
+import { calculateTotals } from '../../../src/utils/taxes';
 
 const db = getAdminDb();
 
@@ -31,20 +32,30 @@ export default async function handler(req, res) {
       obligadoContabilidad: false
     };
 
-    // Adaptar carrito para el generador PDF
-    const cart = (ventaData.productos || ventaData.items || []).map(p => ({
-      id: p.id,
-      sku: p.codigoBarras || p.sku || p.codigo || '',
-      name: p.name || p.nombre,
-      qty: p.qty || p.cantidad || 1,
-      price: p.price || p.precio || 0
+    // Adaptar carrito con desglose único de impuestos para RIDE PDF
+    const vatIncluded = ventaData.vatIncluded !== false;
+    const isNotaVenta = ventaData.isNotaVenta === true;
+    const totalsCalc = calculateTotals(ventaData.productos || ventaData.items || [], vatIncluded, isNotaVenta);
+
+    const cart = totalsCalc.detalles.map(d => ({
+      id: d.id,
+      sku: d.sku || '',
+      name: d.nombre,
+      qty: d.qty,
+      price: d.precioUnitario,
+      precioTotalSinImpuesto: d.precioTotalSinImpuesto
     }));
 
     const pdfBuffer = await generateRidePdf({
       issuerData,
       customer: ventaData.cliente || ventaData.customer || { nombre: 'CONSUMIDOR FINAL', numeroIdentificacion: '9999999999999' },
       cart,
-      totalsData: ventaData.totals || { subtotal: ventaData.subtotal || 0, ivaAmount: ventaData.ivaAmount || 0, total: ventaData.total || 0 },
+      totalsData: {
+        subtotal: totalsCalc.subtotal,
+        baseImponible: totalsCalc.baseImponible,
+        ivaAmount: totalsCalc.ivaAmount,
+        total: totalsCalc.total
+      },
       claveAcceso,
       numeroComprobante: ventaData.numeroComprobante,
       fecha: ventaData.fechaTransaccion ? new Date(ventaData.fechaTransaccion) : new Date()

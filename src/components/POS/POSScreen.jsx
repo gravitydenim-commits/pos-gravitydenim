@@ -3,7 +3,7 @@ import { ShoppingCart, Plus, Minus, Trash2, Tag, Shirt, UserCircle, Printer, Cre
 import { db } from '../../firebase/config';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { validarCedula, validarRUC } from '../../utils/validators';
-import { TAX_CONFIG } from '../../utils/taxes';
+import { TAX_CONFIG, calculateTotals } from '../../utils/taxes';
 
 // Los productos ahora vienen de Firebase/App.js como productsDB
 
@@ -218,28 +218,9 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     ));
   };
 
-  // --- MATH / VAT LOGIC ---
+  // --- MATH / VAT LOGIC (Función única centralizada calculateTotals) ---
   const { subtotal, baseImponible, ivaAmount, total } = useMemo(() => {
-    const sum = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
-    let base = 0;
-    let iva = 0;
-    let finalTotal = 0;
-
-    if (isNotaVenta) {
-      base = sum;
-      iva = 0;
-      finalTotal = sum;
-    } else if (vatIncluded) {
-      finalTotal = sum;
-      base = sum / (1 + TAX_CONFIG.IVA.PERCENTAGE);
-      iva = finalTotal - base;
-    } else {
-      base = sum;
-      iva = base * TAX_CONFIG.IVA.PERCENTAGE;
-      finalTotal = base + iva;
-    }
-
-    return { subtotal: sum, baseImponible: base, ivaAmount: iva, total: finalTotal };
+    return calculateTotals(cart, vatIncluded, isNotaVenta);
   }, [cart, vatIncluded, isNotaVenta]);
 
   // --- SINCRONIZACIÓN PANTALLA SECUNDARIA ---
@@ -398,6 +379,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
           subtotal,
           ivaAmount,
           total,
+          vatIncluded,
           isNotaVenta: isNotaVenta,
           paymentMethod,
           transferRecipient,
@@ -421,15 +403,21 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       const estadoFactura = sriData.estado;
       
       if (!response.ok) {
-         const errorMsg = sriData.error || sriData.message || 'Error en el servidor al procesar la venta.';
+         const errorMsg = sriData.error || sriData.message || `Error HTTP ${response.status} en el servidor al procesar la venta.`;
+         const sriMsgs = Array.isArray(sriData.mensajes) && sriData.mensajes.length > 0 
+           ? `\n\nMensajes SRI:\n` + sriData.mensajes.map(m => `- [${m.identificador || ''}] ${m.mensaje || ''} (${m.informacionAdicional || ''})`).join('\n')
+           : '';
          const stackTrace = sriData.stack ? `\n\nSTACK:\n${sriData.stack}` : '';
-         throw new Error(`Endpoint: /api/sri/emitir\nMotivo: ${errorMsg}${stackTrace}`);
+         throw new Error(`Endpoint: /api/sri/emitir (HTTP ${response.status})\nEstado SRI: ${estadoFactura || 'ERROR'}\nMotivo: ${errorMsg}${sriMsgs}${stackTrace}`);
       }
 
-      if (estadoFactura === 'CONTINGENCIA_LOCAL' || estadoFactura === 'PENDIENTE_ENVIO') {
-        alert(`⚠️ Sin conexión o fallo temporal con el SRI. La venta se guardó localmente en estado PENDIENTE.\nPodrás reintentar el envío manualmente desde la pestaña de facturas pendientes.\nClave temporal: ${claveAcceso}`);
-      } else if (estadoFactura === 'RECHAZADO') {
-        throw new Error(sriData.error || sriData.message || 'La factura fue rechazada por el servidor SRI.');
+      if (estadoFactura === 'PENDIENTE_ENVIO' || estadoFactura === 'CONTINGENCIA_LOCAL') {
+        alert(`⚠️ Sin conexión o fallo temporal con el SRI (HTTP ${response.status}). La venta se guardó localmente en estado PENDIENTE_ENVIO.\nMotivo: ${sriData.error || 'Timeout'}\nClave temporal: ${claveAcceso}`);
+      } else if (estadoFactura === 'DEVUELTA' || estadoFactura === 'NO_AUTORIZADO' || estadoFactura === 'RECHAZADA') {
+        const msgs = Array.isArray(sriData.mensajes) && sriData.mensajes.length > 0 
+          ? `\nDetalles: ` + sriData.mensajes.map(m => `[${m.identificador}] ${m.mensaje} - ${m.informacionAdicional}`).join(' | ')
+          : '';
+        throw new Error(`Factura ${estadoFactura} por el SRI.\nMotivo: ${sriData.error || 'Rechazo'}${msgs}`);
       }
 
       // (La lógica de guardado de cliente fue trasladada al paso 0, al inicio de confirmCheckout)
@@ -569,12 +557,14 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
             if (!tipo) {
               if (nombreLower.includes('baggy')) {
                 tipo = 'Jean Baggy';
+              } else if (nombreLower.includes('semitubo')) {
+                tipo = 'Jean Semitubo';
               } else if (nombreLower.includes('slim')) {
                 tipo = 'Jean Slim';
               } else if (nombreLower.includes('recto')) {
                 tipo = 'Jean Recto';
               } else if (nombreLower.includes('tactico') || nombreLower.includes('táctico') || nombreLower.includes('tactical')) {
-                tipo = 'Jean Táctico';
+                tipo = 'Pantalón Táctico';
               } else if (nombreLower.includes('polo')) {
                 tipo = 'Polo';
               } else if (nombreLower.includes('camiseta') && (nombreLower.includes('mujer') || nombreLower.includes('dama'))) {
@@ -594,13 +584,15 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
               } else if (nombreLower.includes('jogger')) {
                 tipo = 'Jogger';
               } else if (nombreLower.includes('cargo')) {
-                tipo = 'Cargo';
+                tipo = 'Pantalón Cargo';
               } else if (nombreLower.includes('short')) {
                 tipo = 'Short';
               } else if (nombreLower.includes('bermuda')) {
                 tipo = 'Bermuda';
               } else if (nombreLower.includes('blusa')) {
                 tipo = 'Blusa';
+              } else if (nombreLower.includes('chaqueta') && nombreLower.includes('gabardina')) {
+                tipo = 'Chaqueta Gabardina';
               } else if (nombreLower.includes('chaqueta')) {
                 tipo = 'Chaqueta Jean';
               } else if (nombreLower.includes('chaleco')) {
@@ -611,8 +603,11 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                 tipo = 'Falda';
               } else if (nombreLower.includes('vestido')) {
                 tipo = 'Vestido';
+              } else if (nombreLower.includes('niño') || nombreLower.includes('nino')) {
+                tipo = 'Jean Niño';
+              } else if (nombreLower.includes('jean') || nombreLower.includes('pantalon') || nombreLower.includes('pantalón')) {
+                tipo = 'Jean Recto';
               } else {
-                // Fallback final basado en categoría general
                 if (catLower.includes('jean') || catLower.includes('pantal')) {
                   tipo = 'Jean Recto';
                 } else if (catLower.includes('camisa')) {
@@ -637,86 +632,83 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
               }
             }
 
-            // 2. Diccionario de Mapeo de Ilustraciones y Colores
+            // 2. Badge visual por tipo
+            const tipoLower = tipo.toLowerCase();
             let label = tipo.toUpperCase();
             let badgeBg = 'rgba(16, 185, 129, 0.15)';
             let badgeColor = '#34d399';
-            let img3d = '/images/3d/default.png';
 
-            const tipoLower = tipo.toLowerCase();
-
-            if (tipoLower.includes('jean') || tipoLower.includes('pantalón') || tipoLower.includes('pantalon') || tipoLower.includes('cargo') || tipoLower.includes('jogger') || tipoLower.includes('short') || tipoLower.includes('bermuda')) {
-              badgeBg = 'rgba(59, 130, 246, 0.15)';
-              badgeColor = '#60a5fa';
-              img3d = '/images/3d/jean.png';
-              
-              if (tipoLower.includes('táctico') || tipoLower.includes('tactico') || tipoLower.includes('tactical')) {
-                label = 'TACTICAL';
-                badgeBg = 'rgba(16, 185, 129, 0.2)';
-                badgeColor = '#10b981';
-                img3d = '/images/3d/default.png';
-              } else if (tipoLower.includes('short')) {
-                label = 'SHORT';
-                badgeBg = 'rgba(59, 130, 246, 0.12)';
-                badgeColor = '#93c5fd';
-              } else if (tipoLower.includes('bermuda')) {
-                label = 'BERMUDA';
-                badgeBg = 'rgba(249, 115, 22, 0.12)';
-                badgeColor = '#ffedd5';
-              } else if (tipoLower.includes('jogger')) {
-                label = 'JOGGER';
-                badgeBg = 'rgba(59, 130, 246, 0.1)';
-                badgeColor = '#a5f3fc';
-              }
+            if (tipoLower.includes('jean') || tipoLower.includes('pantalón') || tipoLower.includes('pantalon')) {
+              badgeBg = 'rgba(59, 130, 246, 0.15)'; badgeColor = '#60a5fa';
+            } else if (tipoLower.includes('tactico') || tipoLower.includes('táctico') || tipoLower.includes('tactical')) {
+              label = 'TACTICAL'; badgeBg = 'rgba(16, 185, 129, 0.2)'; badgeColor = '#10b981';
+            } else if (tipoLower.includes('cargo')) {
+              label = 'CARGO'; badgeBg = 'rgba(59, 130, 246, 0.15)'; badgeColor = '#60a5fa';
+            } else if (tipoLower.includes('short')) {
+              label = 'SHORT'; badgeBg = 'rgba(59, 130, 246, 0.12)'; badgeColor = '#93c5fd';
+            } else if (tipoLower.includes('bermuda')) {
+              label = 'BERMUDA'; badgeBg = 'rgba(249, 115, 22, 0.12)'; badgeColor = '#fdba74';
+            } else if (tipoLower.includes('jogger')) {
+              label = 'JOGGER'; badgeBg = 'rgba(59, 130, 246, 0.1)'; badgeColor = '#a5f3fc';
             } else if (tipoLower.includes('camisa')) {
-              badgeBg = 'rgba(6, 182, 212, 0.15)';
-              badgeColor = '#22d3ee';
-              
-              if (tipoLower.includes('corta') || tipoLower.includes('mc')) {
-                img3d = '/images/3d/camisa_mc.png';
-                label = 'CAMISA M.C.';
-              } else if (tipoLower.includes('larga') || tipoLower.includes('ml')) {
-                img3d = '/images/3d/camisa_ml.png';
-                label = 'CAMISA M.L.';
-              } else if (tipoLower.includes('cuadros')) {
-                img3d = '/images/3d/camisa_cuadros.png';
-                label = 'CAMISA CUADROS';
-              } else if (tipoLower.includes('gabardina')) {
-                img3d = '/images/3d/camisa_gabardina.png';
-                label = 'GABARDINA';
-              } else {
-                img3d = '/images/3d/camisa.png';
-              }
+              badgeBg = 'rgba(6, 182, 212, 0.15)'; badgeColor = '#22d3ee';
+              if (tipoLower.includes('corta') || tipoLower.includes('mc')) label = 'CAMISA M.C.';
+              else if (tipoLower.includes('larga') || tipoLower.includes('ml')) label = 'CAMISA M.L.';
+              else if (tipoLower.includes('cuadros')) label = 'CUADROS';
+              else if (tipoLower.includes('gabardina')) label = 'GABARDINA';
             } else if (tipoLower.includes('polo')) {
-              label = 'POLO';
-              badgeBg = 'rgba(239, 68, 68, 0.15)';
-              badgeColor = '#f87171';
-              img3d = '/images/3d/polo.png';
+              label = 'POLO'; badgeBg = 'rgba(239, 68, 68, 0.15)'; badgeColor = '#f87171';
             } else if (tipoLower.includes('camiseta')) {
-              badgeBg = 'rgba(239, 68, 68, 0.12)';
-              badgeColor = '#fca5a5';
-              
-              if (tipoLower.includes('mujer') || tipoLower.includes('dama')) {
-                img3d = '/images/3d/camiseta_mujer.png';
-                label = 'CAMISETA MUJER';
-              } else {
-                img3d = '/images/3d/camiseta.png';
-                label = 'CAMISETA';
-              }
+              badgeBg = 'rgba(239, 68, 68, 0.12)'; badgeColor = '#fca5a5';
+              label = (tipoLower.includes('mujer') || tipoLower.includes('dama')) ? 'CAMISETA MUJER' : 'CAMISETA';
             } else if (tipoLower.includes('blusa')) {
-              label = 'BLUSA';
-              badgeBg = 'rgba(168, 85, 247, 0.15)';
-              badgeColor = '#c084fc';
-              img3d = '/images/3d/blusa.png';
+              label = 'BLUSA'; badgeBg = 'rgba(168, 85, 247, 0.15)'; badgeColor = '#c084fc';
             } else if (tipoLower.includes('chaqueta')) {
-              label = 'CHAQUETA';
-              badgeBg = 'rgba(249, 115, 22, 0.15)';
-              badgeColor = '#fb923c';
-              img3d = '/images/3d/chaqueta.png';
+              label = tipoLower.includes('gabardina') ? 'CHAQUETA GAB.' : 'CHAQUETA JEAN';
+              badgeBg = 'rgba(249, 115, 22, 0.15)'; badgeColor = '#fb923c';
+            } else if (tipoLower.includes('chaleco')) {
+              label = 'CHALECO'; badgeBg = 'rgba(251, 191, 36, 0.15)'; badgeColor = '#fcd34d';
+            } else if (tipoLower.includes('overol')) {
+              label = 'OVEROL'; badgeBg = 'rgba(59, 130, 246, 0.15)'; badgeColor = '#60a5fa';
+            } else if (tipoLower.includes('falda')) {
+              label = 'FALDA'; badgeBg = 'rgba(236, 72, 153, 0.15)'; badgeColor = '#f9a8d4';
+            } else if (tipoLower.includes('vestido')) {
+              label = 'VESTIDO'; badgeBg = 'rgba(236, 72, 153, 0.15)'; badgeColor = '#f472b6';
             }
 
-            // 3. Priorizar fotografía real del producto si existe
-            const activeImage = prod.imageUrl || prod.image || img3d;
+            // 3. Prioridad de visualización de imagen
+            let activeImage = '/product-illustrations/3d/default_3d.png';
+            if (prod.imageUrl || prod.image) {
+              activeImage = prod.imageUrl || prod.image;
+            } else if (prod.ilustracion3d || prod.ilustracion_3d) {
+              activeImage = `/product-illustrations/3d/${prod.ilustracion3d || prod.ilustracion_3d}.png`;
+            } else {
+              // P3 — fallback automático por tipo inferido del nombre
+              const BASE = '/product-illustrations/3d/';
+              if (tipoLower.includes('polo'))                                                                           activeImage = BASE + 'polo_cuello_3d.png';
+              else if (tipoLower.includes('camiseta') && (tipoLower.includes('mujer') || tipoLower.includes('dama')))   activeImage = BASE + 'camiseta_mujer_3d.png';
+              else if (tipoLower.includes('camiseta'))                                                                  activeImage = BASE + 'camiseta_basica_3d.png';
+              else if (tipoLower.includes('camisa') && tipoLower.includes('cuadros'))                                   activeImage = BASE + 'camisa_cuadros_3d.png';
+              else if (tipoLower.includes('camisa') && tipoLower.includes('gabardina'))                                 activeImage = BASE + 'camisa_gabardina_3d.png';
+              else if (tipoLower.includes('camisa') && (tipoLower.includes('larga') || tipoLower.includes('ml')))       activeImage = BASE + 'camisa_manga_larga_3d.png';
+              else if (tipoLower.includes('camisa'))                                                                    activeImage = BASE + 'camisa_manga_corta_3d.png';
+              else if (tipoLower.includes('blusa'))                                                                     activeImage = BASE + 'blusa_3d.png';
+              else if (tipoLower.includes('chaqueta') && tipoLower.includes('gabardina'))                               activeImage = BASE + 'chaqueta_gabardina_3d.png';
+              else if (tipoLower.includes('chaqueta'))                                                                  activeImage = BASE + 'chaqueta_jean_3d.png';
+              else if (tipoLower.includes('chaleco'))                                                                   activeImage = BASE + 'chaleco_3d.png';
+              else if (tipoLower.includes('overol'))                                                                    activeImage = BASE + 'overol_3d.png';
+              else if (tipoLower.includes('falda'))                                                                     activeImage = BASE + 'falda_3d.png';
+              else if (tipoLower.includes('vestido'))                                                                   activeImage = BASE + 'vestido_3d.png';
+              else if (tipoLower.includes('tactico') || tipoLower.includes('táctico') || tipoLower.includes('tactical')) activeImage = BASE + 'pantalon_tactico_3d.png';
+              else if (tipoLower.includes('cargo'))                                                                     activeImage = BASE + 'pantalon_cargo_3d.png';
+              else if (tipoLower.includes('jogger'))                                                                    activeImage = BASE + 'jogger_3d.png';
+              else if (tipoLower.includes('short'))                                                                     activeImage = BASE + 'short_3d.png';
+              else if (tipoLower.includes('bermuda'))                                                                   activeImage = BASE + 'bermuda_3d.png';
+              else if (tipoLower.includes('semitubo'))                                                                  activeImage = BASE + 'jean_semitubo_3d.png';
+              else if (tipoLower.includes('baggy'))                                                                     activeImage = BASE + 'jean_baggy_3d.png';
+              else if (tipoLower.includes('niño') || tipoLower.includes('nino'))                                        activeImage = BASE + 'jean_nino_3d.png';
+              else if (tipoLower.includes('jean') || tipoLower.includes('pantalon') || tipoLower.includes('pantalón'))  activeImage = BASE + 'jean_recto_3d.png';
+            }
 
             return (
               <div key={prod.id} className="product-card" onClick={() => addToCart(prod)}>

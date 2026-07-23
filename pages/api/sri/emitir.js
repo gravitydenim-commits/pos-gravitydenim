@@ -10,7 +10,7 @@ process.env.TZ = 'America/Guayaquil';
 const { generateXmlInvoice, signXml, validateXml, authorizeXml } = require('osodreamer-sri-xml-signer');
 import fs from 'fs';
 import path from 'path';
-import { TAX_CONFIG } from '../../../src/utils/taxes';
+import { TAX_CONFIG, calculateTotals } from '../../../src/utils/taxes';
 import { sanitizeFirestorePayload } from '../../../src/utils/sanitize';
 
 const round2 = (val) => Number(Number(val).toFixed(2));
@@ -102,39 +102,33 @@ export default async function handler(req, res) {
       }
     }
 
-    // 5. Cálculos (Simulados para el MVP, deben ser matemáticamente perfectos)
-    let subtotalSinImpuestos = 0;
-    const detalles = productos.map(prod => {
-      const cantidad = prod.qty || prod.cantidad || 1;
-      const precioUnitario = round2(prod.price !== undefined ? prod.price : prod.precio); 
-      const descuento = round2(prod.descuento || 0);
-      const precioTotalSinImpuesto = round2((precioUnitario * cantidad) - descuento);
-      subtotalSinImpuestos += precioTotalSinImpuesto;
-      
-      return {
-        codigoPrincipal: prod.id || prod.codigo || '0000',
-        descripcion: prod.name || prod.nombre || 'Producto',
-        cantidad: cantidad,
-        precioUnitario: precioUnitario,
-        descuento: descuento,
-        precioTotalSinImpuesto: precioTotalSinImpuesto,
-        impuestos: {
-          impuesto: [
-            {
-              codigo: 2, // IVA
-              codigoPorcentaje: TAX_CONFIG.IVA.CODE,
-              tarifa: TAX_CONFIG.IVA.RATE,
-              baseImponible: precioTotalSinImpuesto,
-              valor: round2(precioTotalSinImpuesto * TAX_CONFIG.IVA.PERCENTAGE)
-            }
-          ]
-        }
-      };
-    });
+    // 5. Cálculos tributarios centralizados (función única calculateTotals)
+    const vatIncluded = req.body.vatIncluded !== false;
+    const totalsCalc = calculateTotals(productos, vatIncluded, isNotaVenta);
 
-    subtotalSinImpuestos = round2(subtotalSinImpuestos);
-    const valorIva = round2(subtotalSinImpuestos * TAX_CONFIG.IVA.PERCENTAGE);
-    const importeTotal = round2(subtotalSinImpuestos + valorIva);
+    const subtotalSinImpuestos = totalsCalc.subtotal;
+    const valorIva = totalsCalc.ivaAmount;
+    const importeTotal = totalsCalc.total;
+
+    const detalles = totalsCalc.detalles.map(d => ({
+      codigoPrincipal: d.id,
+      descripcion: d.nombre,
+      cantidad: d.qty,
+      precioUnitario: d.precioUnitario,
+      descuento: d.descuento,
+      precioTotalSinImpuesto: d.precioTotalSinImpuesto,
+      impuestos: {
+        impuesto: [
+          {
+            codigo: 2, // IVA
+            codigoPorcentaje: TAX_CONFIG.IVA.CODE,
+            tarifa: TAX_CONFIG.IVA.RATE,
+            baseImponible: d.precioTotalSinImpuesto,
+            valor: d.iva
+          }
+        ]
+      }
+    }));
 
     const estab = emisor.establecimiento || '001';
     const ptoEmi = emisor.puntoEmision || '001';
