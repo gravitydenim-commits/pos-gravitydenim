@@ -35,9 +35,78 @@ export default async function handler(req, res) {
 
     const ventaData = ventaDoc.data();
 
-    // Solo permitir reintentos si no está autorizada
+    // Si ya está autorizada, ejecutar/reintentar el envío de correo
     if (ventaData.estadoSri === 'AUTORIZADO') {
-      return res.status(400).json({ error: 'La factura ya se encuentra autorizada' });
+      console.log(`[SRI REINTENTO] La factura ${claveAcceso} ya está AUTORIZADA en el SRI. Ejecutando envío de correo...`);
+      const clienteData = ventaData.cliente || ventaData.customer || {};
+      const customerEmail = clienteData.correo || clienteData.email;
+      let emailRes = { success: false, reason: 'NO_VALID_EMAIL' };
+
+      if (customerEmail && customerEmail !== 'N/A' && customerEmail.trim() !== '' && !customerEmail.toLowerCase().includes('consumidorfinal')) {
+        try {
+          const emisorId = ventaData.emisorId || 'hermano_geovanny';
+          const issuerDoc = await adminDb.collection('issuers').doc(emisorId).get();
+          const issuerData = issuerDoc.exists ? issuerDoc.data() : { name: 'GRAVITY DENIM' };
+
+          const pdfBuffer = await generateRidePdf({
+            issuerData,
+            customer: clienteData,
+            cart: (ventaData.productos || ventaData.items || []).map(p => ({
+              id: p.id || p.codigo,
+              sku: p.codigoBarras || p.sku || p.codigo || '',
+              name: p.name || p.nombre,
+              qty: p.qty || p.cantidad || 1,
+              price: p.precioUnitario !== undefined ? p.precioUnitario : (p.price || p.precio || 0),
+              precioTotalSinImpuesto: p.precioTotalSinImpuesto || ((p.price || p.precio || 0) * (p.qty || p.cantidad || 1))
+            })),
+            totalsData: ventaData.totals || { subtotal: ventaData.subtotal || 0, ivaAmount: ventaData.ivaAmount || 0, total: ventaData.total || 0 },
+            claveAcceso,
+            numeroComprobante: ventaData.numeroComprobante,
+            fecha: new Date(ventaData.fechaTransaccion || Date.now())
+          });
+
+          const xmlContent = ventaData.xmlAutorizado || ventaData.xmlFirmado || '';
+
+          emailRes = await sendInvoiceEmail({
+            customerEmail,
+            pdfBuffer,
+            xmlBuffer: xmlContent,
+            claveAcceso,
+            issuerName: issuerData.name || issuerData.razonSocial || 'GRAVITY DENIM',
+            numeroComprobante: ventaData.numeroComprobante
+          });
+
+          const estadoEmail = emailRes.success ? 'ENVIADO' : 'ERROR_ENVIO';
+          await ventaRef.update({
+            estadoEmail,
+            emailStatus: estadoEmail,
+            emailResult: emailRes,
+            emailError: emailRes.success ? null : (emailRes.error || 'Fallo de envío SMTP'),
+            ultimoEnvioEmail: new Date().toISOString()
+          });
+        } catch (eErr) {
+          console.error("❌ Excepción enviando correo para factura autorizada:", eErr);
+          emailRes = { success: false, error: eErr.message, stack: eErr.stack };
+          await ventaRef.update({
+            estadoEmail: 'ERROR_ENVIO',
+            emailStatus: 'ERROR_ENVIO',
+            emailError: eErr.message,
+            ultimoEnvioEmail: new Date().toISOString()
+          });
+        }
+      } else {
+        await ventaRef.update({
+          estadoEmail: 'SIN_CORREO_VALIDO',
+          emailStatus: 'SIN_CORREO_VALIDO'
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'La factura ya se encuentra autorizada en el SRI',
+        estado: 'AUTORIZADO',
+        emailResult: emailRes
+      });
     }
     
     if (!ventaData.xmlFirmado || ventaData.xmlFirmado === 'NO_GENERADO') {
