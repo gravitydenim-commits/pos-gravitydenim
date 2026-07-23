@@ -677,12 +677,19 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
             }
 
             // 3. Prioridad de visualización de imagen
-            let activeImage = '/product-illustrations/3d/default_3d.png';
-            if (prod.imageUrl || prod.image) {
-              activeImage = prod.imageUrl || prod.image;
-            } else if (prod.ilustracion3d || prod.ilustracion_3d) {
-              activeImage = `/product-illustrations/3d/${prod.ilustracion3d || prod.ilustracion_3d}.png`;
-            } else {
+            const validCustomImg = (url) => typeof url === 'string' && url.trim() !== '' && url !== 'undefined' && url !== 'null' && url !== 'N/A' && !url.includes('undefined');
+
+            let activeImage = null;
+            if (validCustomImg(prod.imageUrl)) {
+              activeImage = prod.imageUrl;
+            } else if (validCustomImg(prod.image)) {
+              activeImage = prod.image;
+            } else if (validCustomImg(prod.ilustracion3d) || validCustomImg(prod.ilustracion_3d)) {
+              const fileKey = prod.ilustracion3d || prod.ilustracion_3d;
+              activeImage = `/product-illustrations/3d/${fileKey.endsWith('.png') ? fileKey : fileKey + '.png'}`;
+            }
+
+            if (!activeImage) {
               // P3 — fallback automático por tipo inferido del nombre
               const BASE = '/product-illustrations/3d/';
               if (tipoLower.includes('polo'))                                                                           activeImage = BASE + 'polo_cuello_3d.png';
@@ -708,6 +715,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
               else if (tipoLower.includes('baggy'))                                                                     activeImage = BASE + 'jean_baggy_3d.png';
               else if (tipoLower.includes('niño') || tipoLower.includes('nino'))                                        activeImage = BASE + 'jean_nino_3d.png';
               else if (tipoLower.includes('jean') || tipoLower.includes('pantalon') || tipoLower.includes('pantalón'))  activeImage = BASE + 'jean_recto_3d.png';
+              else activeImage = BASE + 'default_3d.png';
             }
 
             return (
@@ -721,6 +729,10 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                     alt={prod.nombre || prod.name} 
                     className="product-card-image"
                     loading="lazy"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '/product-illustrations/3d/default_3d.png';
+                    }}
                   />
                 </div>
                 <div className="product-name">{prod.nombre || prod.name}</div>
