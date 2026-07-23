@@ -676,21 +676,21 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
               label = 'VESTIDO'; badgeBg = 'rgba(236, 72, 153, 0.15)'; badgeColor = '#f472b6';
             }
 
-            // 3. Prioridad de visualización de imagen
-            const validCustomImg = (url) => typeof url === 'string' && url.trim() !== '' && url !== 'undefined' && url !== 'null' && url !== 'N/A' && !url.includes('undefined');
+            // 3. Prioridad de visualización de imagen (Imágenes 3D locales deterministas sin parpadeo)
+            const customUrl = prod.imageUrl || prod.image;
+            const validHttp = typeof customUrl === 'string' && (customUrl.startsWith('http://') || customUrl.startsWith('https://')) && !customUrl.includes('undefined');
 
             let activeImage = null;
-            if (validCustomImg(prod.imageUrl)) {
-              activeImage = prod.imageUrl;
-            } else if (validCustomImg(prod.image)) {
-              activeImage = prod.image;
-            } else if (validCustomImg(prod.ilustracion3d) || validCustomImg(prod.ilustracion_3d)) {
+            if (validHttp) {
+              activeImage = customUrl;
+            } else {
               const fileKey = prod.ilustracion3d || prod.ilustracion_3d;
-              activeImage = `/product-illustrations/3d/${fileKey.endsWith('.png') ? fileKey : fileKey + '.png'}`;
+              if (typeof fileKey === 'string' && fileKey.trim() !== '' && fileKey !== 'undefined' && fileKey !== 'null') {
+                activeImage = `/product-illustrations/3d/${fileKey.endsWith('.png') ? fileKey : fileKey + '.png'}`;
+              }
             }
 
             if (!activeImage) {
-              // P3 — fallback automático por tipo inferido del nombre
               const BASE = '/product-illustrations/3d/';
               if (tipoLower.includes('polo'))                                                                           activeImage = BASE + 'polo_cuello_3d.png';
               else if (tipoLower.includes('camiseta') && (tipoLower.includes('mujer') || tipoLower.includes('dama')))   activeImage = BASE + 'camiseta_mujer_3d.png';
@@ -701,7 +701,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
               else if (tipoLower.includes('camisa'))                                                                    activeImage = BASE + 'camisa_manga_corta_3d.png';
               else if (tipoLower.includes('blusa'))                                                                     activeImage = BASE + 'blusa_3d.png';
               else if (tipoLower.includes('chaqueta') && tipoLower.includes('gabardina'))                               activeImage = BASE + 'chaqueta_gabardina_3d.png';
-              else if (tipoLower.includes('chaqueta'))                                                                  activeImage = BASE + 'chaqueta_jean_3d.png';
+              else if (tipoLower.includes('chaqueta') || tipoLower.includes('ch.'))                                     activeImage = BASE + 'chaqueta_jean_3d.png';
               else if (tipoLower.includes('chaleco'))                                                                   activeImage = BASE + 'chaleco_3d.png';
               else if (tipoLower.includes('overol'))                                                                    activeImage = BASE + 'overol_3d.png';
               else if (tipoLower.includes('falda'))                                                                     activeImage = BASE + 'falda_3d.png';
@@ -711,10 +711,10 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
               else if (tipoLower.includes('jogger'))                                                                    activeImage = BASE + 'jogger_3d.png';
               else if (tipoLower.includes('short'))                                                                     activeImage = BASE + 'short_3d.png';
               else if (tipoLower.includes('bermuda'))                                                                   activeImage = BASE + 'bermuda_3d.png';
-              else if (tipoLower.includes('semitubo'))                                                                  activeImage = BASE + 'jean_semitubo_3d.png';
+              else if (tipoLower.includes('semitubo') || tipoLower.includes('tubo'))                                    activeImage = BASE + 'jean_semitubo_3d.png';
               else if (tipoLower.includes('baggy'))                                                                     activeImage = BASE + 'jean_baggy_3d.png';
-              else if (tipoLower.includes('niño') || tipoLower.includes('nino'))                                        activeImage = BASE + 'jean_nino_3d.png';
-              else if (tipoLower.includes('jean') || tipoLower.includes('pantalon') || tipoLower.includes('pantalón'))  activeImage = BASE + 'jean_recto_3d.png';
+              else if (tipoLower.includes('niño') || tipoLower.includes('nino') || tipoLower.includes('p. niño'))       activeImage = BASE + 'jean_nino_3d.png';
+              else if (tipoLower.includes('jean') || tipoLower.includes('pantalon') || tipoLower.includes('pantalón') || tipoLower.includes('pant') || tipoLower.includes('ancho') || tipoLower.includes('levas')) activeImage = BASE + 'jean_recto_3d.png';
               else activeImage = BASE + 'default_3d.png';
             }
 
@@ -729,10 +729,6 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                     alt={prod.nombre || prod.name} 
                     className="product-card-image"
                     loading="lazy"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = '/product-illustrations/3d/default_3d.png';
-                    }}
                   />
                 </div>
                 <div className="product-name">{prod.nombre || prod.name}</div>
