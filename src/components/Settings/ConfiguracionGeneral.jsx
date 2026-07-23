@@ -241,12 +241,12 @@ export default function ConfiguracionGeneral() {
 
   // --- SINCRONIZAR SELECCIÓN Y DATOS ---
   useEffect(() => {
-    if (emisoresDB.length >= 0 && !loading) {
+    if (emisoresDB.length > 0 && !loading) {
       let currentSelection = selectedIssuer;
       
-      // Auto-selección si está vacío
-      if (!currentSelection) {
-        currentSelection = "hermano_geovanny"; 
+      // Auto-selección si está vacío o si el ID guardado no existe en Firestore
+      if (!currentSelection || !emisoresDB.some(i => i.id === currentSelection)) {
+        currentSelection = emisoresDB[0].id;
         setSelectedIssuer(currentSelection);
         localStorage.setItem('emisor_config', currentSelection);
       }
@@ -256,8 +256,8 @@ export default function ConfiguracionGeneral() {
       if (existing) {
         setFormData(prev => ({
           ...prev,
-          ruc: prev.ruc || existing.ruc || '', // Respeta si el usuario ya escribió algo
-          nombre: prev.nombre || existing.name || '',
+          ruc: prev.ruc || existing.ruc || '', 
+          nombre: prev.nombre || existing.name || existing.nombreComercial || existing.razonSocial || '',
           direccion: prev.direccion || existing.direccionMatriz || '',
           correo: prev.correo || existing.correo || '',
           obligadoContabilidad: existing.obligadoContabilidad !== undefined ? existing.obligadoContabilidad : prev.obligadoContabilidad,
@@ -430,10 +430,15 @@ export default function ConfiguracionGeneral() {
                   onChange={handleIssuerSelect}
                   style={{ width: '100%', padding: '12px', background: 'var(--input-bg)', border: '1px solid var(--accent)', color: 'var(--text-main)', borderRadius: '8px', fontSize: '1rem' }}
                 >
-                  <option value="" disabled>-- Elige un Perfil --</option>
-                  <option value="hermano_geovanny">Geovanny Sanchez</option>
-                  <option value="hermano_maria">María Pérez</option>
-                  <option value="hermano_carlos">Carlos Pérez</option>
+                  <option value="" disabled>-- Seleccione Perfil Fiscal --</option>
+                  {emisoresDB.map(emisor => {
+                    const displayName = emisor.nombreComercial || emisor.razonSocial || emisor.name || `Perfil (${emisor.id})`;
+                    return (
+                      <option key={emisor.id} value={emisor.id}>
+                        {displayName} {emisor.ruc ? `(RUC: ${emisor.ruc})` : ''}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
