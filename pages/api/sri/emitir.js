@@ -356,45 +356,72 @@ export default async function handler(req, res) {
           httpStatus = e.statusCode || e.status || e.response?.status || 500;
           soapFault = e.soapFault || e.fault || null;
 
-          if (e.constructor?.name === 'SRIRejectedError' || e.estado === 'DEVUELTA') {
-            estadoFinalSri = 'DEVUELTA';
-            estadoRespuestaSRI = 'DEVUELTA';
-            codigoRespuesta = e.identificador || (e.mensajes?.[0]?.identificador) || 'SIN_ID';
-            mensajeRespuesta = e.mensaje || e.mensajeSRI || (e.mensajes?.[0]?.mensaje) || e.message || 'Comprobante devuelto por el SRI';
-            informacionAdicional = e.informacionAdicional || (e.mensajes?.[0]?.informacionAdicional) || null;
-            errorTecnico = `SRI DEVUELTA [${codigoRespuesta}]: ${mensajeRespuesta}${informacionAdicional ? ' - ' + informacionAdicional : ''}`;
-            mensajesSri = [{ identificador: codigoRespuesta, mensaje: mensajeRespuesta, informacionAdicional: informacionAdicional || '', tipo: e.tipo || 'ERROR' }];
-            rawSriResponse = { estado: 'DEVUELTA', identificador: codigoRespuesta, mensaje: mensajeRespuesta, informacionAdicional, tipo: e.tipo || 'ERROR', claveAcceso: e.claveAcceso || invoiceData.infoTributaria.claveAcceso, errorStack, httpStatus, soapFault };
-            sriTimeout = false;
+          // Si el error de Recepción es CLAVE ACCESO REGISTRADA (43), re-consultar Autorización inmediatamente
+          const isClaveRegistrada = (e.identificador === '43') || 
+                                    (e.message && e.message.includes('CLAVE ACCESO REGISTRADA')) || 
+                                    (e.mensaje && e.mensaje.includes('CLAVE ACCESO REGISTRADA'));
 
-          } else if (e.constructor?.name === 'SRIAutorizacionError' || e.estado === 'NO AUTORIZADO' || e.estado === 'RECHAZADA') {
-            estadoFinalSri = e.estado || 'NO_AUTORIZADO';
-            estadoRespuestaSRI = estadoFinalSri;
-            codigoRespuesta = e.identificador || (e.mensajes?.[0]?.identificador) || 'SIN_ID';
-            mensajeRespuesta = e.mensaje || e.mensajeSRI || (e.mensajes?.[0]?.mensaje) || e.message || 'Comprobante no autorizado por el SRI';
-            informacionAdicional = e.informacionAdicional || (e.mensajes?.[0]?.informacionAdicional) || null;
-            errorTecnico = `SRI ${estadoFinalSri} [${codigoRespuesta}]: ${mensajeRespuesta}${informacionAdicional ? ' - ' + informacionAdicional : ''}`;
-            mensajesSri = [{ identificador: codigoRespuesta, mensaje: mensajeRespuesta, informacionAdicional: informacionAdicional || '', tipo: e.tipo || 'ERROR' }];
-            rawSriResponse = { estado: estadoFinalSri, identificador: codigoRespuesta, mensaje: mensajeRespuesta, informacionAdicional, tipo: e.tipo || 'ERROR', comprobanteXml: e.comprobanteXml || null, errorStack, httpStatus, soapFault };
-            sriTimeout = false;
+          if (isClaveRegistrada) {
+            console.log(`[SRI EMITIR] ⚠️ SRI Recepción devolvió CLAVE ACCESO REGISTRADA (43). Re-consultando servicio de Autorización...`);
+            try {
+              const checkAuth = await authorizeXml({ claveAcceso: invoiceData.infoTributaria.claveAcceso, env: sriEnv });
+              const estCheck = (checkAuth && (checkAuth.estadoAutorizacion || checkAuth.estado || '')).toUpperCase();
+              if (estCheck === 'AUTORIZADO') {
+                authResult = checkAuth;
+                estadoFinalSri = 'AUTORIZADO';
+                estadoRespuestaSRI = 'AUTORIZADO';
+                mensajeRespuesta = 'Comprobante AUTORIZADO correctamente por el SRI';
+                rawSriResponse = authResult;
+                mensajesSri = authResult.mensajes || [];
+                sriTimeout = false;
+                e = null; // Anular la excepción ya que el comprobante quedó autorizado
+              }
+            } catch (secErr) {
+              console.warn("[SRI EMITIR] Consulta de autorización tras error 43 falló:", secErr.message);
+            }
+          }
 
-          } else if (e.constructor?.name === 'SRIUnauthorizedError') {
-            estadoFinalSri = e.estado || 'NO_AUTORIZADO';
-            estadoRespuestaSRI = estadoFinalSri;
-            mensajeRespuesta = `SRI Autorización incompleta: estado ${estadoFinalSri}`;
-            errorTecnico = mensajeRespuesta;
-            rawSriResponse = { estado: estadoFinalSri, error: errorTecnico, errorStack, httpStatus, soapFault };
-            sriTimeout = false;
+          if (e) {
+            if (e.constructor?.name === 'SRIRejectedError' || e.estado === 'DEVUELTA') {
+              estadoFinalSri = 'DEVUELTA';
+              estadoRespuestaSRI = 'DEVUELTA';
+              codigoRespuesta = e.identificador || (e.mensajes?.[0]?.identificador) || 'SIN_ID';
+              mensajeRespuesta = e.mensaje || e.mensajeSRI || (e.mensajes?.[0]?.mensaje) || e.message || 'Comprobante devuelto por el SRI';
+              informacionAdicional = e.informacionAdicional || (e.mensajes?.[0]?.informacionAdicional) || null;
+              errorTecnico = `SRI DEVUELTA [${codigoRespuesta}]: ${mensajeRespuesta}${informacionAdicional ? ' - ' + informacionAdicional : ''}`;
+              mensajesSri = [{ identificador: codigoRespuesta, mensaje: mensajeRespuesta, informacionAdicional: informacionAdicional || '', tipo: e.tipo || 'ERROR' }];
+              rawSriResponse = { estado: 'DEVUELTA', identificador: codigoRespuesta, mensaje: mensajeRespuesta, informacionAdicional, tipo: e.tipo || 'ERROR', claveAcceso: e.claveAcceso || invoiceData.infoTributaria.claveAcceso, errorStack, httpStatus, soapFault };
+              sriTimeout = false;
 
-          } else {
-            // Falla real de red, conexión rehusada o timeout SOAP
-            sriTimeout = true;
-            estadoFinalSri = 'PENDIENTE_ENVIO';
-            estadoRespuestaSRI = 'PENDIENTE_ENVIO';
-            mensajeRespuesta = 'No fue posible comunicarse con el SRI.';
-            informacionAdicional = e.message || 'Sin respuesta del servidor SRI';
-            errorTecnico = 'No fue posible comunicarse con el SRI.';
-            rawSriResponse = { error: errorTecnico, errorName: e.name || 'Error', errorStack, httpStatus, soapFault, response: e.response || null };
+            } else if (e.constructor?.name === 'SRIAutorizacionError' || e.estado === 'NO AUTORIZADO' || e.estado === 'RECHAZADA') {
+              estadoFinalSri = e.estado || 'NO_AUTORIZADO';
+              estadoRespuestaSRI = estadoFinalSri;
+              codigoRespuesta = e.identificador || (e.mensajes?.[0]?.identificador) || 'SIN_ID';
+              mensajeRespuesta = e.mensaje || e.mensajeSRI || (e.mensajes?.[0]?.mensaje) || e.message || 'Comprobante no autorizado por el SRI';
+              informacionAdicional = e.informacionAdicional || (e.mensajes?.[0]?.informacionAdicional) || null;
+              errorTecnico = `SRI ${estadoFinalSri} [${codigoRespuesta}]: ${mensajeRespuesta}${informacionAdicional ? ' - ' + informacionAdicional : ''}`;
+              mensajesSri = [{ identificador: codigoRespuesta, mensaje: mensajeRespuesta, informacionAdicional: informacionAdicional || '', tipo: e.tipo || 'ERROR' }];
+              rawSriResponse = { estado: estadoFinalSri, identificador: codigoRespuesta, mensaje: mensajeRespuesta, informacionAdicional, tipo: e.tipo || 'ERROR', comprobanteXml: e.comprobanteXml || null, errorStack, httpStatus, soapFault };
+              sriTimeout = false;
+
+            } else if (e.constructor?.name === 'SRIUnauthorizedError') {
+              estadoFinalSri = e.estado || 'NO_AUTORIZADO';
+              estadoRespuestaSRI = estadoFinalSri;
+              mensajeRespuesta = `SRI Autorización incompleta: estado ${estadoFinalSri}`;
+              errorTecnico = mensajeRespuesta;
+              rawSriResponse = { estado: estadoFinalSri, error: errorTecnico, errorStack, httpStatus, soapFault };
+              sriTimeout = false;
+
+            } else {
+              // Falla real de red, conexión rehusada o timeout SOAP
+              sriTimeout = true;
+              estadoFinalSri = 'PENDIENTE_ENVIO';
+              estadoRespuestaSRI = 'PENDIENTE_ENVIO';
+              mensajeRespuesta = 'No fue posible comunicarse con el SRI.';
+              informacionAdicional = e.message || 'Sin respuesta del servidor SRI';
+              errorTecnico = 'No fue posible comunicarse con el SRI.';
+              rawSriResponse = { error: errorTecnico, errorName: e.name || 'Error', errorStack, httpStatus, soapFault, response: e.response || null };
+            }
           }
         }
       }
