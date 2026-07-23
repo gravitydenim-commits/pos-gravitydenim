@@ -5,7 +5,58 @@ import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, setD
 import { validarCedula, validarRUC } from '../../utils/validators';
 import { TAX_CONFIG, calculateTotals } from '../../utils/taxes';
 
-// Los productos ahora vienen de Firebase/App.js como productsDB
+// Función única para obtener la imagen 3D predeterminada según el tipo o nombre del producto
+export function getFallback3DImage(prod) {
+  const text = `${prod?.tipoPrenda || ''} ${prod?.tipo || ''} ${prod?.categoria || ''} ${prod?.nombre || prod?.name || ''}`.toLowerCase();
+  const BASE = '/product-illustrations/3d/';
+
+  if (text.includes('polo')) return BASE + 'polo_cuello_3d.png';
+  if (text.includes('camiseta') && (text.includes('mujer') || text.includes('dama'))) return BASE + 'camiseta_mujer_3d.png';
+  if (text.includes('camiseta')) return BASE + 'camiseta_basica_3d.png';
+  if (text.includes('camisa') && text.includes('cuadros')) return BASE + 'camisa_cuadros_3d.png';
+  if (text.includes('camisa') && text.includes('gabardina')) return BASE + 'camisa_gabardina_3d.png';
+  if (text.includes('camisa') && (text.includes('larga') || text.includes('ml'))) return BASE + 'camisa_manga_larga_3d.png';
+  if (text.includes('camisa')) return BASE + 'camisa_manga_corta_3d.png';
+  if (text.includes('blusa')) return BASE + 'blusa_3d.png';
+  if (text.includes('chaqueta') && text.includes('gabardina')) return BASE + 'chaqueta_gabardina_3d.png';
+  if (text.includes('chaqueta') || text.includes('ch.')) return BASE + 'chaqueta_jean_3d.png';
+  if (text.includes('chaleco')) return BASE + 'chaleco_3d.png';
+  if (text.includes('overol')) return BASE + 'overol_3d.png';
+  if (text.includes('falda')) return BASE + 'falda_3d.png';
+  if (text.includes('vestido')) return BASE + 'vestido_3d.png';
+  if (text.includes('tactico') || text.includes('táctico') || text.includes('tactical')) return BASE + 'pantalon_tactico_3d.png';
+  if (text.includes('cargo')) return BASE + 'pantalon_cargo_3d.png';
+  if (text.includes('jogger')) return BASE + 'jogger_3d.png';
+  if (text.includes('short')) return BASE + 'short_3d.png';
+  if (text.includes('bermuda')) return BASE + 'bermuda_3d.png';
+  if (text.includes('semitubo') || text.includes('tubo')) return BASE + 'jean_semitubo_3d.png';
+  if (text.includes('baggy')) return BASE + 'jean_baggy_3d.png';
+  if (text.includes('niño') || text.includes('nino') || text.includes('p. niño')) return BASE + 'jean_nino_3d.png';
+  if (text.includes('jean') || text.includes('pantalon') || text.includes('pantalón') || text.includes('pant') || text.includes('ancho') || text.includes('levas')) return BASE + 'jean_recto_3d.png';
+
+  return BASE + 'default_3d.png';
+}
+
+// Función única para resolver la URL de imagen del producto (imageUrl, image, photoURL, imagen, ilustracion3d o fallback 3D)
+export function getProductImageUrl(prod) {
+  if (!prod) return '/product-illustrations/3d/default_3d.png';
+
+  const fields = [prod.imageUrl, prod.image, prod.photoURL, prod.imagen];
+  for (const rawUrl of fields) {
+    if (typeof rawUrl === 'string' && rawUrl.trim() !== '' && rawUrl !== 'undefined' && rawUrl !== 'null' && rawUrl !== 'N/A' && !rawUrl.includes('undefined')) {
+      if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('/')) {
+        return rawUrl;
+      }
+    }
+  }
+
+  const fileKey = prod.ilustracion3d || prod.ilustracion_3d;
+  if (typeof fileKey === 'string' && fileKey.trim() !== '' && fileKey !== 'undefined' && fileKey !== 'null') {
+    return `/product-illustrations/3d/${fileKey.endsWith('.png') ? fileKey : fileKey + '.png'}`;
+  }
+
+  return getFallback3DImage(prod);
+}
 
 export default function POSScreen({ issuers, productsDB, salesDB = [], recordSale, customersDB, recordCustomer }) {
   const [cart, setCart] = useState([]);
@@ -676,47 +727,8 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
               label = 'VESTIDO'; badgeBg = 'rgba(236, 72, 153, 0.15)'; badgeColor = '#f472b6';
             }
 
-            // 3. Prioridad de visualización de imagen (Imágenes 3D locales deterministas sin parpadeo)
-            const customUrl = prod.imageUrl || prod.image;
-            const validHttp = typeof customUrl === 'string' && (customUrl.startsWith('http://') || customUrl.startsWith('https://')) && !customUrl.includes('undefined');
-
-            let activeImage = null;
-            if (validHttp) {
-              activeImage = customUrl;
-            } else {
-              const fileKey = prod.ilustracion3d || prod.ilustracion_3d;
-              if (typeof fileKey === 'string' && fileKey.trim() !== '' && fileKey !== 'undefined' && fileKey !== 'null') {
-                activeImage = `/product-illustrations/3d/${fileKey.endsWith('.png') ? fileKey : fileKey + '.png'}`;
-              }
-            }
-
-            if (!activeImage) {
-              const BASE = '/product-illustrations/3d/';
-              if (tipoLower.includes('polo'))                                                                           activeImage = BASE + 'polo_cuello_3d.png';
-              else if (tipoLower.includes('camiseta') && (tipoLower.includes('mujer') || tipoLower.includes('dama')))   activeImage = BASE + 'camiseta_mujer_3d.png';
-              else if (tipoLower.includes('camiseta'))                                                                  activeImage = BASE + 'camiseta_basica_3d.png';
-              else if (tipoLower.includes('camisa') && tipoLower.includes('cuadros'))                                   activeImage = BASE + 'camisa_cuadros_3d.png';
-              else if (tipoLower.includes('camisa') && tipoLower.includes('gabardina'))                                 activeImage = BASE + 'camisa_gabardina_3d.png';
-              else if (tipoLower.includes('camisa') && (tipoLower.includes('larga') || tipoLower.includes('ml')))       activeImage = BASE + 'camisa_manga_larga_3d.png';
-              else if (tipoLower.includes('camisa'))                                                                    activeImage = BASE + 'camisa_manga_corta_3d.png';
-              else if (tipoLower.includes('blusa'))                                                                     activeImage = BASE + 'blusa_3d.png';
-              else if (tipoLower.includes('chaqueta') && tipoLower.includes('gabardina'))                               activeImage = BASE + 'chaqueta_gabardina_3d.png';
-              else if (tipoLower.includes('chaqueta') || tipoLower.includes('ch.'))                                     activeImage = BASE + 'chaqueta_jean_3d.png';
-              else if (tipoLower.includes('chaleco'))                                                                   activeImage = BASE + 'chaleco_3d.png';
-              else if (tipoLower.includes('overol'))                                                                    activeImage = BASE + 'overol_3d.png';
-              else if (tipoLower.includes('falda'))                                                                     activeImage = BASE + 'falda_3d.png';
-              else if (tipoLower.includes('vestido'))                                                                   activeImage = BASE + 'vestido_3d.png';
-              else if (tipoLower.includes('tactico') || tipoLower.includes('táctico') || tipoLower.includes('tactical')) activeImage = BASE + 'pantalon_tactico_3d.png';
-              else if (tipoLower.includes('cargo'))                                                                     activeImage = BASE + 'pantalon_cargo_3d.png';
-              else if (tipoLower.includes('jogger'))                                                                    activeImage = BASE + 'jogger_3d.png';
-              else if (tipoLower.includes('short'))                                                                     activeImage = BASE + 'short_3d.png';
-              else if (tipoLower.includes('bermuda'))                                                                   activeImage = BASE + 'bermuda_3d.png';
-              else if (tipoLower.includes('semitubo') || tipoLower.includes('tubo'))                                    activeImage = BASE + 'jean_semitubo_3d.png';
-              else if (tipoLower.includes('baggy'))                                                                     activeImage = BASE + 'jean_baggy_3d.png';
-              else if (tipoLower.includes('niño') || tipoLower.includes('nino') || tipoLower.includes('p. niño'))       activeImage = BASE + 'jean_nino_3d.png';
-              else if (tipoLower.includes('jean') || tipoLower.includes('pantalon') || tipoLower.includes('pantalón') || tipoLower.includes('pant') || tipoLower.includes('ancho') || tipoLower.includes('levas')) activeImage = BASE + 'jean_recto_3d.png';
-              else activeImage = BASE + 'default_3d.png';
-            }
+            // 3. Resolución de Imagen con getProductImageUrl y fallback onError
+            const activeImage = getProductImageUrl(prod);
 
             return (
               <div key={prod.id} className="product-card" onClick={() => addToCart(prod)}>
@@ -729,6 +741,10 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                     alt={prod.nombre || prod.name} 
                     className="product-card-image"
                     loading="lazy"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = getFallback3DImage(prod);
+                    }}
                   />
                 </div>
                 <div className="product-name">{prod.nombre || prod.name}</div>
