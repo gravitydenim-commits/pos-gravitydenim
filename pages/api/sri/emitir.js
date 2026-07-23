@@ -329,6 +329,11 @@ export default async function handler(req, res) {
         console.log(`[SRI BACKEND] Clave de Acceso: ${invoiceData.infoTributaria.claveAcceso}`);
         console.log(`[SRI BACKEND] ==========================================`);
 
+        let codigoRespuesta = null;
+        let mensajeRespuesta = null;
+        let informacionAdicional = null;
+        let estadoRespuestaSRI = isNotaVenta ? 'NOTA_DE_VENTA' : 'PENDIENTE_ENVIO';
+
         try {
           // 8.3 Enviar (validar) y Autorizar SRI (Red/Internet)
           console.log(`[SRI STEP 1/2] Enviando XML a Recepción SOAP...`);
@@ -340,39 +345,44 @@ export default async function handler(req, res) {
           console.log(`[SRI STEP 2/2] ✅ Respuesta Autorización SRI:`, authResult);
 
           estadoFinalSri = authResult.estadoAutorizacion || authResult.estado || 'AUTORIZADO';
+          estadoRespuestaSRI = estadoFinalSri;
+          mensajeRespuesta = 'Comprobante AUTORIZADO correctamente por el SRI';
           rawSriResponse = authResult;
           mensajesSri = authResult.mensajes || [];
 
         } catch (e) {
           console.error("Excepción en comunicación SOAP con el SRI:", e);
           errorStack = e.stack || null;
-          httpStatus = e.statusCode || e.status || e.response?.status || null;
+          httpStatus = e.statusCode || e.status || e.response?.status || 500;
           soapFault = e.soapFault || e.fault || null;
 
-          // Clasificar tipo de error según respuesta del SRI
           if (e.constructor?.name === 'SRIRejectedError' || e.estado === 'DEVUELTA') {
             estadoFinalSri = 'DEVUELTA';
-            const idMsg = e.identificador || 'SIN_ID';
-            const mainMsg = e.mensaje || e.mensajeSRI || e.message || 'Comprobante devuelto por el SRI';
-            const extraMsg = e.informacionAdicional || '';
-            errorTecnico = `SRI DEVUELTA [${idMsg}]: ${mainMsg}${extraMsg ? ' - ' + extraMsg : ''}`;
-            mensajesSri = [{ identificador: idMsg, mensaje: mainMsg, informacionAdicional: extraMsg, tipo: e.tipo || 'ERROR' }];
-            rawSriResponse = { estado: 'DEVUELTA', identificador: idMsg, mensaje: mainMsg, informacionAdicional: extraMsg, tipo: e.tipo || 'ERROR', claveAcceso: e.claveAcceso || invoiceData.infoTributaria.claveAcceso, errorStack, httpStatus, soapFault };
+            estadoRespuestaSRI = 'DEVUELTA';
+            codigoRespuesta = e.identificador || (e.mensajes?.[0]?.identificador) || 'SIN_ID';
+            mensajeRespuesta = e.mensaje || e.mensajeSRI || (e.mensajes?.[0]?.mensaje) || e.message || 'Comprobante devuelto por el SRI';
+            informacionAdicional = e.informacionAdicional || (e.mensajes?.[0]?.informacionAdicional) || null;
+            errorTecnico = `SRI DEVUELTA [${codigoRespuesta}]: ${mensajeRespuesta}${informacionAdicional ? ' - ' + informacionAdicional : ''}`;
+            mensajesSri = [{ identificador: codigoRespuesta, mensaje: mensajeRespuesta, informacionAdicional: informacionAdicional || '', tipo: e.tipo || 'ERROR' }];
+            rawSriResponse = { estado: 'DEVUELTA', identificador: codigoRespuesta, mensaje: mensajeRespuesta, informacionAdicional, tipo: e.tipo || 'ERROR', claveAcceso: e.claveAcceso || invoiceData.infoTributaria.claveAcceso, errorStack, httpStatus, soapFault };
             sriTimeout = false;
 
           } else if (e.constructor?.name === 'SRIAutorizacionError' || e.estado === 'NO AUTORIZADO' || e.estado === 'RECHAZADA') {
             estadoFinalSri = e.estado || 'NO_AUTORIZADO';
-            const idMsg = e.identificador || 'SIN_ID';
-            const mainMsg = e.mensaje || e.mensajeSRI || e.message || 'Comprobante no autorizado por el SRI';
-            const extraMsg = e.informacionAdicional || '';
-            errorTecnico = `SRI ${estadoFinalSri} [${idMsg}]: ${mainMsg}${extraMsg ? ' - ' + extraMsg : ''}`;
-            mensajesSri = [{ identificador: idMsg, mensaje: mainMsg, informacionAdicional: extraMsg, tipo: e.tipo || 'ERROR' }];
-            rawSriResponse = { estado: estadoFinalSri, identificador: idMsg, mensaje: mainMsg, informacionAdicional: extraMsg, tipo: e.tipo || 'ERROR', comprobanteXml: e.comprobanteXml || null, errorStack, httpStatus, soapFault };
+            estadoRespuestaSRI = estadoFinalSri;
+            codigoRespuesta = e.identificador || (e.mensajes?.[0]?.identificador) || 'SIN_ID';
+            mensajeRespuesta = e.mensaje || e.mensajeSRI || (e.mensajes?.[0]?.mensaje) || e.message || 'Comprobante no autorizado por el SRI';
+            informacionAdicional = e.informacionAdicional || (e.mensajes?.[0]?.informacionAdicional) || null;
+            errorTecnico = `SRI ${estadoFinalSri} [${codigoRespuesta}]: ${mensajeRespuesta}${informacionAdicional ? ' - ' + informacionAdicional : ''}`;
+            mensajesSri = [{ identificador: codigoRespuesta, mensaje: mensajeRespuesta, informacionAdicional: informacionAdicional || '', tipo: e.tipo || 'ERROR' }];
+            rawSriResponse = { estado: estadoFinalSri, identificador: codigoRespuesta, mensaje: mensajeRespuesta, informacionAdicional, tipo: e.tipo || 'ERROR', comprobanteXml: e.comprobanteXml || null, errorStack, httpStatus, soapFault };
             sriTimeout = false;
 
           } else if (e.constructor?.name === 'SRIUnauthorizedError') {
             estadoFinalSri = e.estado || 'NO_AUTORIZADO';
-            errorTecnico = `SRI Autorización incompleta: estado ${estadoFinalSri}`;
+            estadoRespuestaSRI = estadoFinalSri;
+            mensajeRespuesta = `SRI Autorización incompleta: estado ${estadoFinalSri}`;
+            errorTecnico = mensajeRespuesta;
             rawSriResponse = { estado: estadoFinalSri, error: errorTecnico, errorStack, httpStatus, soapFault };
             sriTimeout = false;
 
@@ -380,13 +390,10 @@ export default async function handler(req, res) {
             // Falla real de red, conexión rehusada o timeout SOAP
             sriTimeout = true;
             estadoFinalSri = 'PENDIENTE_ENVIO';
-            errorTecnico = e.message || 'Sin respuesta del servidor SRI';
-            if (e.errors) {
-              errorTecnico += ' | Errores: ' + (typeof e.errors === 'string' ? e.errors : JSON.stringify(e.errors));
-            }
-            if (e.response && e.response.mensajes) {
-              errorTecnico += ' | Mensajes SRI: ' + JSON.stringify(e.response.mensajes);
-            }
+            estadoRespuestaSRI = 'PENDIENTE_ENVIO';
+            mensajeRespuesta = 'No fue posible comunicarse con el SRI.';
+            informacionAdicional = e.message || 'Sin respuesta del servidor SRI';
+            errorTecnico = 'No fue posible comunicarse con el SRI.';
             rawSriResponse = { error: errorTecnico, errorName: e.name || 'Error', errorStack, httpStatus, soapFault, response: e.response || null };
           }
         }
@@ -415,6 +422,10 @@ export default async function handler(req, res) {
       xmlFirmado: signedXml || xmlUnsigned || 'NO_GENERADO',
       estadoLocal: sriTimeout ? 'TIMEOUT' : 'PROCESADO',
       estadoSri: estadoFinalSri || 'PENDIENTE_ENVIO',
+      estadoRespuestaSRI: estadoRespuestaSRI || estadoFinalSri || 'PENDIENTE_ENVIO',
+      codigoRespuesta: codigoRespuesta || null,
+      mensajeRespuesta: mensajeRespuesta || null,
+      informacionAdicional: informacionAdicional || null,
       respuestaSri: rawSriResponse || authResult || {},
       errorTecnico: errorTecnico || '',
       errorStack: errorStack || null,
@@ -466,6 +477,10 @@ export default async function handler(req, res) {
       claveAcceso: finalClaveAcceso,
       estadoVenta: 'FINALIZADA',
       estadoSri: estadoFinalSri || 'PENDIENTE_ENVIO', 
+      estadoRespuestaSRI: estadoRespuestaSRI || estadoFinalSri || 'PENDIENTE_ENVIO',
+      codigoRespuesta: codigoRespuesta || null,
+      mensajeRespuesta: mensajeRespuesta || null,
+      informacionAdicional: informacionAdicional || null,
       numeroAutorizacion: (authResult && authResult.numeroAutorizacion) || (authResult && authResult.estadoAutorizacion === 'AUTORIZADO' ? finalClaveAcceso : null) || null,
       fechaAutorizacion: (authResult && authResult.fechaAutorizacion && (typeof authResult.fechaAutorizacion === 'string' || authResult.fechaAutorizacion instanceof Date)) ? authResult.fechaAutorizacion.toString() : (authResult ? new Date().toISOString() : null),
       mensajesSri: mensajesSri.length > 0 ? mensajesSri : ((authResult && authResult.mensajes) || []),
@@ -480,6 +495,7 @@ export default async function handler(req, res) {
       createdAt: new Date().toISOString(),
       cajeroUid: decodedToken.uid || 'UNKNOWN',
       transactionId: transactionId,
+      vatIncluded,
       isNotaVenta: isNotaVenta
     });
 
@@ -510,7 +526,13 @@ export default async function handler(req, res) {
         success: false,
         claveAcceso: finalClaveAcceso,
         estado: 'ERROR_INTERNO',
+        estadoRespuestaSRI: 'ERROR_INTERNO',
+        codigoRespuesta: null,
+        mensajeRespuesta: errorTecnico || 'Error fatal en la generación de la factura.',
+        informacionAdicional: null,
         error: errorTecnico || 'Error fatal en la generación de la factura.',
+        soapFault,
+        httpStatus: 500,
         numeroComprobante: numeroComprobanteCompleto
       });
     }
@@ -520,7 +542,13 @@ export default async function handler(req, res) {
         success: false, 
         claveAcceso: finalClaveAcceso,
         estado: 'PENDIENTE_ENVIO',
-        error: `Fallo de conexión SOAP con el SRI: ${errorTecnico || 'Sin respuesta'}. Se guardó localmente en estado PENDIENTE_ENVIO.`,
+        estadoRespuestaSRI: 'PENDIENTE_ENVIO',
+        codigoRespuesta: null,
+        mensajeRespuesta: 'No fue posible comunicarse con el SRI.',
+        informacionAdicional: errorTecnico || null,
+        error: 'No fue posible comunicarse con el SRI.',
+        soapFault,
+        httpStatus: httpStatus || 504,
         numeroComprobante: numeroComprobanteCompleto
       });
     }
@@ -530,8 +558,14 @@ export default async function handler(req, res) {
         success: false,
         claveAcceso: finalClaveAcceso,
         estado: estadoFinalSri,
-        error: errorTecnico || `La factura fue ${estadoFinalSri} por el SRI.`,
+        estadoRespuestaSRI: estadoRespuestaSRI || estadoFinalSri,
+        codigoRespuesta,
+        mensajeRespuesta,
+        informacionAdicional,
+        error: errorTecnico || mensajeRespuesta || `La factura fue ${estadoFinalSri} por el SRI.`,
         mensajes: mensajesSri,
+        soapFault,
+        httpStatus: httpStatus || 400,
         numeroComprobante: numeroComprobanteCompleto,
         sriRawResponse: rawSriResponse
       });
@@ -541,6 +575,10 @@ export default async function handler(req, res) {
       success: true, 
       claveAcceso: finalClaveAcceso, 
       estado: estadoFinalSri,
+      estadoRespuestaSRI: estadoFinalSri,
+      codigoRespuesta: null,
+      mensajeRespuesta: 'Comprobante AUTORIZADO correctamente por el SRI',
+      informacionAdicional: null,
       mensajes: (authResult && authResult.mensajes) ? authResult.mensajes : [],
       numeroComprobante: isNotaVenta ? 'S/N' : numeroComprobanteCompleto
     });

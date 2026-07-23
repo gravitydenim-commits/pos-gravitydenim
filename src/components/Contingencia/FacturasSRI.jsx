@@ -96,32 +96,46 @@ export default function FacturasSRI() {
   const handleReenviar = async (venta) => {
     setProcesando(true);
     try {
-      console.log(`Intentando reenviar factura ${venta.id} al SRI...`);
-      const response = await fetch('/api/sri/emitir', {
+      const claveAcceso = venta.claveAcceso || venta.id;
+      console.log(`Intentando reenviar factura ${claveAcceso} al SRI...`);
+
+      const { getAuth } = await import('firebase/auth');
+      const auth = getAuth();
+      const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : '';
+
+      const response = await fetch('/api/sri/reintentar', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          cart: venta.items, 
-          customer: venta.customer, 
-          emisorId: venta.issuerId,
-          existingSecuencial: venta.secuencial // Pasamos el secuencial original
-        })
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ claveAcceso })
       });
 
       const sriData = await response.json();
 
-      if (sriData.estado === 'AUTORIZADO') {
-        // Actualizar en Firebase
-        await updateDoc(doc(db, 'ventas', venta.id), {
-          status: 'AUTORIZADO',
-          numeroComprobante: sriData.numeroComprobante
-        });
-        alert(`✅ Factura ${sriData.numeroComprobante} AUTORIZADA por el SRI.`);
+      if (response.ok && (sriData.estado === 'AUTORIZADO' || sriData.estadoSri === 'AUTORIZADO')) {
+        alert(`✅ Factura ${sriData.numeroComprobante || claveAcceso} AUTORIZADA por el SRI.`);
       } else {
-        throw new Error(sriData.message || 'La factura no fue autorizada en el reintento.');
+        // Formatear error exacto del SRI
+        const est = (sriData.estadoRespuestaSRI || sriData.estado || '').toUpperCase();
+        if (est === 'PENDIENTE_ENVIO' || est === 'CONTINGENCIA_LOCAL' || !response.ok && response.status === 504) {
+          alert('No fue posible comunicarse con el SRI.');
+        } else {
+          const cod = sriData.codigoRespuesta || sriData.mensajes?.[0]?.identificador || '';
+          const msg = sriData.mensajeRespuesta || sriData.mensajes?.[0]?.mensaje || sriData.error || 'Error en comprobante';
+          const info = sriData.informacionAdicional || sriData.mensajes?.[0]?.informacionAdicional || '';
+
+          const header = `SRI ${est}${cod ? ` [${cod}]` : ''}`;
+          const lines = [header, msg];
+          if (info && info.trim() !== '' && info.trim() !== 'Sin información adicional') {
+            lines.push(info.trim());
+          }
+          alert(lines.join('\n'));
+        }
       }
     } catch (error) {
-      alert(`⚠️ Fallo el reintento: ${error.message}`);
+      alert(`No fue posible comunicarse con el SRI.\nDetalle: ${error.message}`);
     } finally {
       setProcesando(false);
     }
@@ -419,11 +433,20 @@ export default function FacturasSRI() {
                </div>
              </div>
 
-             <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '6px', fontSize: '0.8rem' }}>
-               <div><b>Clave Acceso:</b> {selectedVenta.claveAcceso || selectedVenta.id}</div>
-               <div><b>Número Autorización:</b> {selectedVenta.numeroAutorizacion || 'N/A'}</div>
-               <div><b>Fecha Autorización:</b> {selectedVenta.fechaAutorizacion || 'N/A'}</div>
-             </div>
+              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '12px', borderRadius: '8px', fontSize: '0.82rem', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ color: 'var(--accent)', fontWeight: 'bold', marginBottom: '4px' }}>🔍 Información y Diagnóstico SRI</div>
+                <div><b>Estado Respuesta SRI:</b> <span style={{ color: selectedVenta.estadoSri === 'AUTORIZADO' ? '#34d399' : '#f87171', fontWeight: 'bold' }}>{selectedVenta.estadoRespuestaSRI || selectedVenta.estadoSri || selectedVenta.status || 'N/A'}</span></div>
+                <div><b>Código Respuesta:</b> {selectedVenta.codigoRespuesta || (selectedVenta.mensajesSri?.[0]?.identificador) || 'N/A'}</div>
+                <div><b>Mensaje Respuesta:</b> {selectedVenta.mensajeRespuesta || (selectedVenta.mensajesSri?.[0]?.mensaje) || selectedVenta.errorTecnico || 'N/A'}</div>
+                <div><b>Información Adicional:</b> {selectedVenta.informacionAdicional || (selectedVenta.mensajesSri?.[0]?.informacionAdicional) || 'N/A'}</div>
+                <div><b>SOAP Fault:</b> {selectedVenta.soapFault ? (typeof selectedVenta.soapFault === 'object' ? JSON.stringify(selectedVenta.soapFault) : String(selectedVenta.soapFault)) : 'Ninguno'}</div>
+                <div><b>HTTP Status:</b> {selectedVenta.httpStatus || '200'}</div>
+                <div style={{ marginTop: '8px', borderTop: '1px dashed rgba(255,255,255,0.1)', paddingTop: '6px' }}>
+                  <div><b>Clave Acceso:</b> {selectedVenta.claveAcceso || selectedVenta.id}</div>
+                  <div><b>Número Autorización:</b> {selectedVenta.numeroAutorizacion || 'N/A'}</div>
+                  <div><b>Fecha Autorización:</b> {selectedVenta.fechaAutorizacion || 'N/A'}</div>
+                </div>
+              </div>
 
              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
                <button onClick={() => handleReimprimirClick(selectedVenta)} style={{ padding: '8px 16px', background: 'rgba(255, 255, 255, 0.1)', color: 'white', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
