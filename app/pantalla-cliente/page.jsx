@@ -4,7 +4,8 @@ import '../../src/index.css';
 
 export default function PantallaCliente() {
   const [csState, setCsState] = useState({
-    status: 'idle', // 'idle' | 'checkout' | 'paid'
+    status: 'idle', // 'idle' | 'customer_review' | 'checkout' | 'paid'
+    customerData: null,
     total: 0,
     paymentMethod: 'EFECTIVO'
   });
@@ -66,7 +67,94 @@ export default function PantallaCliente() {
     );
   }
 
-  // 1. Idle (or Paid) view
+  // 1. Customer Review Mode (Llenado/Edición de datos del cliente en tiempo real)
+  if (csState.status === 'customer_review') {
+    const cData = csState.customerData || {};
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#0f172a', color: 'white', padding: '2.5rem' }}>
+        {/* Cabecera con Título y Subtítulo requeridos */}
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <img src="/logo.jpg" alt="Logo" style={{ height: '60px', marginBottom: '1.25rem', borderRadius: '10px' }} onError={(e) => e.target.style.display='none'} />
+          <h1 style={{ fontSize: '3rem', fontWeight: 'bold', color: '#38bdf8', margin: '0 0 0.5rem 0', letterSpacing: '-0.02em' }}>
+            Por favor, revise sus datos
+          </h1>
+          <p style={{ fontSize: '1.5rem', color: '#94a3b8', margin: 0, fontWeight: '400' }}>
+            Indique al vendedor si necesita corregir alguna información.
+          </p>
+        </div>
+
+        {/* Tarjeta de Confirmación de Datos del Cliente en Tiempo Real */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ 
+            width: '100%', 
+            maxWidth: '900px', 
+            background: 'rgba(30, 41, 59, 0.85)', 
+            borderRadius: '28px', 
+            border: '2px solid rgba(56, 189, 248, 0.4)', 
+            padding: '3rem', 
+            boxShadow: '0 25px 60px rgba(0,0,0,0.6)', 
+            backdropFilter: 'blur(16px)' 
+          }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.75rem' }}>
+              
+              {/* Nombres / Razón Social */}
+              <div style={{ gridColumn: '1 / -1', background: 'rgba(255,255,255,0.04)', padding: '1.5rem', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <span style={{ display: 'block', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#38bdf8', fontWeight: 'bold', marginBottom: '0.35rem' }}>
+                  Nombres / Razón Social
+                </span>
+                <span style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#ffffff', wordBreak: 'break-word' }}>
+                  {cData.nombre || '—'}
+                </span>
+              </div>
+
+              {/* Cédula o RUC */}
+              <div style={{ background: 'rgba(255,255,255,0.04)', padding: '1.5rem', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <span style={{ display: 'block', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#38bdf8', fontWeight: 'bold', marginBottom: '0.35rem' }}>
+                  {cData.tipoDocumento === 'RUC' ? 'RUC' : cData.tipoDocumento === 'CEDULA' ? 'Cédula' : 'Identificación'}
+                </span>
+                <span style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#38bdf8' }}>
+                  {cData.numeroIdentificacion || '—'}
+                </span>
+              </div>
+
+              {/* Teléfono */}
+              <div style={{ background: 'rgba(255,255,255,0.04)', padding: '1.5rem', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <span style={{ display: 'block', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#38bdf8', fontWeight: 'bold', marginBottom: '0.35rem' }}>
+                  Teléfono
+                </span>
+                <span style={{ fontSize: '1.6rem', color: '#ffffff', fontWeight: '500' }}>
+                  {cData.telefono || '—'}
+                </span>
+              </div>
+
+              {/* Dirección */}
+              <div style={{ gridColumn: '1 / -1', background: 'rgba(255,255,255,0.04)', padding: '1.5rem', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <span style={{ display: 'block', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#38bdf8', fontWeight: 'bold', marginBottom: '0.35rem' }}>
+                  Dirección
+                </span>
+                <span style={{ fontSize: '1.6rem', color: '#ffffff', wordBreak: 'break-word', fontWeight: '500' }}>
+                  {cData.direccion || '—'}
+                </span>
+              </div>
+
+              {/* Correo electrónico */}
+              <div style={{ gridColumn: '1 / -1', background: 'rgba(255,255,255,0.04)', padding: '1.5rem', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <span style={{ display: 'block', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#38bdf8', fontWeight: 'bold', marginBottom: '0.35rem' }}>
+                  Correo Electrónico
+                </span>
+                <span style={{ fontSize: '1.6rem', color: '#ffffff', wordBreak: 'break-word', fontWeight: '500' }}>
+                  {cData.correo || '—'}
+                </span>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Idle (or Paid) view
   if (csState.status === 'idle' || csState.status === 'paid') {
     return (
       <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white', textAlign: 'center', padding: '2rem' }}>
@@ -95,7 +183,7 @@ export default function PantallaCliente() {
     );
   }
 
-  // 2. Checkout view
+  // 3. Checkout view (Al momento del cobro)
   if (csState.status === 'checkout') {
     return (
       <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#0f172a', color: 'white' }}>
