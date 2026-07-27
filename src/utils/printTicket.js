@@ -1,4 +1,4 @@
-export const imprimirTicket = (issuerData, cartData, totalsData, customerData, claveAcceso, paymentMethod, transferRecipient, isNotaVenta, format = '80mm', isReprint = false) => {
+export const imprimirTicket = (issuerData, cartData, totalsData, customerData, claveAcceso, paymentMethod, transferRecipient, isNotaVenta, format = '80mm', isReprint = false, paymentDetails = null) => {
   console.log(`🖨️ Conectando con ticketera térmica formato ${format}...`);
   const is58 = format === '58mm';
   
@@ -206,8 +206,19 @@ export const imprimirTicket = (issuerData, cartData, totalsData, customerData, c
           
           <!-- Forma de Pago -->
           <div style="font-size: 9px;">
-            <div><b>FORMA DE PAGO:</b> ${paymentMethod === 'EFECTIVO' ? 'EFECTIVO' : 'SISTEMA FINANCIERO'}</div>
-            ${paymentMethod === 'TRANSFERENCIA' && transferRecipient ? `<div><b>DESTINATARIO:</b> ${transferRecipient}</div>` : ''}
+            <div><b>FORMA DE PAGO:</b></div>
+            ${paymentDetails && paymentDetails.payments && paymentDetails.payments.length > 0 ? 
+              paymentDetails.payments.map(p => `
+                <div style="margin-left: 4px; padding-top: 2px;">
+                  - ${p.method === 'EFECTIVO' ? 'EFECTIVO' : 'TRANSFERENCIA'} ${p.recipientName ? `(${p.recipientName})` : ''}: $${Number(p.amount).toFixed(2)}
+                  ${p.reference ? `<br/><span style="font-size:7.5px; color:#444; margin-left: 8px;">Ref: ${p.reference}</span>` : ''}
+                </div>
+              `).join('') : `
+                <div style="margin-left: 4px;">
+                  ${paymentMethod === 'EFECTIVO' ? 'EFECTIVO' : 'SISTEMA FINANCIERO'} ${transferRecipient ? `(${transferRecipient})` : ''}
+                </div>
+              `
+            }
           </div>
 
           <div class="divider"></div>

@@ -104,6 +104,87 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
   const [transferQrs, setTransferQrs] = useState({});
   const [liveIssuerDoc, setLiveIssuerDoc] = useState(null);
 
+  // --- MÚLTIPLES FORMAS DE PAGO (PAGO MIXTO / COMBINADO) ---
+  const [paymentsList, setPaymentsList] = useState([
+    {
+      id: 'pay-1',
+      method: 'EFECTIVO',
+      amount: 0,
+      recipientName: '',
+      recipientId: '',
+      bank: '',
+      reference: ''
+    }
+  ]);
+
+  // Sincronizar automáticamente el valor si solo hay 1 forma de pago
+  useEffect(() => {
+    setPaymentsList(prev => {
+      if (prev.length === 1) {
+        return [{ ...prev[0], amount: total }];
+      }
+      return prev;
+    });
+  }, [total]);
+
+  // Agregar una nueva línea de pago
+  const handleAddPaymentLine = () => {
+    setPaymentsList(prev => {
+      const currentPaid = prev.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+      const remaining = Math.max(0, Number((total - currentPaid).toFixed(2)));
+      return [
+        ...prev,
+        {
+          id: `pay-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          method: 'TRANSFERENCIA',
+          amount: remaining,
+          recipientName: 'Diana',
+          recipientId: 'Diana',
+          bank: '',
+          reference: ''
+        }
+      ];
+    });
+  };
+
+  // Actualizar un campo de una línea de pago
+  const handleUpdatePaymentLine = (id, field, value) => {
+    setPaymentsList(prev => prev.map(p => {
+      if (p.id !== id) return p;
+      const updated = { ...p, [field]: value };
+      if (field === 'method' && value === 'EFECTIVO') {
+        updated.recipientName = '';
+        updated.recipientId = '';
+        updated.bank = '';
+        updated.reference = '';
+      }
+      if (field === 'recipientName') {
+        const found = users.find(u => (u.name || '').toLowerCase().includes(value.toLowerCase()));
+        updated.recipientId = found ? found.id : value;
+      }
+      return updated;
+    }));
+  };
+
+  // Eliminar una línea de pago
+  const handleRemovePaymentLine = (id) => {
+    setPaymentsList(prev => {
+      if (prev.length <= 1) return prev;
+      return prev.filter(p => p.id !== id);
+    });
+  };
+
+  // Cálculo de Pagos y Saldo Pendiente
+  const totalPagado = useMemo(() => {
+    return Number(paymentsList.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0).toFixed(2));
+  }, [paymentsList]);
+
+  const saldoPendiente = useMemo(() => {
+    return Number((total - totalPagado).toFixed(2));
+  }, [total, totalPagado]);
+
+  const isPaymentValid = Math.abs(saldoPendiente) < 0.01 && total > 0;
+
   // Escuchar en tiempo real el emisor seleccionado para mantener sincronizados los secuenciales entre dispositivos
   useEffect(() => {
     if (!selectedIssuer) {
@@ -1178,127 +1259,224 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
               </label>
             </div>
 
-            {/* NOTA DE VENTA BOTON */}
-            <div style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+            {/* BOTONES DIVIDIDOS: NOTA DE VENTA Y AÑADIR FORMA DE PAGO */}
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', marginBottom: '0.75rem' }}>
               <button 
+                type="button"
                 onClick={() => setIsNotaVenta(!isNotaVenta)}
                 style={{ 
-                  width: '100%',
-                  padding: '10px', 
+                  flex: 1,
+                  padding: '8px 10px', 
                   borderRadius: '8px', 
                   border: `2px solid ${isNotaVenta ? 'var(--warning)' : 'var(--panel-border)'}`,
                   background: isNotaVenta ? 'rgba(255, 152, 0, 0.2)' : 'transparent',
                   color: isNotaVenta ? 'var(--warning)' : 'var(--text-muted)',
-                  fontWeight: isNotaVenta ? 'bold' : 'normal',
+                  fontWeight: isNotaVenta ? 'bold' : '500',
+                  fontSize: '0.8rem',
                   cursor: 'pointer',
                   display: 'flex',
                   justifyContent: 'center',
                   alignItems: 'center',
-                  gap: '0.5rem',
+                  gap: '0.35rem',
                   transition: 'all 0.2s'
                 }}
               >
-                📝 {isNotaVenta ? 'MODO NOTA DE VENTA (Activo)' : 'Emitir como Nota de Venta (Inactivo)'}
+                📝 {isNotaVenta ? 'Nota de venta (ON)' : 'Nota de venta'}
+              </button>
+
+              <button 
+                type="button"
+                onClick={handleAddPaymentLine}
+                style={{ 
+                  flex: 1.2,
+                  padding: '8px 10px', 
+                  borderRadius: '8px', 
+                  border: '1px solid var(--accent)',
+                  background: 'rgba(59, 130, 246, 0.12)',
+                  color: 'var(--accent)',
+                  fontWeight: 'bold',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  transition: 'all 0.2s'
+                }}
+              >
+                ➕ Añadir forma de pago
               </button>
             </div>
 
-            {/* MÉTODO DE PAGO */}
-            <div style={{ padding: '0.5rem 0', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <button 
-                type="button"
-                onClick={() => setPaymentMethod('EFECTIVO')}
-                style={{ 
-                  flex: 1, 
-                  padding: '8px', 
-                  borderRadius: '8px', 
-                  border: `2px solid ${paymentMethod === 'EFECTIVO' ? 'var(--success)' : 'var(--panel-border)'}`,
-                  background: paymentMethod === 'EFECTIVO' ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
-                  color: 'var(--text-main)',
-                  fontWeight: paymentMethod === 'EFECTIVO' ? 'bold' : 'normal',
-                  cursor: 'pointer'
-                }}
-              >
-                💵 Efectivo
-              </button>
-              <button 
-                type="button"
-                onClick={() => setPaymentMethod('TRANSFERENCIA')}
-                style={{ 
-                  flex: 1, 
-                  padding: '8px', 
-                  borderRadius: '8px', 
-                  border: `2px solid ${paymentMethod === 'TRANSFERENCIA' ? 'var(--success)' : 'var(--panel-border)'}`,
-                  background: paymentMethod === 'TRANSFERENCIA' ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
-                  color: 'var(--text-main)',
-                  fontWeight: paymentMethod === 'TRANSFERENCIA' ? 'bold' : 'normal',
-                  cursor: 'pointer'
-                }}
-              >
-                🏦 Transferencia
-              </button>
-            </div>
+            {/* SECCIÓN DINÁMICA DE FORMAS DE PAGO */}
+            <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              {paymentsList.map((payment) => (
+                <div 
+                  key={payment.id} 
+                  style={{ 
+                    background: 'rgba(255, 255, 255, 0.03)', 
+                    border: '1px solid var(--panel-border)', 
+                    borderRadius: '8px', 
+                    padding: '0.65rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {/* Selector de Método */}
+                    <select
+                      value={payment.method}
+                      onChange={(e) => handleUpdatePaymentLine(payment.id, 'method', e.target.value)}
+                      style={{
+                        flex: 1,
+                        padding: '6px 8px',
+                        borderRadius: '6px',
+                        background: 'var(--input-bg)',
+                        border: '1px solid var(--panel-border)',
+                        color: 'var(--text-main)',
+                        fontSize: '0.82rem',
+                        fontWeight: '600'
+                      }}
+                    >
+                      <option value="EFECTIVO">💵 Efectivo</option>
+                      <option value="TRANSFERENCIA">🏦 Transferencia</option>
+                    </select>
 
-            {paymentMethod === 'TRANSFERENCIA' && (
-              <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--panel-border)', display: 'flex', flexDirection: 'column', gap: '8px', color: 'white' }}>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Cuenta que recibió la transferencia *</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '3px' }}>
-                    {['Diana', 'Fabian', 'Edgar', 'Amparito'].map((name) => (
+                    {/* Input de Valor */}
+                    <div style={{ position: 'relative', width: '100px' }}>
+                      <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: '0.8rem' }}>$</span>
+                      <input 
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={payment.amount}
+                        onChange={(e) => handleUpdatePaymentLine(payment.id, 'amount', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '6px 8px 6px 20px',
+                          borderRadius: '6px',
+                          background: 'var(--input-bg)',
+                          border: '1px solid var(--panel-border)',
+                          color: 'var(--text-main)',
+                          fontSize: '0.85rem',
+                          fontWeight: 'bold',
+                          textAlign: 'right',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+
+                    {/* Botón Eliminar Fila */}
+                    {paymentsList.length > 1 && (
                       <button
                         type="button"
-                        key={name}
-                        onClick={() => {
-                          setTransferRecipient(name);
-                          const found = users.find(u => (u.name || '').toLowerCase().includes(name.toLowerCase()));
-                          if (found) {
-                            setTransferRecipientId(found.id);
-                          } else {
-                            setTransferRecipientId(name);
-                          }
-                        }}
+                        onClick={() => handleRemovePaymentLine(payment.id)}
                         style={{
-                          padding: '8px',
+                          background: 'rgba(239, 68, 68, 0.15)',
+                          border: '1px solid rgba(239, 68, 68, 0.3)',
+                          color: '#f87171',
                           borderRadius: '6px',
-                          border: `2px solid ${transferRecipient === name ? '#3b82f6' : 'var(--panel-border)'}`,
-                          background: transferRecipient === name ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                          color: transferRecipient === name ? '#3b82f6' : 'var(--text-main)',
-                          fontWeight: transferRecipient === name ? 'bold' : 'normal',
+                          padding: '6px',
                           cursor: 'pointer',
-                          fontSize: '0.85rem'
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
                         }}
+                        title="Eliminar forma de pago"
                       >
-                        {name}
+                        <Trash2 size={15} />
                       </button>
-                    ))}
+                    )}
                   </div>
-                </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Banco:</label>
-                    <input 
-                      type="text" 
-                      placeholder="Ej. Pichincha"
-                      value={transferBank}
-                      onChange={(e) => setTransferBank(e.target.value)}
-                      style={{ padding: '6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white', fontSize: '0.85rem' }}
-                    />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Referencia:</label>
-                    <input 
-                      type="text" 
-                      placeholder="No. Documento/Ref"
-                      value={transferReference}
-                      onChange={(e) => setTransferReference(e.target.value)}
-                      style={{ padding: '6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white', fontSize: '0.85rem' }}
-                    />
-                  </div>
-                </div>
+                  {/* Campos adicionales si es TRANSFERENCIA */}
+                  {payment.method === 'TRANSFERENCIA' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem', paddingTop: '0.5rem', borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
+                      <div>
+                        <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Cuenta destino *</label>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '4px' }}>
+                          {['Diana', 'Fabian', 'Edgar', 'Amparito'].map((name) => (
+                            <button
+                              type="button"
+                              key={name}
+                              onClick={() => handleUpdatePaymentLine(payment.id, 'recipientName', name)}
+                              style={{
+                                padding: '5px 2px',
+                                borderRadius: '4px',
+                                border: `1px solid ${payment.recipientName === name ? '#3b82f6' : 'var(--panel-border)'}`,
+                                background: payment.recipientName === name ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                                color: payment.recipientName === name ? '#60a5fa' : 'var(--text-muted)',
+                                fontWeight: payment.recipientName === name ? 'bold' : 'normal',
+                                cursor: 'pointer',
+                                fontSize: '0.75rem'
+                              }}
+                            >
+                              {name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
 
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                        <input 
+                          type="text" 
+                          placeholder="Banco (ej. Pichincha)"
+                          value={payment.bank || ''}
+                          onChange={(e) => handleUpdatePaymentLine(payment.id, 'bank', e.target.value)}
+                          style={{ padding: '5px 8px', borderRadius: '4px', border: '1px solid var(--panel-border)', background: 'var(--input-bg)', color: 'var(--text-main)', fontSize: '0.78rem' }}
+                        />
+                        <input 
+                          type="text" 
+                          placeholder="No. Documento / Ref"
+                          value={payment.reference || ''}
+                          onChange={(e) => handleUpdatePaymentLine(payment.id, 'reference', e.target.value)}
+                          style={{ padding: '5px 8px', borderRadius: '4px', border: '1px solid var(--panel-border)', background: 'var(--input-bg)', color: 'var(--text-main)', fontSize: '0.78rem' }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* RESUMEN DE PAGOS Y SALDO PENDIENTE */}
+            <div style={{ 
+              background: 'rgba(15, 23, 42, 0.6)', 
+              border: '1px solid var(--panel-border)', 
+              borderRadius: '8px', 
+              padding: '0.75rem', 
+              marginBottom: '1rem',
+              fontSize: '0.85rem'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Total venta:</span>
+                <span style={{ fontWeight: 'bold', color: 'var(--text-main)' }}>${total.toFixed(2)}</span>
               </div>
-            )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Total distribuido:</span>
+                <span style={{ fontWeight: 'bold', color: '#60a5fa' }}>${totalPagado.toFixed(2)}</span>
+              </div>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                paddingTop: '4px', 
+                borderTop: '1px dashed var(--panel-border)',
+                fontWeight: 'bold',
+                color: isPaymentValid ? '#34d399' : (saldoPendiente > 0 ? '#f59e0b' : '#f87171')
+              }}>
+                <span>Saldo pendiente:</span>
+                <span>${saldoPendiente.toFixed(2)}</span>
+              </div>
+              {!isPaymentValid && cart.length > 0 && (
+                <div style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '6px', textAlign: 'center', fontWeight: '500' }}>
+                  {saldoPendiente > 0 
+                    ? `⚠️ Falta distribuir $${saldoPendiente.toFixed(2)} en las formas de pago.` 
+                    : `⚠️ El monto pagado excede el total por $${Math.abs(saldoPendiente).toFixed(2)}.`}
+                </div>
+              )}
+            </div>
 
             {/* TOTALES */}
             <div className="summary-row">
@@ -1325,12 +1503,13 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
             {/* BOTONES DE PAGO */}
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button 
-                className={`btn-primary ${(!selectedIssuer || cart.length === 0) ? 'disabled' : ''}`} 
+                className={`btn-primary ${(!selectedIssuer || cart.length === 0 || !isPaymentValid) ? 'disabled' : ''}`} 
                 onClick={() => handleCheckout(false)}
-                disabled={cart.length === 0}
+                disabled={cart.length === 0 || !selectedIssuer || !isPaymentValid}
                 style={{
                   flex: 1, 
-                  opacity: (cart.length === 0 || !selectedIssuer) ? 0.5 : 1,
+                  opacity: (cart.length === 0 || !selectedIssuer || !isPaymentValid) ? 0.4 : 1,
+                  cursor: (cart.length === 0 || !selectedIssuer || !isPaymentValid) ? 'not-allowed' : 'pointer',
                   display: 'flex', 
                   alignItems: 'center', 
                   justifyContent: 'center', 
@@ -1339,17 +1518,17 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                   color: 'var(--text-main)'
                 }}
               >
-                <CreditCard size={20} />
                 Solo Pagar
               </button>
 
               <button 
-                className={`btn-success ${(!selectedIssuer || cart.length === 0) ? 'disabled' : ''}`} 
+                className={`btn-success ${(!selectedIssuer || cart.length === 0 || !isPaymentValid) ? 'disabled' : ''}`} 
                 onClick={() => handleCheckout(true)}
-                disabled={cart.length === 0}
+                disabled={cart.length === 0 || !selectedIssuer || !isPaymentValid}
                 style={{
                   flex: 2, 
-                  opacity: (cart.length === 0 || !selectedIssuer) ? 0.5 : 1,
+                  opacity: (cart.length === 0 || !selectedIssuer || !isPaymentValid) ? 0.4 : 1,
+                  cursor: (cart.length === 0 || !selectedIssuer || !isPaymentValid) ? 'not-allowed' : 'pointer',
                   display: 'flex', 
                   alignItems: 'center', 
                   justifyContent: 'center', 
