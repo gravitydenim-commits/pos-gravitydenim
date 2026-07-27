@@ -14,9 +14,34 @@ const { virtualfs } = require('pdfmake');
 const urlResolver = new URLResolver(virtualfs);
 const printer = new PdfPrinter(fonts, virtualfs, urlResolver);
 
+const bwipjs = require('bwip-js');
+
 async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAcceso, numeroComprobante, fecha }) {
   return new Promise(async (resolve, reject) => {
     try {
+      // 1. Determinar ambiente real a partir del dígito 24 de la Clave de Acceso o variable de entorno
+      const isProd = (claveAcceso && claveAcceso.length === 49 && claveAcceso[23] === '2') || process.env.SRI_ENVIRONMENT === 'production';
+      const ambienteTexto = isProd ? 'PRODUCCIÓN' : 'PRUEBAS';
+
+      // 2. Generar Código de Barras Code 128 en PNG Base64
+      let barcodeDataUrl = null;
+      try {
+        const barcodeBuffer = await bwipjs.toBuffer({
+          bcid: 'code128',
+          text: claveAcceso,
+          scale: 3,
+          height: 11,
+          includetext: false
+        });
+        barcodeDataUrl = `data:image/png;base64,${barcodeBuffer.toString('base64')}`;
+      } catch (errBar) {
+        console.error("Error generando código de barras Code 128:", errBar);
+      }
+
+      // Formatear fecha de autorización
+      const fechaAuthObj = fecha ? (fecha.seconds ? new Date(fecha.seconds * 1000) : new Date(fecha)) : new Date();
+      const fechaAuthStr = fechaAuthObj.toLocaleString('es-EC');
+
       const docDefinition = {
         defaultStyle: {
           font: 'Helvetica',
@@ -35,7 +60,7 @@ async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAc
                     table: {
                       widths: ['*'],
                       body: [
-                        [{ text: issuerData.name, bold: true, fontSize: 10, border: [true, true, true, false] }],
+                        [{ text: issuerData.name || issuerData.razonSocial || 'EMISOR', bold: true, fontSize: 10, border: [true, true, true, false] }],
                         [{ text: `Dirección Matriz: ${issuerData.direccionMatriz || 'N/A'}`, border: [true, false, true, false] }],
                         [{ text: `Contribuyente Especial: ${issuerData.contribuyenteEspecial || 'N/A'}`, border: [true, false, true, false] }],
                         [{ text: `OBLIGADO A LLEVAR CONTABILIDAD: ${issuerData.obligadoContabilidad ? 'SI' : 'NO'}`, border: [true, false, true, true] }]
@@ -57,14 +82,14 @@ async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAc
                           { text: `R.U.C.: ${issuerData.ruc}`, fontSize: 12, bold: true },
                           { text: 'FACTURA', fontSize: 14, bold: true, margin: [0, 5, 0, 5] },
                           { text: `No. ${numeroComprobante}`, bold: true },
-                          { text: 'NÚMERO DE AUTORIZACIÓN:', margin: [0, 10, 0, 2] },
-                          { text: claveAcceso, fontSize: 9 },
-                          { text: `FECHA Y HORA DE AUTORIZACIÓN: ${fecha.toLocaleString('es-EC')}`, margin: [0, 10, 0, 5] },
-                          { text: 'AMBIENTE: PRUEBAS', margin: [0, 0, 0, 2] },
-                          { text: 'EMISIÓN: NORMAL', margin: [0, 0, 0, 10] },
+                          { text: 'NÚMERO DE AUTORIZACIÓN:', margin: [0, 8, 0, 2] },
+                          { text: claveAcceso, fontSize: 8.5, bold: true },
+                          { text: `FECHA Y HORA DE AUTORIZACIÓN: ${fechaAuthStr}`, margin: [0, 8, 0, 4] },
+                          { text: `AMBIENTE: ${ambienteTexto}`, bold: true, margin: [0, 0, 0, 2] },
+                          { text: 'EMISIÓN: NORMAL', margin: [0, 0, 0, 6] },
                           { text: 'CLAVE DE ACCESO', bold: true },
-                          { text: '[Código de Barras - Clave de Acceso]', alignment: 'center', color: 'gray', margin: [0, 10, 0, 5] },
-                          { text: claveAcceso, fontSize: 8, alignment: 'center', margin: [0, 2, 0, 0] }
+                          ...(barcodeDataUrl ? [{ image: barcodeDataUrl, width: 220, alignment: 'center', margin: [0, 6, 0, 3] }] : []),
+                          { text: claveAcceso, fontSize: 7.5, alignment: 'center', margin: [0, 2, 0, 0] }
                         ],
                         border: [true, true, true, true],
                         padding: [10, 10, 10, 10]
