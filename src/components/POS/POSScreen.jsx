@@ -109,7 +109,9 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     return calculateTotals(cart, vatIncluded, isNotaVenta);
   }, [cart, vatIncluded, isNotaVenta]);
 
-  // --- MÚLTIPLES FORMAS DE PAGO (PAGO MIXTO / COMBINADO) ---
+  // --- MODO DE PAGO: NORMAL vs MIXTO ---
+  const [isMixedPayment, setIsMixedPayment] = useState(false);
+
   const [paymentsList, setPaymentsList] = useState([
     {
       id: 'pay-1',
@@ -122,17 +124,67 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     }
   ]);
 
-  // Sincronizar automáticamente el valor si solo hay 1 forma de pago
-  useEffect(() => {
-    setPaymentsList(prev => {
-      if (prev.length === 1) {
-        return [{ ...prev[0], amount: total }];
+  // Activar modo mixto (desde el botón "+ Añadir forma de pago")
+  const handleActivateMixedPayment = () => {
+    setIsMixedPayment(true);
+    const half1 = Number((total / 2).toFixed(2));
+    const half2 = Number((total - half1).toFixed(2));
+    setPaymentsList([
+      {
+        id: `pay-1-${Date.now()}`,
+        method: 'EFECTIVO',
+        amount: half1,
+        recipientName: '',
+        recipientId: '',
+        bank: '',
+        reference: ''
+      },
+      {
+        id: `pay-2-${Date.now()}`,
+        method: 'TRANSFERENCIA',
+        amount: half2,
+        recipientName: transferRecipient || 'Diana',
+        recipientId: transferRecipientId || 'Diana',
+        bank: transferBank || '',
+        reference: transferReference || ''
       }
-      return prev;
-    });
-  }, [total]);
+    ]);
+  };
 
-  // Agregar una nueva línea de pago
+  // Cancelar modo mixto y volver a forma única normal
+  const handleCancelMixedPayment = () => {
+    setIsMixedPayment(false);
+    setPaymentsList([
+      {
+        id: 'pay-1',
+        method: paymentMethod,
+        amount: total,
+        recipientName: transferRecipient,
+        recipientId: transferRecipientId,
+        bank: transferBank,
+        reference: transferReference
+      }
+    ]);
+  };
+
+  // Sincronizar automáticamente el valor en modo normal o de 1 sola forma
+  useEffect(() => {
+    if (!isMixedPayment) {
+      setPaymentsList([
+        {
+          id: 'pay-1',
+          method: paymentMethod,
+          amount: total,
+          recipientName: transferRecipient,
+          recipientId: transferRecipientId,
+          bank: transferBank,
+          reference: transferReference
+        }
+      ]);
+    }
+  }, [total, paymentMethod, transferRecipient, transferRecipientId, transferBank, transferReference, isMixedPayment]);
+
+  // Agregar una nueva línea de pago en modo mixto
   const handleAddPaymentLine = () => {
     setPaymentsList(prev => {
       const currentPaid = prev.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
@@ -143,8 +195,8 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
           id: `pay-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           method: 'TRANSFERENCIA',
           amount: remaining,
-          recipientName: 'Diana',
-          recipientId: 'Diana',
+          recipientName: transferRecipient || 'Diana',
+          recipientId: transferRecipientId || 'Diana',
           bank: '',
           reference: ''
         }
@@ -181,14 +233,23 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
 
   // Cálculo de Pagos y Saldo Pendiente
   const totalPagado = useMemo(() => {
+    if (!isMixedPayment) return total;
     return Number(paymentsList.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0).toFixed(2));
-  }, [paymentsList]);
+  }, [isMixedPayment, total, paymentsList]);
 
   const saldoPendiente = useMemo(() => {
+    if (!isMixedPayment) return 0;
     return Number((total - totalPagado).toFixed(2));
-  }, [total, totalPagado]);
+  }, [isMixedPayment, total, totalPagado]);
 
-  const isPaymentValid = Math.abs(saldoPendiente) < 0.01 && total > 0;
+  const isPaymentValid = useMemo(() => {
+    if (total <= 0) return false;
+    if (!isMixedPayment) {
+      if (paymentMethod === 'TRANSFERENCIA' && !transferRecipient) return false;
+      return true;
+    }
+    return Math.abs(saldoPendiente) < 0.01;
+  }, [total, isMixedPayment, paymentMethod, transferRecipient, saldoPendiente]);
 
   // Escuchar en tiempo real el emisor seleccionado para mantener sincronizados los secuenciales entre dispositivos
   useEffect(() => {
@@ -688,20 +749,60 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     // Generar Llave de Idempotencia única para esta transacción
     const transactionId = crypto.randomUUID ? crypto.randomUUID() : `tx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    // Construir paymentDetails estructurado (Simplificado sin MIXTO)
-    const paymentDetails = {
-      method: paymentMethod,
-      cashAmount: paymentMethod === 'EFECTIVO' ? total : 0,
-      transfers: paymentMethod === 'TRANSFERENCIA' ? [
-        {
-          recipientId: transferRecipientId,
-          recipientName: transferRecipient,
-          amount: total,
-          bank: transferBank,
-          reference: transferReference
-        }
-      ] : []
-    };
+    // Construir paymentDetails estructurado según si es Normal o Pago Mixto
+    let paymentDetails;
+    if (!isMixedPayment) {
+      paymentDetails = {
+        isMixed: false,
+        method: paymentMethod,
+        payments: [
+          {
+            method: paymentMethod,
+            amount: total,
+            recipientName: paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null,
+            recipientId: paymentMethod === 'TRANSFERENCIA' ? transferRecipientId : null,
+            bank: paymentMethod === 'TRANSFERENCIA' ? transferBank : null,
+            reference: paymentMethod === 'TRANSFERENCIA' ? transferReference : null
+          }
+        ],
+        cashAmount: paymentMethod === 'EFECTIVO' ? total : 0,
+        transfers: paymentMethod === 'TRANSFERENCIA' ? [
+          {
+            recipientId: transferRecipientId || transferRecipient,
+            recipientName: transferRecipient,
+            amount: total,
+            bank: transferBank,
+            reference: transferReference
+          }
+        ] : []
+      };
+    } else {
+      paymentDetails = {
+        isMixed: true,
+        method: 'MIXTO',
+        payments: paymentsList.map(p => ({
+          method: p.method,
+          amount: Number(p.amount) || 0,
+          recipientName: p.method === 'TRANSFERENCIA' ? p.recipientName : null,
+          recipientId: p.method === 'TRANSFERENCIA' ? p.recipientId : null,
+          bank: (p.method === 'TRANSFERENCIA' || p.method === 'CHEQUE') ? p.bank : null,
+          reference: (p.method === 'TRANSFERENCIA' || p.method === 'CHEQUE') ? p.reference : null
+        })),
+        cashAmount: paymentsList.filter(p => p.method === 'EFECTIVO').reduce((s, p) => s + (Number(p.amount) || 0), 0),
+        transfers: paymentsList.filter(p => p.method === 'TRANSFERENCIA').map(p => ({
+          recipientId: p.recipientId || p.recipientName,
+          recipientName: p.recipientName,
+          amount: Number(p.amount) || 0,
+          bank: p.bank,
+          reference: p.reference
+        })),
+        checks: paymentsList.filter(p => p.method === 'CHEQUE').map(p => ({
+          amount: Number(p.amount) || 0,
+          bank: p.bank,
+          reference: p.reference
+        }))
+      };
+    }
 
     const totalsData = { subtotal, baseImponible, ivaAmount, total };
 
@@ -1259,224 +1360,421 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
               </label>
             </div>
 
-            {/* BOTONES DIVIDIDOS: NOTA DE VENTA Y AÑADIR FORMA DE PAGO */}
-            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', marginBottom: '0.75rem' }}>
-              <button 
-                type="button"
-                onClick={() => setIsNotaVenta(!isNotaVenta)}
-                style={{ 
-                  flex: 1,
-                  padding: '8px 10px', 
-                  borderRadius: '8px', 
-                  border: `2px solid ${isNotaVenta ? 'var(--warning)' : 'var(--panel-border)'}`,
-                  background: isNotaVenta ? 'rgba(255, 152, 0, 0.2)' : 'transparent',
-                  color: isNotaVenta ? 'var(--warning)' : 'var(--text-muted)',
-                  fontWeight: isNotaVenta ? 'bold' : '500',
-                  fontSize: '0.8rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  transition: 'all 0.2s'
-                }}
-              >
-                📝 {isNotaVenta ? 'Nota de venta (ON)' : 'Nota de venta'}
-              </button>
+            {/* --- SECCIÓN DE MÉTODOS DE PAGO --- */}
+            {!isMixedPayment ? (
+              /* MODO NORMAL (PAGO ÚNICO) */
+              <>
+                <div style={{ padding: '0.5rem 0', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <button 
+                    type="button"
+                    onClick={() => setPaymentMethod('EFECTIVO')}
+                    style={{ 
+                      flex: 1, 
+                      padding: '8px', 
+                      borderRadius: '8px', 
+                      border: `2px solid ${paymentMethod === 'EFECTIVO' ? 'var(--success)' : 'var(--panel-border)'}`,
+                      background: paymentMethod === 'EFECTIVO' ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
+                      color: 'var(--text-main)',
+                      fontWeight: paymentMethod === 'EFECTIVO' ? 'bold' : 'normal',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    💵 Efectivo
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setPaymentMethod('TRANSFERENCIA')}
+                    style={{ 
+                      flex: 1, 
+                      padding: '8px', 
+                      borderRadius: '8px', 
+                      border: `2px solid ${paymentMethod === 'TRANSFERENCIA' ? 'var(--success)' : 'var(--panel-border)'}`,
+                      background: paymentMethod === 'TRANSFERENCIA' ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
+                      color: 'var(--text-main)',
+                      fontWeight: paymentMethod === 'TRANSFERENCIA' ? 'bold' : 'normal',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🏦 Transferencia
+                  </button>
+                </div>
 
-              <button 
-                type="button"
-                onClick={handleAddPaymentLine}
-                style={{ 
-                  flex: 1.2,
-                  padding: '8px 10px', 
-                  borderRadius: '8px', 
-                  border: '1px solid var(--accent)',
-                  background: 'rgba(59, 130, 246, 0.12)',
-                  color: 'var(--accent)',
-                  fontWeight: 'bold',
-                  fontSize: '0.8rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  transition: 'all 0.2s'
-                }}
-              >
-                ➕ Añadir forma de pago
-              </button>
-            </div>
-
-            {/* SECCIÓN DINÁMICA DE FORMAS DE PAGO */}
-            <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-              {paymentsList.map((payment) => (
-                <div 
-                  key={payment.id} 
-                  style={{ 
-                    background: 'rgba(255, 255, 255, 0.03)', 
-                    border: '1px solid var(--panel-border)', 
-                    borderRadius: '8px', 
-                    padding: '0.65rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.5rem'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    {/* Selector de Método */}
-                    <select
-                      value={payment.method}
-                      onChange={(e) => handleUpdatePaymentLine(payment.id, 'method', e.target.value)}
-                      style={{
-                        flex: 1,
-                        padding: '6px 8px',
-                        borderRadius: '6px',
-                        background: 'var(--input-bg)',
-                        border: '1px solid var(--panel-border)',
-                        color: 'var(--text-main)',
-                        fontSize: '0.82rem',
-                        fontWeight: '600'
-                      }}
-                    >
-                      <option value="EFECTIVO">💵 Efectivo</option>
-                      <option value="TRANSFERENCIA">🏦 Transferencia</option>
-                    </select>
-
-                    {/* Input de Valor */}
-                    <div style={{ position: 'relative', width: '100px' }}>
-                      <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: '0.8rem' }}>$</span>
-                      <input 
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0.00"
-                        value={payment.amount}
-                        onChange={(e) => handleUpdatePaymentLine(payment.id, 'amount', e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '6px 8px 6px 20px',
-                          borderRadius: '6px',
-                          background: 'var(--input-bg)',
-                          border: '1px solid var(--panel-border)',
-                          color: 'var(--text-main)',
-                          fontSize: '0.85rem',
-                          fontWeight: 'bold',
-                          textAlign: 'right',
-                          outline: 'none'
-                        }}
-                      />
+                {paymentMethod === 'TRANSFERENCIA' && (
+                  <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--panel-border)', display: 'flex', flexDirection: 'column', gap: '8px', color: 'white' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Cuenta que recibió la transferencia *</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '3px' }}>
+                        {['Diana', 'Fabian', 'Edgar', 'Amparito'].map((name) => (
+                          <button
+                            type="button"
+                            key={name}
+                            onClick={() => {
+                              setTransferRecipient(name);
+                              const found = users.find(u => (u.name || '').toLowerCase().includes(name.toLowerCase()));
+                              setTransferRecipientId(found ? found.id : name);
+                            }}
+                            style={{
+                              padding: '8px',
+                              borderRadius: '6px',
+                              border: `2px solid ${transferRecipient === name ? '#3b82f6' : 'var(--panel-border)'}`,
+                              background: transferRecipient === name ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                              color: transferRecipient === name ? '#3b82f6' : 'var(--text-main)',
+                              fontWeight: transferRecipient === name ? 'bold' : 'normal',
+                              cursor: 'pointer',
+                              fontSize: '0.85rem'
+                            }}
+                          >
+                            {name}
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
-                    {/* Botón Eliminar Fila */}
-                    {paymentsList.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemovePaymentLine(payment.id)}
-                        style={{
-                          background: 'rgba(239, 68, 68, 0.15)',
-                          border: '1px solid rgba(239, 68, 68, 0.3)',
-                          color: '#f87171',
-                          borderRadius: '6px',
-                          padding: '6px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                        title="Eliminar forma de pago"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    )}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Banco:</label>
+                        <input 
+                          type="text" 
+                          placeholder="Ej. Pichincha"
+                          value={transferBank}
+                          onChange={(e) => setTransferBank(e.target.value)}
+                          style={{ padding: '6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white', fontSize: '0.85rem' }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Referencia:</label>
+                        <input 
+                          type="text" 
+                          placeholder="No. Documento/Ref"
+                          value={transferReference}
+                          onChange={(e) => setTransferReference(e.target.value)}
+                          style={{ padding: '6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white', fontSize: '0.85rem' }}
+                        />
+                      </div>
+                    </div>
                   </div>
+                )}
 
-                  {/* Campos adicionales si es TRANSFERENCIA */}
-                  {payment.method === 'TRANSFERENCIA' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem', paddingTop: '0.5rem', borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
-                      <div>
-                        <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Cuenta destino *</label>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '4px' }}>
-                          {['Diana', 'Fabian', 'Edgar', 'Amparito'].map((name) => (
-                            <button
-                              type="button"
-                              key={name}
-                              onClick={() => handleUpdatePaymentLine(payment.id, 'recipientName', name)}
-                              style={{
-                                padding: '5px 2px',
-                                borderRadius: '4px',
-                                border: `1px solid ${payment.recipientName === name ? '#3b82f6' : 'var(--panel-border)'}`,
-                                background: payment.recipientName === name ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
-                                color: payment.recipientName === name ? '#60a5fa' : 'var(--text-muted)',
-                                fontWeight: payment.recipientName === name ? 'bold' : 'normal',
-                                cursor: 'pointer',
-                                fontSize: '0.75rem'
-                              }}
-                            >
-                              {name}
-                            </button>
-                          ))}
+                {/* BOTONES ACCIÓN INFERIOR: NOTA DE VENTA Y AÑADIR FORMA DE PAGO */}
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', marginBottom: '0.75rem' }}>
+                  <button 
+                    type="button"
+                    onClick={() => setIsNotaVenta(!isNotaVenta)}
+                    style={{ 
+                      flex: 1,
+                      padding: '8px 10px', 
+                      borderRadius: '8px', 
+                      border: `2px solid ${isNotaVenta ? 'var(--warning)' : 'var(--panel-border)'}`,
+                      background: isNotaVenta ? 'rgba(255, 152, 0, 0.2)' : 'transparent',
+                      color: isNotaVenta ? 'var(--warning)' : 'var(--text-muted)',
+                      fontWeight: isNotaVenta ? 'bold' : '500',
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    📝 {isNotaVenta ? 'Nota de venta (ON)' : 'Nota de venta'}
+                  </button>
+
+                  <button 
+                    type="button"
+                    onClick={handleActivateMixedPayment}
+                    style={{ 
+                      flex: 1.2,
+                      padding: '8px 10px', 
+                      borderRadius: '8px', 
+                      border: '1px solid var(--accent)',
+                      background: 'rgba(59, 130, 246, 0.12)',
+                      color: 'var(--accent)',
+                      fontWeight: 'bold',
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    ➕ Añadir forma de pago
+                  </button>
+                </div>
+              </>
+            ) : (
+              /* MODO PAGO MIXTO */
+              <>
+                <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '8px', padding: '0.55rem 0.75rem', marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 'bold', color: '#60a5fa' }}>🔀 Modo Pago Mixto</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{paymentsList.length} formas distribuidas</span>
+                </div>
+
+                {/* NOTA DE VENTA TOGGLE EN MODO MIXTO */}
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <button 
+                    type="button"
+                    onClick={() => setIsNotaVenta(!isNotaVenta)}
+                    style={{ 
+                      width: '100%',
+                      padding: '8px', 
+                      borderRadius: '8px', 
+                      border: `2px solid ${isNotaVenta ? 'var(--warning)' : 'var(--panel-border)'}`,
+                      background: isNotaVenta ? 'rgba(255, 152, 0, 0.2)' : 'transparent',
+                      color: isNotaVenta ? 'var(--warning)' : 'var(--text-muted)',
+                      fontWeight: isNotaVenta ? 'bold' : '500',
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      gap: '0.35rem'
+                    }}
+                  >
+                    📝 {isNotaVenta ? 'Nota de Venta Activada' : 'Emitir como Nota de Venta'}
+                  </button>
+                </div>
+
+                {/* SECCIÓN DINÁMICA DE LÍNEAS DE PAGO */}
+                <div style={{ marginBottom: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  {paymentsList.map((payment) => (
+                    <div 
+                      key={payment.id} 
+                      style={{ 
+                        background: 'rgba(255, 255, 255, 0.03)', 
+                        border: '1px solid var(--panel-border)', 
+                        borderRadius: '8px', 
+                        padding: '0.65rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.5rem'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        {/* Selector de Método: EFECTIVO, TRANSFERENCIA, CHEQUE */}
+                        <select
+                          value={payment.method}
+                          onChange={(e) => handleUpdatePaymentLine(payment.id, 'method', e.target.value)}
+                          style={{
+                            flex: 1,
+                            padding: '6px 8px',
+                            borderRadius: '6px',
+                            background: 'var(--input-bg)',
+                            border: '1px solid var(--panel-border)',
+                            color: 'var(--text-main)',
+                            fontSize: '0.82rem',
+                            fontWeight: '600'
+                          }}
+                        >
+                          <option value="EFECTIVO">💵 Efectivo</option>
+                          <option value="TRANSFERENCIA">🏦 Transferencia</option>
+                          <option value="CHEQUE">📜 Cheque</option>
+                        </select>
+
+                        {/* Input de Valor */}
+                        <div style={{ position: 'relative', width: '100px' }}>
+                          <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: '0.8rem' }}>$</span>
+                          <input 
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="0.00"
+                            value={payment.amount}
+                            onChange={(e) => handleUpdatePaymentLine(payment.id, 'amount', e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '6px 8px 6px 20px',
+                              borderRadius: '6px',
+                              background: 'var(--input-bg)',
+                              border: '1px solid var(--panel-border)',
+                              color: 'var(--text-main)',
+                              fontSize: '0.85rem',
+                              fontWeight: 'bold',
+                              textAlign: 'right',
+                              outline: 'none'
+                            }}
+                          />
                         </div>
+
+                        {/* Botón Eliminar Fila */}
+                        {paymentsList.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePaymentLine(payment.id)}
+                            style={{
+                              background: 'rgba(239, 68, 68, 0.15)',
+                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                              color: '#f87171',
+                              borderRadius: '6px',
+                              padding: '6px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                            title="Eliminar forma de pago"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                        <input 
-                          type="text" 
-                          placeholder="Banco (ej. Pichincha)"
-                          value={payment.bank || ''}
-                          onChange={(e) => handleUpdatePaymentLine(payment.id, 'bank', e.target.value)}
-                          style={{ padding: '5px 8px', borderRadius: '4px', border: '1px solid var(--panel-border)', background: 'var(--input-bg)', color: 'var(--text-main)', fontSize: '0.78rem' }}
-                        />
-                        <input 
-                          type="text" 
-                          placeholder="No. Documento / Ref"
-                          value={payment.reference || ''}
-                          onChange={(e) => handleUpdatePaymentLine(payment.id, 'reference', e.target.value)}
-                          style={{ padding: '5px 8px', borderRadius: '4px', border: '1px solid var(--panel-border)', background: 'var(--input-bg)', color: 'var(--text-main)', fontSize: '0.78rem' }}
-                        />
-                      </div>
+                      {/* Campos adicionales si es TRANSFERENCIA */}
+                      {payment.method === 'TRANSFERENCIA' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem', paddingTop: '0.5rem', borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
+                          <div>
+                            <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Cuenta destino *</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '4px' }}>
+                              {['Diana', 'Fabian', 'Edgar', 'Amparito'].map((name) => (
+                                <button
+                                  type="button"
+                                  key={name}
+                                  onClick={() => handleUpdatePaymentLine(payment.id, 'recipientName', name)}
+                                  style={{
+                                    padding: '5px 2px',
+                                    borderRadius: '4px',
+                                    border: `1px solid ${payment.recipientName === name ? '#3b82f6' : 'var(--panel-border)'}`,
+                                    background: payment.recipientName === name ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                                    color: payment.recipientName === name ? '#60a5fa' : 'var(--text-muted)',
+                                    fontWeight: payment.recipientName === name ? 'bold' : 'normal',
+                                    cursor: 'pointer',
+                                    fontSize: '0.75rem'
+                                  }}
+                                >
+                                  {name}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                            <input 
+                              type="text" 
+                              placeholder="Banco (ej. Pichincha)"
+                              value={payment.bank || ''}
+                              onChange={(e) => handleUpdatePaymentLine(payment.id, 'bank', e.target.value)}
+                              style={{ padding: '5px 8px', borderRadius: '4px', border: '1px solid var(--panel-border)', background: 'var(--input-bg)', color: 'var(--text-main)', fontSize: '0.78rem' }}
+                            />
+                            <input 
+                              type="text" 
+                              placeholder="No. Documento / Ref"
+                              value={payment.reference || ''}
+                              onChange={(e) => handleUpdatePaymentLine(payment.id, 'reference', e.target.value)}
+                              style={{ padding: '5px 8px', borderRadius: '4px', border: '1px solid var(--panel-border)', background: 'var(--input-bg)', color: 'var(--text-main)', fontSize: '0.78rem' }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Campos adicionales si es CHEQUE */}
+                      {payment.method === 'CHEQUE' && (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '0.25rem', paddingTop: '0.5rem', borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
+                          <input 
+                            type="text" 
+                            placeholder="Banco Emisor del Cheque"
+                            value={payment.bank || ''}
+                            onChange={(e) => handleUpdatePaymentLine(payment.id, 'bank', e.target.value)}
+                            style={{ padding: '5px 8px', borderRadius: '4px', border: '1px solid var(--panel-border)', background: 'var(--input-bg)', color: 'var(--text-main)', fontSize: '0.78rem' }}
+                          />
+                          <input 
+                            type="text" 
+                            placeholder="No. Cheque / Referencia"
+                            value={payment.reference || ''}
+                            onChange={(e) => handleUpdatePaymentLine(payment.id, 'reference', e.target.value)}
+                            style={{ padding: '5px 8px', borderRadius: '4px', border: '1px solid var(--panel-border)', background: 'var(--input-bg)', color: 'var(--text-main)', fontSize: '0.78rem' }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* BOTONES DE CONTROL DE MODO MIXTO */}
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  <button
+                    type="button"
+                    onClick={handleAddPaymentLine}
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--accent)',
+                      background: 'rgba(59, 130, 246, 0.15)',
+                      color: '#60a5fa',
+                      fontWeight: 'bold',
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.35rem'
+                    }}
+                  >
+                    ➕ Otra forma
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelMixedPayment}
+                    style={{
+                      flex: 1.2,
+                      padding: '8px',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(239, 68, 68, 0.4)',
+                      background: 'rgba(239, 68, 68, 0.12)',
+                      color: '#f87171',
+                      fontWeight: 'bold',
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.35rem'
+                    }}
+                  >
+                    ❌ Cancelar pago mixto
+                  </button>
+                </div>
+
+                {/* RESUMEN DE PAGOS Y SALDO PENDIENTE */}
+                <div style={{ 
+                  background: 'rgba(15, 23, 42, 0.6)', 
+                  border: '1px solid var(--panel-border)', 
+                  borderRadius: '8px', 
+                  padding: '0.75rem', 
+                  marginBottom: '1rem',
+                  fontSize: '0.85rem'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Total venta:</span>
+                    <span style={{ fontWeight: 'bold', color: 'var(--text-main)' }}>${total.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Total distribuido:</span>
+                    <span style={{ fontWeight: 'bold', color: '#60a5fa' }}>${totalPagado.toFixed(2)}</span>
+                  </div>
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    paddingTop: '4px', 
+                    borderTop: '1px dashed var(--panel-border)',
+                    fontWeight: 'bold',
+                    color: isPaymentValid ? '#34d399' : (saldoPendiente > 0 ? '#f59e0b' : '#f87171')
+                  }}>
+                    <span>Saldo pendiente:</span>
+                    <span>${saldoPendiente.toFixed(2)}</span>
+                  </div>
+                  {!isPaymentValid && cart.length > 0 && (
+                    <div style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '6px', textAlign: 'center', fontWeight: '500' }}>
+                      {saldoPendiente > 0 
+                        ? `⚠️ Falta distribuir $${saldoPendiente.toFixed(2)} en las formas de pago.` 
+                        : `⚠️ El monto pagado excede el total por $${Math.abs(saldoPendiente).toFixed(2)}.`}
                     </div>
                   )}
                 </div>
-              ))}
-            </div>
-
-            {/* RESUMEN DE PAGOS Y SALDO PENDIENTE */}
-            <div style={{ 
-              background: 'rgba(15, 23, 42, 0.6)', 
-              border: '1px solid var(--panel-border)', 
-              borderRadius: '8px', 
-              padding: '0.75rem', 
-              marginBottom: '1rem',
-              fontSize: '0.85rem'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Total venta:</span>
-                <span style={{ fontWeight: 'bold', color: 'var(--text-main)' }}>${total.toFixed(2)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Total distribuido:</span>
-                <span style={{ fontWeight: 'bold', color: '#60a5fa' }}>${totalPagado.toFixed(2)}</span>
-              </div>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                paddingTop: '4px', 
-                borderTop: '1px dashed var(--panel-border)',
-                fontWeight: 'bold',
-                color: isPaymentValid ? '#34d399' : (saldoPendiente > 0 ? '#f59e0b' : '#f87171')
-              }}>
-                <span>Saldo pendiente:</span>
-                <span>${saldoPendiente.toFixed(2)}</span>
-              </div>
-              {!isPaymentValid && cart.length > 0 && (
-                <div style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '6px', textAlign: 'center', fontWeight: '500' }}>
-                  {saldoPendiente > 0 
-                    ? `⚠️ Falta distribuir $${saldoPendiente.toFixed(2)} en las formas de pago.` 
-                    : `⚠️ El monto pagado excede el total por $${Math.abs(saldoPendiente).toFixed(2)}.`}
-                </div>
-              )}
-            </div>
+              </>
+            )}
 
             {/* TOTALES */}
             <div className="summary-row">
