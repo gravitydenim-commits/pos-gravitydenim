@@ -466,10 +466,11 @@ export default function ConfiguracionGeneral() {
                 >
                   <option value="" disabled>-- Seleccione Perfil Fiscal --</option>
                   {emisoresDB.map(emisor => {
-                    const displayName = emisor.nombreComercial || emisor.razonSocial || emisor.name || `Perfil (${emisor.id})`;
+                    const nombreTitular = emisor.razonSocial || emisor.name || `Perfil (${emisor.id})`;
+                    const nombreComercialText = (emisor.nombreComercial && emisor.nombreComercial !== nombreTitular) ? ` [${emisor.nombreComercial}]` : '';
                     return (
                       <option key={emisor.id} value={emisor.id}>
-                        {displayName} {emisor.ruc ? `(RUC: ${emisor.ruc})` : ''}
+                        {nombreTitular} {emisor.ruc ? `(RUC: ${emisor.ruc})` : ''}{nombreComercialText}
                       </option>
                     );
                   })}

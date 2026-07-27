@@ -1009,9 +1009,14 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
               style={{ background: 'var(--input-bg)', color: 'var(--text-main)', border: 'none', outline: 'none' }}
             >
               <option value="" disabled style={{ background: 'var(--bg-color)', color: 'var(--text-main)' }}>-- Seleccione Emisor (Hermano) --</option>
-              {issuers.map(issuer => (
-                <option key={issuer.id} value={issuer.id} style={{ background: 'var(--bg-color)', color: 'var(--text-main)' }}>{issuer.name} (RUC: {issuer.ruc.slice(-4)})</option>
-              ))}
+              {issuers.map(issuer => {
+                const nombreTitular = issuer.razonSocial || issuer.name || `Emisor (${issuer.id})`;
+                return (
+                  <option key={issuer.id} value={issuer.id} style={{ background: 'var(--bg-color)', color: 'var(--text-main)' }}>
+                    {nombreTitular} (RUC: {issuer.ruc})
+                  </option>
+                );
+              })}
             </select>
           </div>
         </div>
