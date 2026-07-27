@@ -253,11 +253,11 @@ export default function ConfiguracionGeneral() {
         localStorage.setItem('emisor_config', currentSelection);
       }
 
-      // Llenar datos (solo si no se está editando activamente)
+      // Llenar datos desde la base de datos de emisores
       const existing = emisoresDB.find(i => i.id === currentSelection);
       if (existing) {
-        const estab = existing.estab || existing.establecimiento || '001';
-        const ptoEmi = existing.ptoEmi || existing.puntoEmision || '001';
+        const estab = (existing.estab || existing.establecimiento || '001').padStart(3, '0');
+        const ptoEmi = (existing.ptoEmi || existing.puntoEmision || '001').padStart(3, '0');
         const secMap = existing.secuenciales || {};
         const secSri = secMap[`${estab}_${ptoEmi}`] !== undefined ? secMap[`${estab}_${ptoEmi}`] : (existing.secuencial || 1);
         const secNv = secMap[`${estab}_${ptoEmi}_NV`] !== undefined ? secMap[`${estab}_${ptoEmi}_NV`] : 1;
@@ -265,19 +265,19 @@ export default function ConfiguracionGeneral() {
 
         setFormData(prev => ({
           ...prev,
-          ruc: prev.ruc || existing.ruc || '', 
-          nombre: prev.nombre || existing.name || existing.nombreComercial || existing.razonSocial || '',
-          direccion: prev.direccion || existing.direccionMatriz || '',
-          direccionEstablecimiento: prev.direccionEstablecimiento || existing.direccionEstablecimiento || existing.direccionMatriz || '',
-          correo: prev.correo || existing.correo || '',
+          ruc: existing.ruc || prev.ruc || '', 
+          nombre: existing.name || existing.nombreComercial || existing.razonSocial || prev.nombre || '',
+          direccion: existing.direccionMatriz || prev.direccion || '',
+          direccionEstablecimiento: existing.direccionEstablecimiento || existing.direccionMatriz || prev.direccionEstablecimiento || '',
+          correo: existing.correo || prev.correo || '',
           obligadoContabilidad: existing.obligadoContabilidad !== undefined ? existing.obligadoContabilidad : prev.obligadoContabilidad,
           passwordP12: prev.passwordP12 || '********',
-          fileName: prev.fileName || existing.p12Name || '',
-          estab: prev.estab || estab,
-          ptoEmi: prev.ptoEmi || ptoEmi,
-          secuencialSRI: prev.secuencialSRI || String(secSri),
-          secuencialNV: prev.secuencialNV || String(secNv),
-          bloquearSecuencialAuto: prev.bloquearSecuencialAuto !== undefined ? prev.bloquearSecuencialAuto : bloqAuto
+          fileName: existing.p12Name || prev.fileName || '',
+          estab: estab,
+          ptoEmi: ptoEmi,
+          secuencialSRI: String(secSri),
+          secuencialNV: String(secNv),
+          bloquearSecuencialAuto: bloqAuto
         }));
       }
     }
@@ -290,8 +290,8 @@ export default function ConfiguracionGeneral() {
     localStorage.setItem('emisor_config', issuerId);
     
     const existing = emisoresDB.find(i => i.id === issuerId);
-    const estab = existing?.estab || existing?.establecimiento || '001';
-    const ptoEmi = existing?.ptoEmi || existing?.puntoEmision || '001';
+    const estab = String(existing?.estab || existing?.establecimiento || '001').padStart(3, '0');
+    const ptoEmi = String(existing?.ptoEmi || existing?.puntoEmision || '001').padStart(3, '0');
     const secMap = existing?.secuenciales || {};
     const secSri = secMap[`${estab}_${ptoEmi}`] !== undefined ? secMap[`${estab}_${ptoEmi}`] : (existing?.secuencial || 1);
     const secNv = secMap[`${estab}_${ptoEmi}_NV`] !== undefined ? secMap[`${estab}_${ptoEmi}_NV`] : 1;
