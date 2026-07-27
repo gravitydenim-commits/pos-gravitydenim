@@ -531,7 +531,8 @@ export default async function handler(req, res) {
       cajeroUid: decodedToken.uid || 'UNKNOWN',
       transactionId: transactionId,
       vatIncluded,
-      isNotaVenta: isNotaVenta
+      isNotaVenta: isNotaVenta,
+      paymentDetails: req.body.paymentDetails || null
     });
 
     console.log('--- COMPROBANTE DATA QUE SE GUARDARÁ EN FIRESTORE ---');
@@ -581,7 +582,8 @@ export default async function handler(req, res) {
             },
             claveAcceso: finalClaveAcceso,
             numeroComprobante: numeroComprobanteCompleto,
-            fecha: new Date()
+            fecha: new Date(),
+            paymentDetails: req.body.paymentDetails || null
           });
 
           const xmlContent = (authResult && (authResult.comprobante || authResult.xmlAutorizado)) || signedXml || '';

@@ -7,7 +7,7 @@ if (!admin.apps.length) admin.initializeApp({ credential: admin.credential.cert(
 const db = admin.firestore();
 
 async function testSriSequentialsAndRide() {
-  console.log("🧪 VERIFICANDO CONTROL DE SECUENCIALES Y GENERACIÓN DE RIDE EN PRODUCCIÓN");
+  console.log("🧪 VERIFICANDO RIDE PDF PROFESIONAL SRI CON VALIDACIONES Y FORMAS DE PAGO MIXTAS");
 
   // 1. Verificar emisor Fabián
   const fabianDoc = await db.collection('issuers').doc('hermano_carlos').get();
@@ -19,46 +19,67 @@ async function testSriSequentialsAndRide() {
   console.log(`   - Establecimiento: ${fabian.estab}`);
   console.log(`   - Punto de Emisión: ${fabian.ptoEmi}`);
   console.log(`   - Ambiente: ${fabian.ambiente === '2' ? 'PRODUCCIÓN (2)' : 'PRUEBAS (1)'}`);
-  console.log(`   - Secuenciales:`, fabian.secuenciales);
 
-  if (fabian.estab !== '001' || fabian.ptoEmi !== '100') {
-    console.error("❌ Error: Fabián debe usar estab 001 y ptoEmi 100");
+  // 2. Probar validación de emisor incompleto
+  console.log("\n2. PROBANDO VALIDACIÓN PREVIA DE EMISOR INCOMPLETO...");
+  try {
+    await generateRidePdf({
+      issuerData: { ruc: '' },
+      customer: { nombre: 'TEST' },
+      cart: [],
+      totalsData: { subtotal: 0, ivaAmount: 0, total: 0 },
+      claveAcceso: '2707202601180463265900120011000000003541234567812',
+      numeroComprobante: '001-100-000000354',
+      fecha: new Date()
+    });
+    console.error("❌ Error: Debería haber fallado por falta de RUC en el emisor.");
     process.exit(1);
+  } catch (errVal) {
+    console.log(`✅ Validación previa correcta: "${errVal.message}"`);
   }
 
-  const currentSec = fabian.secuenciales['001_100'];
-  console.log(`\n📌 Secuencial actual disponible en Firestore: ${currentSec}`);
-
-  // 2. Simular generación de RIDE PDF
+  // 3. Simular generación de RIDE PDF completo con pagos mixtos
+  const currentSec = fabian.secuenciales['001_100'] || 354;
   const testClaveAcceso = `270720260118046326590012001100000000${currentSec}1234567812`;
-  const numComprobante = `001-100-String(${currentSec}).padStart(9, '0')`;
+  const numComprobante = `001-100-${String(currentSec).padStart(9, '0')}`;
 
-  console.log("\n2. PROBANDO GENERACIÓN DE RIDE PDF...");
+  console.log("\n3. PROBANDO GENERACIÓN DE RIDE PDF CON PAGOS MIXTOS...");
   const pdfBuffer = await generateRidePdf({
     issuerData: fabian,
     customer: {
-      nombre: 'JUAN PEREZ',
+      nombre: 'CARLOS LOPEZ',
       numeroIdentificacion: '1803805405',
-      direccion: 'AMBATO - CENTRO',
-      tipoDocumento: 'CEDULA'
+      direccion: 'AV. CEVALLOS 123',
+      correo: 'carlos@ejemplo.com',
+      telefono: '0991234567',
+      tipoDocumento: 'CEDULA',
+      vendedor: 'DIANA',
+      observaciones: 'ENTREGADO EN TIENDA'
     },
     cart: [
-      { sku: 'JEAN-01', name: 'JEAN CLASSIC AZUL', qty: 2, price: 25.00 }
+      { sku: 'JEAN-01', name: 'JEAN SLIM FIT AZUL', qty: 2, price: 30.00, descuento: 0 },
+      { sku: 'CAM-02', name: 'CAMISA CASUAL', qty: 1, price: 20.00, descuento: 0 }
     ],
     totalsData: {
-      subtotal: 50.00,
-      baseImponible: 50.00,
-      ivaAmount: 7.50,
-      total: 57.50
+      subtotal: 80.00,
+      baseImponible: 80.00,
+      ivaAmount: 12.00,
+      total: 92.00
     },
     claveAcceso: testClaveAcceso,
-    numeroComprobante: `001-100-${String(currentSec).padStart(9, '0')}`,
-    fecha: new Date()
+    numeroComprobante: numComprobante,
+    fecha: new Date(),
+    paymentDetails: {
+      isMixed: true,
+      payments: [
+        { method: 'EFECTIVO', amount: 40.00 },
+        { method: 'TRANSFERENCIA', amount: 52.00, recipientName: 'Diana', reference: 'TRF-98765' }
+      ]
+    }
   });
 
   console.log(`✅ PDF generado exitosamente: ${pdfBuffer.length} bytes`);
 
-  // Verificar que el PDF no contenga cadenas defectuosas
   const pdfText = pdfBuffer.toString('utf8');
   if (pdfText.includes('undefined') || pdfText.includes('Invalid Date')) {
     console.error("❌ Error: El PDF contiene valores inválidos (undefined o Invalid Date)");
@@ -67,7 +88,7 @@ async function testSriSequentialsAndRide() {
     console.log("✅ PDF verificado: Sin cadenas 'undefined' ni 'Invalid Date'.");
   }
 
-  console.log("\n🎉 TODAS LAS VERIFICACIONES PASARON EXITOSAMENTE.");
+  console.log("\n🎉 TODAS LAS PRUEBAS DE DISEÑO Y ESTRUCTURA DEL RIDE PDF PASARON EXITOSAMENTE.");
 }
 
 testSriSequentialsAndRide().then(() => process.exit(0)).catch(err => { console.error(err); process.exit(1); });

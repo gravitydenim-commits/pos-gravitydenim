@@ -58,7 +58,8 @@ export default async function handler(req, res) {
       },
       claveAcceso,
       numeroComprobante: ventaData.numeroComprobante,
-      fecha: ventaData.fechaTransaccion ? new Date(ventaData.fechaTransaccion) : new Date()
+      fecha: ventaData.fechaTransaccion ? new Date(ventaData.fechaTransaccion) : new Date(),
+      paymentDetails: ventaData.paymentDetails || null
     });
 
     res.setHeader('Content-Type', 'application/pdf');
