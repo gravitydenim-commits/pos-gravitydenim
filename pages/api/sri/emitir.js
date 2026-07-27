@@ -24,6 +24,17 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  let estadoRespuestaSRI = 'PENDIENTE_ENVIO';
+  let estadoFinalSri = 'PENDIENTE_ENVIO';
+  let codigoRespuesta = null;
+  let mensajeRespuesta = null;
+  let informacionAdicional = null;
+  let mensajesSri = [];
+  let rawSriResponse = null;
+  let errorTecnico = null;
+  let soapFault = null;
+  let httpStatus = 500;
+
   try {
     const adminAuth = getAdminAuth();
     const adminDb = getAdminDb();

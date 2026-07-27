@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ShoppingCart, Plus, Minus, Trash2, Tag, Shirt, UserCircle, Printer, CreditCard, User, Search, Loader2, ShoppingBag, Scissors, Package, Briefcase, Glasses, Watch, Gem } from 'lucide-react';
 import { db } from '../../firebase/config';
-import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, setDoc, onSnapshot, runTransaction } from 'firebase/firestore';
 import { validarCedula, validarRUC } from '../../utils/validators';
 import { TAX_CONFIG, calculateTotals } from '../../utils/taxes';
 
@@ -439,6 +439,152 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     setShowPreviewModal(true);
   };
 
+  // --- EMISIÓN EXCLUSIVA DE NOTA DE VENTA INTERNA (SIN SRI, SIN XML, SIN PFX) ---
+  const emitirNotaVentaInterna = async (withPrint, issuerData, paymentDetails, totalsData, transactionId) => {
+    console.log("📝 [NOTA DE VENTA INTERNA] Procesando comprobante interno en Firestore sin intervención del SRI...");
+
+    try {
+      // 0. Guardado Inmediato de Cliente (si no es Consumidor Final)
+      if (customer.tipoDocumento !== 'CONSUMIDOR_FINAL' && customer.numeroIdentificacion) {
+        try {
+          await setDoc(doc(db, "clientes", customer.numeroIdentificacion), {
+            ...customer,
+            fechaTransaccion: new Date().toISOString()
+          }, { merge: true });
+        } catch (err) {
+          console.error("Error guardando cliente:", err);
+        }
+      }
+
+      const estab = issuerData.estab || issuerData.establecimiento || '001';
+      const ptoEmi = issuerData.ptoEmi || issuerData.puntoEmision || '001';
+      const secKeyNV = `${estab}_${ptoEmi}_NV`;
+
+      // 1. Transacción Atómica en Firestore: Secuencial interno NV + Descuento Stock + Guardado Venta
+      const resultNV = await runTransaction(db, async (t) => {
+        // Leer emisor para secuencial NV
+        const issuerRef = doc(db, 'issuers', issuerData.id);
+        const issuerSnap = await t.get(issuerRef);
+        if (!issuerSnap.exists()) {
+          throw new Error(`Emisor ${issuerData.id} no existe.`);
+        }
+        const emisorData = issuerSnap.data();
+        const secuencialesMap = emisorData.secuenciales || {};
+        const currentSecNV = secuencialesMap[secKeyNV] || 0;
+        const nextSecNV = currentSecNV + 1;
+        const secStr = String(nextSecNV).padStart(9, '0');
+        const numComprobanteCompleto = `NV-${estab}-${ptoEmi}-${secStr}`;
+
+        // Descontar inventario una sola vez
+        for (const item of cart) {
+          if (item.id) {
+            const prodRef = doc(db, 'productos', item.id);
+            const prodSnap = await t.get(prodRef);
+            if (prodSnap.exists()) {
+              const currentStock = prodSnap.data().stock || 0;
+              const newStock = Math.max(0, currentStock - item.qty);
+              t.update(prodRef, { stock: newStock });
+            }
+          }
+        }
+
+        // Reservar secuencial de Nota de Venta
+        t.update(issuerRef, { [`secuenciales.${secKeyNV}`]: nextSecNV });
+
+        // Crear la venta interna en la colección 'ventas'
+        const ventaId = `nv-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+        const ventaRef = doc(db, 'ventas', ventaId);
+
+        const nuevaVentaInterna = {
+          id: ventaId,
+          status: 'COMPLETADA', // NUNCA AUTORIZADA ni PENDIENTE_SRI
+          estado: 'COMPLETADA',
+          tipoComprobante: 'NOTA_DE_VENTA',
+          numeroComprobante: numComprobanteCompleto,
+          secuencial: secStr,
+          date: new Date().toISOString(),
+          customer: customer,
+          cliente: customer,
+          items: cart,
+          productos: cart,
+          totals: totalsData,
+          subtotal: totalsData.subtotal,
+          ivaAmount: totalsData.ivaAmount,
+          total: totalsData.total,
+          paymentMethod: paymentMethod,
+          paymentDetails: paymentDetails,
+          issuerId: issuerData.id,
+          emisorId: issuerData.id,
+          vatIncluded: vatIncluded,
+          isNotaVenta: true,
+          transactionId: transactionId,
+          origen: 'VENTA_INTERNA'
+        };
+
+        t.set(ventaRef, nuevaVentaInterna);
+
+        return {
+          ventaId,
+          numeroComprobante: numComprobanteCompleto
+        };
+      });
+
+      console.log(`✅ Nota de Venta Interna procesada con éxito: ${resultNV.numeroComprobante}`);
+
+      // 2. Imprimir ticket interno si corresponde
+      if (withPrint) {
+        const format = localStorage.getItem('printerFormat') || '80mm';
+        const method = localStorage.getItem('printerMethod') || 'sistema';
+
+        if (format === '58mm' && method === 'bluetooth_58') {
+          import('../../lib/Printer58Service').then(async (module) => {
+            try {
+              await module.printer58Service.printTicket(
+                issuerData, 
+                customer, 
+                cart, 
+                totalsData.subtotal, 
+                totalsData.ivaAmount, 
+                totalsData.total, 
+                { numeroComprobante: resultNV.numeroComprobante, isNotaVenta: true },
+                paymentMethod
+              );
+            } catch (err) {
+              import('../../utils/printTicket').then(fallbackMod => {
+                fallbackMod.imprimirTicket(issuerData, cart, totalsData, customer, resultNV.numeroComprobante, paymentMethod, paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, true, format);
+              });
+            }
+          });
+        } else {
+          import('../../utils/printTicket').then(module => {
+            module.imprimirTicket(
+              issuerData, 
+              cart, 
+              totalsData, 
+              customer, 
+              resultNV.numeroComprobante, 
+              paymentMethod, 
+              paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, 
+              true, 
+              format
+            );
+          });
+        }
+      }
+
+      alert(`✅ Nota de Venta Interna emitida con éxito.\nComprobante No: ${resultNV.numeroComprobante}`);
+
+      // 3. Limpiar estado y carrito
+      setCart([]);
+
+    } catch (errNV) {
+      console.error("❌ Error emitiendo Nota de Venta Interna:", errNV);
+      alert(`⚠️ Error procesando la Nota de Venta: ${errNV.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // --- CONFIRMAR PAGO REAL (SRI Y FIREBASE) ---
   const confirmCheckout = async () => {
     if (isProcessing) return; // Bloqueo anti doble clic
@@ -449,7 +595,6 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     }
 
     setIsProcessing(true);
-    const isFacturaSri = !isNotaVenta;
     setShowPreviewModal(false);
     
     const withPrint = checkoutWithPrint;
@@ -477,9 +622,16 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       ] : []
     };
 
-    try {
-      const totalsData = { subtotal, baseImponible, ivaAmount, total };
+    const totalsData = { subtotal, baseImponible, ivaAmount, total };
 
+    // 🔴 SI ES NOTA DE VENTA INTERNA: Proceso 100% local atómico sin llamar al SRI
+    if (isNotaVenta) {
+      await emitirNotaVentaInterna(withPrint, issuerData, paymentDetails, totalsData, transactionId);
+      return;
+    }
+
+    // 🟢 SI ES FACTURA ELECTRÓNICA SRI: Proceso electrónico completo en /api/sri/emitir
+    try {
       // 0. Guardado Inmediato de Cliente (Antes del SRI y el stock)
       if (customer.tipoDocumento !== 'CONSUMIDOR_FINAL' && customer.numeroIdentificacion) {
         console.log("👤 [Cliente] Guardando/Actualizando cliente en Firebase inmediatamente...");
@@ -495,7 +647,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       }
 
       // 1. Enviar petición a nuestro backend interno (Centralizado para SRI, Notas de Venta y Stock)
-      console.log(`🚀 Enviando petición al backend interno (isNotaVenta: ${isNotaVenta})...`);
+      console.log(`🚀 Enviando petición de Facturación Electrónica al backend SRI...`);
       const { getAuth } = await import('firebase/auth');
       const auth = getAuth();
       const idToken = await auth.currentUser.getIdToken();
@@ -516,7 +668,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
           ivaAmount,
           total,
           vatIncluded,
-          isNotaVenta: isNotaVenta,
+          isNotaVenta: false,
           paymentMethod,
           transferRecipient,
           transferRecipientId,

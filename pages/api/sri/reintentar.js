@@ -9,6 +9,15 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  let estadoRespuestaSRI = 'PENDIENTE_ENVIO';
+  let estadoFinalSri = 'PENDIENTE_ENVIO';
+  let codigoRespuesta = null;
+  let mensajeRespuesta = null;
+  let informacionAdicional = null;
+  let mensajesSri = [];
+  let rawSriResponse = null;
+  let errorTecnico = null;
+
   try {
     const adminAuth = getAdminAuth();
     let token = req.headers.authorization;
