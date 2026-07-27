@@ -1455,52 +1455,53 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                   </div>
                 )}
 
-                {/* BOTONES ACCIÓN INFERIOR: NOTA DE VENTA Y AÑADIR FORMA DE PAGO */}
+                {/* BOTONES ACCIÓN INFERIOR: NOTA DE VENTA (GRANDE) Y AÑADIR FORMA DE PAGO (PEQUEÑO) */}
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', marginBottom: '0.75rem' }}>
                   <button 
                     type="button"
                     onClick={() => setIsNotaVenta(!isNotaVenta)}
                     style={{ 
-                      flex: 1,
-                      padding: '8px 10px', 
+                      flex: 2,
+                      padding: '10px 12px', 
                       borderRadius: '8px', 
                       border: `2px solid ${isNotaVenta ? 'var(--warning)' : 'var(--panel-border)'}`,
                       background: isNotaVenta ? 'rgba(255, 152, 0, 0.2)' : 'transparent',
                       color: isNotaVenta ? 'var(--warning)' : 'var(--text-muted)',
-                      fontWeight: isNotaVenta ? 'bold' : '500',
-                      fontSize: '0.8rem',
+                      fontWeight: isNotaVenta ? 'bold' : '600',
+                      fontSize: '0.85rem',
                       cursor: 'pointer',
                       display: 'flex',
                       justifyContent: 'center',
                       alignItems: 'center',
-                      gap: '0.35rem',
+                      gap: '0.4rem',
                       transition: 'all 0.2s'
                     }}
                   >
-                    📝 {isNotaVenta ? 'Nota de venta (ON)' : 'Nota de venta'}
+                    📝 {isNotaVenta ? 'Nota de Venta (ON)' : 'Nota de Venta'}
                   </button>
 
                   <button 
                     type="button"
                     onClick={handleActivateMixedPayment}
                     style={{ 
-                      flex: 1.2,
-                      padding: '8px 10px', 
+                      flex: 1,
+                      padding: '8px 6px', 
                       borderRadius: '8px', 
                       border: '1px solid var(--accent)',
                       background: 'rgba(59, 130, 246, 0.12)',
                       color: 'var(--accent)',
                       fontWeight: 'bold',
-                      fontSize: '0.8rem',
+                      fontSize: '0.75rem',
                       cursor: 'pointer',
                       display: 'flex',
                       justifyContent: 'center',
                       alignItems: 'center',
-                      gap: '0.35rem',
-                      transition: 'all 0.2s'
+                      gap: '0.25rem',
+                      transition: 'all 0.2s',
+                      whiteSpace: 'nowrap'
                     }}
                   >
-                    ➕ Añadir forma de pago
+                    ➕ Añadir pago
                   </button>
                 </div>
               </>
