@@ -126,10 +126,10 @@ export const imprimirTicket = (issuerData, cartData, totalsData, customerData, c
               </div>
             ` : ''}
             ${!isNotaVentaActual ? `
-              <div class="font-bold">No. ${claveAcceso.substring(24, 27)}-${claveAcceso.substring(27, 30)}-${claveAcceso.substring(30, 39)}</div>
+              <div class="font-bold">No. ${claveAcceso.length === 49 ? `${claveAcceso.substring(24, 27)}-${claveAcceso.substring(27, 30)}-${claveAcceso.substring(30, 39)}` : claveAcceso}</div>
               <div style="font-size: 9px; text-align: left; margin-top: 4px;">
                 <div><b>F. Emisión:</b> ${new Date().toLocaleString('es-EC')}</div>
-                <div><b>Ambiente:</b> PRUEBAS (1)</div>
+                <div><b>Ambiente:</b> ${(claveAcceso && claveAcceso.length === 49 && claveAcceso[23] === '2') || issuerData?.ambiente === '2' ? 'PRODUCCIÓN (2)' : 'PRUEBAS (1)'}</div>
                 <div><b>Emisión:</b> NORMAL</div>
                 <div><b>Clave Acceso:</b></div>
                 <div style="word-break: break-all; font-size: 8px;">${claveAcceso}</div>

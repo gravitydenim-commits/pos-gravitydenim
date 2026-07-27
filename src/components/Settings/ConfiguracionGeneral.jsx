@@ -268,6 +268,7 @@ export default function ConfiguracionGeneral() {
           ruc: prev.ruc || existing.ruc || '', 
           nombre: prev.nombre || existing.name || existing.nombreComercial || existing.razonSocial || '',
           direccion: prev.direccion || existing.direccionMatriz || '',
+          direccionEstablecimiento: prev.direccionEstablecimiento || existing.direccionEstablecimiento || existing.direccionMatriz || '',
           correo: prev.correo || existing.correo || '',
           obligadoContabilidad: existing.obligadoContabilidad !== undefined ? existing.obligadoContabilidad : prev.obligadoContabilidad,
           passwordP12: prev.passwordP12 || '********',
@@ -300,6 +301,7 @@ export default function ConfiguracionGeneral() {
       ruc: existing?.ruc || '',
       nombre: existing?.name || existing?.nombreComercial || existing?.razonSocial || '',
       direccion: existing?.direccionMatriz || '',
+      direccionEstablecimiento: existing?.direccionEstablecimiento || existing?.direccionMatriz || '',
       correo: existing?.correo || '',
       obligadoContabilidad: existing?.obligadoContabilidad || false,
       passwordP12: '********',
@@ -408,6 +410,7 @@ export default function ConfiguracionGeneral() {
         ruc: formData.ruc,
         name: formData.nombre,
         direccionMatriz: formData.direccion,
+        direccionEstablecimiento: formData.direccionEstablecimiento || formData.direccion,
         correo: formData.correo,
         obligadoContabilidad: formData.obligadoContabilidad,
         passwordP12: formData.passwordP12 !== '********' ? formData.passwordP12 : existingIssuer?.passwordP12 || '',
@@ -505,17 +508,30 @@ export default function ConfiguracionGeneral() {
                 </div>
               </div>
 
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Dirección Matriz</label>
-                <input 
-                  type="text" 
-                  name="direccion" 
-                  value={formData.direccion} 
-                  onChange={handleInputChange} 
-                  placeholder="Av. Principal y Secundaria..."
-                  required
-                  style={{ width: '100%', padding: '12px', background: 'var(--card-bg)', border: '1px solid var(--panel-border)', borderRadius: '6px', color: 'var(--text-main)', fontSize: '1rem' }}
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Dirección Matriz</label>
+                  <input 
+                    type="text" 
+                    name="direccion" 
+                    value={formData.direccion} 
+                    onChange={handleInputChange} 
+                    placeholder="Av. Matriz..."
+                    required
+                    style={{ width: '100%', padding: '12px', background: 'var(--card-bg)', border: '1px solid var(--panel-border)', borderRadius: '6px', color: 'var(--text-main)', fontSize: '1rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Dirección del Establecimiento</label>
+                  <input 
+                    type="text" 
+                    name="direccionEstablecimiento" 
+                    value={formData.direccionEstablecimiento || ''} 
+                    onChange={handleInputChange} 
+                    placeholder="Av. Establecimiento..."
+                    style={{ width: '100%', padding: '12px', background: 'var(--card-bg)', border: '1px solid var(--panel-border)', borderRadius: '6px', color: 'var(--text-main)', fontSize: '1rem' }}
+                  />
+                </div>
               </div>
 
               <div style={{ marginBottom: '1rem' }}>

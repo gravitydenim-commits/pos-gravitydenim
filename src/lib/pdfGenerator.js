@@ -236,8 +236,15 @@ async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAc
                   const price = Number(item.price || item.precio || 0);
                   const desc = Number(item.descuento || 0);
                   const totalLine = (qty * price) - desc;
+
+                  // Evitar IDs aleatorios autogenerados de Firestore en la columna Cod. Principal
+                  let codeVal = String(item.sku || item.codigo || item.codigoBarras || item.codigoComercial || item.codigoPrincipal || '').trim();
+                  if (!codeVal || codeVal === item.id || /^[A-Za-z0-9]{18,}$/.test(codeVal)) {
+                    codeVal = '-';
+                  }
+
                   return [
-                    { text: item.sku || item.id || 'N/A', alignment: 'center', fontSize: 7.5 },
+                    { text: codeVal, alignment: 'center', fontSize: 7.5 },
                     { text: '---', alignment: 'center', fontSize: 7.5 },
                     { text: qty.toString(), alignment: 'center', fontSize: 7.5 },
                     { text: item.name || item.nombre || 'PRODUCTO', fontSize: 7.5 },
