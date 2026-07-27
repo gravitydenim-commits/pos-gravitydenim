@@ -863,7 +863,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                         <td>{saleDate.toLocaleDateString('sv-SE')}</td>
                         <td>{isAutorizado ? saleDate.toLocaleString('sv-SE', {hour12: false}) : ''}</td>
                         <td>{issuer.establecimiento || '001'}</td>
-                        <td>{issuer.puntoEmision || '100'}</td>
+                        <td>{issuer.puntoEmision || issuer.ptoEmi || '001'}</td>
                         <td style={{ background: '#3b82f6', color: 'white', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', margin: '4px' }}>
                           {sale.numeroComprobante ? sale.numeroComprobante.split('-')[2] : (sale.secuencial || '000')}
                         </td>
@@ -950,7 +950,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                     <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                       <td>{saleDate.toLocaleDateString('sv-SE')}</td>
                       <td>{issuer.establecimiento || '001'}</td>
-                      <td>{issuer.puntoEmision || '100'}</td>
+                      <td>{issuer.puntoEmision || issuer.ptoEmi || '001'}</td>
                       <td style={{ background: 'var(--warning)', color: 'white', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', margin: '4px' }}>
                         {sale.numeroComprobante || 'S/N'}
                       </td>

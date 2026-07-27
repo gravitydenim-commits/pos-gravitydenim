@@ -132,8 +132,8 @@ export default async function handler(req, res) {
       }
     }));
 
-    const estab = emisor.establecimiento || '001';
-    const ptoEmi = emisor.puntoEmision || '001';
+    const estab = emisor.estab || emisor.establecimiento || '001';
+    const ptoEmi = emisor.ptoEmi || emisor.puntoEmision || '001';
     const secKey = `${estab}_${ptoEmi}`;
 
     // 6. Generar Secuencial de forma ATÓMICA (Evita race conditions)

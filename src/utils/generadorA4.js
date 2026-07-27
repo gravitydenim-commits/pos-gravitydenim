@@ -13,7 +13,7 @@ export const generarFacturaA4 = (venta, issuerData) => {
   const tipoEmision = "1"; // 1: Normal
 
   const claveAcceso = venta.claveAcceso || "0000000000000000000000000000000000000000000000000";
-  const numComprobante = venta.numeroComprobante || (isNotaVenta ? claveAcceso.split('-')[1] || claveAcceso : `${issuerData.establecimiento || '001'}-${issuerData.puntoEmision || '100'}-${venta.secuencial || '000000000'}`);
+  const numComprobante = venta.numeroComprobante || (isNotaVenta ? claveAcceso.split('-')[1] || claveAcceso : `${issuerData.establecimiento || issuerData.estab || '001'}-${issuerData.puntoEmision || issuerData.ptoEmi || '001'}-${venta.secuencial || '000000000'}`);
 
   // Formateo de fechas
   const dateObj = venta.date?.seconds ? new Date(venta.date.seconds * 1000) : new Date(venta.date);

@@ -102,6 +102,38 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
   const [isNotaVenta, setIsNotaVenta] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false); // Previene doble clic
   const [transferQrs, setTransferQrs] = useState({});
+  const [liveIssuerDoc, setLiveIssuerDoc] = useState(null);
+
+  // Escuchar en tiempo real el emisor seleccionado para mantener sincronizados los secuenciales entre dispositivos
+  useEffect(() => {
+    if (!selectedIssuer) {
+      setLiveIssuerDoc(null);
+      return;
+    }
+    const unsub = onSnapshot(doc(db, 'issuers', selectedIssuer), (docSnap) => {
+      if (docSnap.exists()) {
+        setLiveIssuerDoc({ id: docSnap.id, ...docSnap.data() });
+      }
+    }, (err) => console.error("Error escuchando emisor en tiempo real:", err));
+    return () => unsub();
+  }, [selectedIssuer]);
+
+  const activeIssuerData = liveIssuerDoc || issuers.find(i => i.id === selectedIssuer) || {};
+  const currentEstab = activeIssuerData.estab || activeIssuerData.establecimiento || '001';
+  const currentPtoEmi = activeIssuerData.ptoEmi || activeIssuerData.puntoEmision || '001';
+
+  const secKeySRI = `${currentEstab}_${currentPtoEmi}`;
+  const secKeyNV = `${currentEstab}_${currentPtoEmi}_NV`;
+  const secuencialesMap = activeIssuerData.secuenciales || {};
+
+  const currentSecSriNum = secuencialesMap[secKeySRI] || 0;
+  const currentSecNvNum = secuencialesMap[secKeyNV] || 0;
+
+  const nextSecSriStr = String(currentSecSriNum + 1).padStart(9, '0');
+  const nextSecNvStr = String(currentSecNvNum + 1).padStart(9, '0');
+
+  const proximoNumeroComprobanteSRI = `${currentEstab}-${currentPtoEmi}-${nextSecSriStr}`;
+  const proximoNumeroComprobanteNV = `NV-${currentEstab}-${currentPtoEmi}-${nextSecNvStr}`;
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'transfer_qrs'), (docSnap) => {
@@ -583,7 +615,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         <div className="header" style={{ alignItems: 'center' }}>
           <h2><Shirt className="inline" style={{verticalAlign: 'bottom'}}/> Catálogo Compartido</h2>
           
-          <div className="issuer-selector">
+          <div className="issuer-selector" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
             <UserCircle size={20} style={{color: 'var(--text-muted)'}} />
             <select 
               value={selectedIssuer} 
@@ -596,6 +628,26 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                 <option key={issuer.id} value={issuer.id} style={{ background: 'var(--bg-color)', color: 'var(--text-main)' }}>{issuer.name} (RUC: {issuer.ruc.slice(-4)})</option>
               ))}
             </select>
+
+            {selectedIssuer && (
+              <div style={{ 
+                fontSize: '0.78rem', 
+                background: 'rgba(16, 185, 129, 0.12)', 
+                color: '#10b981', 
+                border: '1px solid rgba(16, 185, 129, 0.3)', 
+                padding: '4px 10px', 
+                borderRadius: '6px', 
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                <span>🔒 Próx. {isNotaVenta ? 'NV' : 'SRI'}:</span>
+                <span style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>
+                  {isNotaVenta ? proximoNumeroComprobanteNV : proximoNumeroComprobanteSRI}
+                </span>
+              </div>
+            )}
           </div>
         </div>
         <div className="products-grid">
@@ -1138,20 +1190,24 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                     <div style={{ fontWeight: 'bold', fontSize: '13px', color: '#0f172a' }}>
                       {isNotaVenta ? 'NOTA DE VENTA' : 'FACTURA ELECTRÓNICA'}
                     </div>
-                    {isNotaVenta ? (
+                    {isNotaVenta && (
                       <div style={{ fontSize: '10px', color: '#b91c1c', fontWeight: 'bold', border: '1px dashed #ef4444', padding: '4px', marginTop: '4px', background: '#fef2f2' }}>
                         *** DOCUMENTO SIN VALOR TRIBUTARIO ***
                       </div>
-                    ) : (
-                      <div style={{ fontSize: '10px', color: '#475569', marginTop: '4px' }}>
-                        No. {issuerData?.establecimiento || '001'}-{issuerData?.puntoEmision || '001'}-XXXXXXXXX<br/>
-                        <span style={{ fontSize: '9px', color: '#64748b' }}>(Se asignará secuencial al emitir)</span>
-                      </div>
                     )}
-                    {isNotaVenta && (
-                      <div style={{ fontSize: '10px', color: '#475569', marginTop: '4px' }}>
-                        No. NV-{issuerData?.establecimiento || '001'}-{issuerData?.puntoEmision || '001'}-XXXXXXXXX<br/>
-                        <span style={{ fontSize: '9px', color: '#64748b' }}>(Se asignará secuencial al emitir)</span>
+                    {!isNotaVenta ? (
+                      <div style={{ fontSize: '11px', color: '#0f172a', fontWeight: 'bold', marginTop: '4px' }}>
+                        No. {proximoNumeroComprobanteSRI}<br/>
+                        <span style={{ fontSize: '9px', color: '#10b981', background: '#ecfdf5', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', marginTop: '3px' }}>
+                          🔒 Secuencial reservado en tiempo real (Firestore)
+                        </span>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '11px', color: '#0f172a', fontWeight: 'bold', marginTop: '4px' }}>
+                        No. {proximoNumeroComprobanteNV}<br/>
+                        <span style={{ fontSize: '9px', color: '#10b981', background: '#ecfdf5', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', marginTop: '3px' }}>
+                          🔒 Secuencial reservado en tiempo real (Firestore)
+                        </span>
                       </div>
                     )}
                   </div>

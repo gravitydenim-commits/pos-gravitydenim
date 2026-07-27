@@ -12,7 +12,7 @@ export const generarGuiaA4 = (guia, issuerData) => {
   const tipoEmision = "1"; // 1: Normal
 
   const claveAcceso = guia.claveAcceso || "0000000000000000000000000000000000000000000000000";
-  const numComprobante = `${issuerData.establecimiento || '001'}-${issuerData.puntoEmision || '100'}-${guia.secuencial || '000000000'}`;
+  const numComprobante = `${issuerData.establecimiento || issuerData.estab || '001'}-${issuerData.puntoEmision || issuerData.ptoEmi || '001'}-${guia.secuencial || '000000000'}`;
 
   // Formateo de fechas
   const dateObj = guia.date?.seconds ? new Date(guia.date.seconds * 1000) : new Date(guia.date);
