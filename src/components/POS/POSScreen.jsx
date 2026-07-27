@@ -831,26 +831,6 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                 <option key={issuer.id} value={issuer.id} style={{ background: 'var(--bg-color)', color: 'var(--text-main)' }}>{issuer.name} (RUC: {issuer.ruc.slice(-4)})</option>
               ))}
             </select>
-
-            {selectedIssuer && (
-              <div style={{ 
-                fontSize: '0.78rem', 
-                background: 'rgba(16, 185, 129, 0.12)', 
-                color: '#10b981', 
-                border: '1px solid rgba(16, 185, 129, 0.3)', 
-                padding: '4px 10px', 
-                borderRadius: '6px', 
-                fontWeight: '600',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}>
-                <span>🔒 Próx. {isNotaVenta ? 'NV' : 'SRI'}:</span>
-                <span style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>
-                  {isNotaVenta ? proximoNumeroComprobanteNV : proximoNumeroComprobanteSRI}
-                </span>
-              </div>
-            )}
           </div>
         </div>
         <div className="products-grid">

@@ -223,7 +223,9 @@ export default function ConfiguracionGeneral() {
     fileName: '',
     estab: '001',
     ptoEmi: '001',
-    secuencial: '1'
+    secuencialSRI: '1',
+    secuencialNV: '1',
+    bloquearSecuencialAuto: true
   });
 
   const [isUploading, setIsUploading] = useState(false);
@@ -254,6 +256,13 @@ export default function ConfiguracionGeneral() {
       // Llenar datos (solo si no se está editando activamente)
       const existing = emisoresDB.find(i => i.id === currentSelection);
       if (existing) {
+        const estab = existing.estab || existing.establecimiento || '001';
+        const ptoEmi = existing.ptoEmi || existing.puntoEmision || '001';
+        const secMap = existing.secuenciales || {};
+        const secSri = secMap[`${estab}_${ptoEmi}`] !== undefined ? secMap[`${estab}_${ptoEmi}`] : (existing.secuencial || 1);
+        const secNv = secMap[`${estab}_${ptoEmi}_NV`] !== undefined ? secMap[`${estab}_${ptoEmi}_NV`] : 1;
+        const bloqAuto = existing.bloquearSecuencialAuto !== undefined ? existing.bloquearSecuencialAuto : true;
+
         setFormData(prev => ({
           ...prev,
           ruc: prev.ruc || existing.ruc || '', 
@@ -263,9 +272,11 @@ export default function ConfiguracionGeneral() {
           obligadoContabilidad: existing.obligadoContabilidad !== undefined ? existing.obligadoContabilidad : prev.obligadoContabilidad,
           passwordP12: prev.passwordP12 || '********',
           fileName: prev.fileName || existing.p12Name || '',
-          estab: prev.estab || existing.estab || '001',
-          ptoEmi: prev.ptoEmi || existing.ptoEmi || '001',
-          secuencial: prev.secuencial || existing.secuencial || '1'
+          estab: prev.estab || estab,
+          ptoEmi: prev.ptoEmi || ptoEmi,
+          secuencialSRI: prev.secuencialSRI || String(secSri),
+          secuencialNV: prev.secuencialNV || String(secNv),
+          bloquearSecuencialAuto: prev.bloquearSecuencialAuto !== undefined ? prev.bloquearSecuencialAuto : bloqAuto
         }));
       }
     }
@@ -277,19 +288,28 @@ export default function ConfiguracionGeneral() {
     setSelectedIssuer(issuerId);
     localStorage.setItem('emisor_config', issuerId);
     
-    // Resetear formulario para forzar recarga del nuevo
+    const existing = emisoresDB.find(i => i.id === issuerId);
+    const estab = existing?.estab || existing?.establecimiento || '001';
+    const ptoEmi = existing?.ptoEmi || existing?.puntoEmision || '001';
+    const secMap = existing?.secuenciales || {};
+    const secSri = secMap[`${estab}_${ptoEmi}`] !== undefined ? secMap[`${estab}_${ptoEmi}`] : (existing?.secuencial || 1);
+    const secNv = secMap[`${estab}_${ptoEmi}_NV`] !== undefined ? secMap[`${estab}_${ptoEmi}_NV`] : 1;
+    const bloqAuto = existing?.bloquearSecuencialAuto !== undefined ? existing.bloquearSecuencialAuto : true;
+
     setFormData({
-      ruc: '',
-      nombre: '',
-      direccion: '',
-      correo: '',
-      obligadoContabilidad: false,
-      passwordP12: '',
+      ruc: existing?.ruc || '',
+      nombre: existing?.name || existing?.nombreComercial || existing?.razonSocial || '',
+      direccion: existing?.direccionMatriz || '',
+      correo: existing?.correo || '',
+      obligadoContabilidad: existing?.obligadoContabilidad || false,
+      passwordP12: '********',
       file: null,
-      fileName: '',
-      estab: '001',
-      ptoEmi: '001',
-      secuencial: '1'
+      fileName: existing?.p12Name || '',
+      estab: estab,
+      ptoEmi: ptoEmi,
+      secuencialSRI: String(secSri),
+      secuencialNV: String(secNv),
+      bloquearSecuencialAuto: bloqAuto
     });
   };
 
@@ -369,7 +389,6 @@ export default function ConfiguracionGeneral() {
       // 1. Subir archivo .p12 a la bóveda (si se seleccionó uno nuevo)
       if (formData.file) {
         console.log(`📤 [Seguridad] Guardando firma ${formData.fileName} en la Bóveda...`);
-        // Simular progreso rápido para el UI
         setUploadProgress(50);
         await uploadToVault(formData.file, formData.passwordP12);
         setUploadProgress(100);
@@ -378,24 +397,39 @@ export default function ConfiguracionGeneral() {
 
       // 2. Guardar/Actualizar en Firestore en la colección 'issuers'
       const existingIssuer = emisoresDB.find(i => i.id === selectedIssuer);
+      const estab = (formData.estab || '001').padStart(3, '0');
+      const ptoEmi = (formData.ptoEmi || '001').padStart(3, '0');
+      const secKeySRI = `${estab}_${ptoEmi}`;
+      const secKeyNV = `${estab}_${ptoEmi}_NV`;
+      const numSecSri = parseInt(formData.secuencialSRI, 10) || 1;
+      const numSecNv = parseInt(formData.secuencialNV, 10) || 1;
+
       const issuerDocUpdate = {
         ruc: formData.ruc,
         name: formData.nombre,
         direccionMatriz: formData.direccion,
         correo: formData.correo,
         obligadoContabilidad: formData.obligadoContabilidad,
-        passwordP12: formData.passwordP12 !== '********' ? formData.passwordP12 : existingIssuer?.passwordP12 || '', // Mantener la anterior si no cambió
-        p12Url: p12DownloadUrl || existingIssuer?.p12Url || '', // Guardar la ruta del storage
+        passwordP12: formData.passwordP12 !== '********' ? formData.passwordP12 : existingIssuer?.passwordP12 || '',
+        p12Url: p12DownloadUrl || existingIssuer?.p12Url || '',
         p12Name: formData.fileName || existingIssuer?.p12Name || '',
-        estab: formData.estab,
-        ptoEmi: formData.ptoEmi,
-        secuencial: parseInt(formData.secuencial, 10) || 1
+        estab: estab,
+        establecimiento: estab,
+        ptoEmi: ptoEmi,
+        puntoEmision: ptoEmi,
+        bloquearSecuencialAuto: formData.bloquearSecuencialAuto,
+        secuencial: numSecSri,
+        secuenciales: {
+          ...(existingIssuer?.secuenciales || {}),
+          [secKeySRI]: numSecSri,
+          [secKeyNV]: numSecNv
+        }
       };
 
-      console.log(`💾 [Firestore] Actualizando documento en colección 'issuers' para ID: ${selectedIssuer}`);
+      console.log(`💾 [Firestore] Actualizando perfil fiscal 'issuers/${selectedIssuer}'...`);
       await setDoc(doc(db, 'issuers', selectedIssuer), issuerDocUpdate, { merge: true });
 
-      alert(`✅ Configuración fiscal de ${formData.nombre} guardada exitosamente en Firebase.`);
+      alert(`✅ Configuración fiscal de ${formData.nombre} guardada exitosamente.`);
       
     } catch (error) {
       console.error("❌ Error guardando configuración:", error);
@@ -497,42 +531,123 @@ export default function ConfiguracionGeneral() {
               </div>
 
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Establecimiento</label>
+              {/* SECCIÓN CONFIGURACIÓN SECUENCIAL Y BLOQUEO AUTOMÁTICO */}
+              <div style={{ 
+                background: 'var(--input-bg)', 
+                border: '1px solid var(--panel-border)', 
+                borderRadius: '8px', 
+                padding: '1.25rem', 
+                marginBottom: '1.5rem' 
+              }}>
+                <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span>🔒 Control de Secuenciales</span>
+                </h4>
+
+                {/* Casilla Bloquear secuencial automático */}
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.75rem', 
+                  marginBottom: '1.25rem', 
+                  background: formData.bloquearSecuencialAuto ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+                  border: `1px solid ${formData.bloquearSecuencialAuto ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                  padding: '12px',
+                  borderRadius: '6px'
+                }}>
                   <input 
-                    type="text" 
-                    name="estab"
-                    value={formData.estab}
+                    type="checkbox" 
+                    id="bloquearSecuencialAuto" 
+                    name="bloquearSecuencialAuto"
+                    checked={formData.bloquearSecuencialAuto}
                     onChange={handleInputChange}
-                    placeholder="001"
-                    required
-                    style={{ width: '100%', padding: '12px', background: 'var(--card-bg)', border: '1px solid var(--panel-border)', borderRadius: '6px', color: 'var(--text-main)', fontSize: '1rem' }}
+                    style={{ width: '20px', height: '20px', cursor: 'pointer' }}
                   />
+                  <div>
+                    <label htmlFor="bloquearSecuencialAuto" style={{ color: 'var(--text-main)', fontWeight: 'bold', cursor: 'pointer', display: 'block' }}>
+                      Bloquear secuencial automático
+                    </label>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      {formData.bloquearSecuencialAuto 
+                        ? 'El campo está en solo lectura. El sistema incrementará el secuencial automáticamente en cada venta.' 
+                        : 'El campo es editable. Puede cambiar el número secuencial manualmente.'}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Pto. Emisión</label>
-                  <input 
-                    type="text" 
-                    name="ptoEmi"
-                    value={formData.ptoEmi}
-                    onChange={handleInputChange}
-                    placeholder="001"
-                    required
-                    style={{ width: '100%', padding: '12px', background: 'var(--card-bg)', border: '1px solid var(--panel-border)', borderRadius: '6px', color: 'var(--text-main)', fontSize: '1rem' }}
-                  />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Establecimiento</label>
+                    <input 
+                      type="text" 
+                      name="estab"
+                      value={formData.estab}
+                      onChange={handleInputChange}
+                      placeholder="001"
+                      required
+                      style={{ width: '100%', padding: '10px', background: 'var(--card-bg)', border: '1px solid var(--panel-border)', borderRadius: '6px', color: 'var(--text-main)', fontSize: '0.95rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Pto. Emisión</label>
+                    <input 
+                      type="text" 
+                      name="ptoEmi"
+                      value={formData.ptoEmi}
+                      onChange={handleInputChange}
+                      placeholder="001"
+                      required
+                      style={{ width: '100%', padding: '10px', background: 'var(--card-bg)', border: '1px solid var(--panel-border)', borderRadius: '6px', color: 'var(--text-main)', fontSize: '0.95rem' }}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Secuencial Actual</label>
-                  <input 
-                    type="number" 
-                    name="secuencial"
-                    value={formData.secuencial}
-                    onChange={handleInputChange}
-                    placeholder="1"
-                    required
-                    style={{ width: '100%', padding: '12px', background: 'var(--card-bg)', border: '1px solid var(--panel-border)', borderRadius: '6px', color: 'var(--text-main)', fontSize: '1rem' }}
-                  />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Secuencial Actual Facturas SRI</label>
+                    <input 
+                      type="number" 
+                      name="secuencialSRI"
+                      value={formData.secuencialSRI}
+                      onChange={handleInputChange}
+                      disabled={formData.bloquearSecuencialAuto}
+                      readOnly={formData.bloquearSecuencialAuto}
+                      placeholder="1"
+                      required
+                      style={{ 
+                        width: '100%', 
+                        padding: '10px', 
+                        background: formData.bloquearSecuencialAuto ? 'rgba(255, 255, 255, 0.05)' : 'var(--card-bg)', 
+                        border: `1px solid ${formData.bloquearSecuencialAuto ? 'var(--panel-border)' : 'var(--accent)'}`, 
+                        borderRadius: '6px', 
+                        color: formData.bloquearSecuencialAuto ? 'var(--text-muted)' : 'var(--text-main)', 
+                        fontSize: '0.95rem',
+                        cursor: formData.bloquearSecuencialAuto ? 'not-allowed' : 'text'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Secuencial Actual Nota Venta</label>
+                    <input 
+                      type="number" 
+                      name="secuencialNV"
+                      value={formData.secuencialNV}
+                      onChange={handleInputChange}
+                      disabled={formData.bloquearSecuencialAuto}
+                      readOnly={formData.bloquearSecuencialAuto}
+                      placeholder="1"
+                      required
+                      style={{ 
+                        width: '100%', 
+                        padding: '10px', 
+                        background: formData.bloquearSecuencialAuto ? 'rgba(255, 255, 255, 0.05)' : 'var(--card-bg)', 
+                        border: `1px solid ${formData.bloquearSecuencialAuto ? 'var(--panel-border)' : 'var(--accent)'}`, 
+                        borderRadius: '6px', 
+                        color: formData.bloquearSecuencialAuto ? 'var(--text-muted)' : 'var(--text-main)', 
+                        fontSize: '0.95rem',
+                        cursor: formData.bloquearSecuencialAuto ? 'not-allowed' : 'text'
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
 
