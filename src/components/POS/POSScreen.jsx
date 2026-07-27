@@ -1303,16 +1303,20 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
             {/* TOTALES */}
             <div className="summary-row">
               <span>Subtotal</span>
-              <span>${subtotal.toFixed(2)}</span>
+              <span>${(isNotaVenta ? total : subtotal).toFixed(2)}</span>
             </div>
-            <div className="summary-row">
-              <span>Base Imponible (15%)</span>
-              <span>${baseImponible.toFixed(2)}</span>
-            </div>
-            <div className="summary-row">
-              <span>IVA (15%)</span>
-              <span>${ivaAmount.toFixed(2)}</span>
-            </div>
+            {!isNotaVenta && (
+              <>
+                <div className="summary-row">
+                  <span>Base Imponible (15%)</span>
+                  <span>${baseImponible.toFixed(2)}</span>
+                </div>
+                <div className="summary-row">
+                  <span>IVA (15%)</span>
+                  <span>${ivaAmount.toFixed(2)}</span>
+                </div>
+              </>
+            )}
             <div className="summary-row total" style={{ marginTop: '0.5rem', marginBottom: '1rem', paddingTop: '0.5rem' }}>
               <span>TOTAL</span>
               <span>${total.toFixed(2)}</span>
@@ -1481,14 +1485,18 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         );
       })()}
 
-      {/* --- OVERLAY DE CARGA / PROCESAMIENTO SRI --- */}
+      {/* --- OVERLAY DE CARGA / PROCESAMIENTO --- */}
       {isProcessing && (
         <div className="modal-overlay animate-fade-in" style={{ zIndex: 1000, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(4px)' }}>
           <div className="glass-panel" style={{ padding: '2.5rem', textAlign: 'center', maxWidth: '380px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', border: '1px solid var(--panel-border)', borderRadius: '12px' }}>
             <Loader2 size={48} className="animate-spin" style={{ color: 'var(--accent)' }} />
-            <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.25rem' }}>Procesando Venta</h3>
+            <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.25rem' }}>
+              {isNotaVenta ? 'Registrando Venta Interna' : 'Procesando Factura SRI'}
+            </h3>
             <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-              Firmando el comprobante electrónico y comunicando con el SRI.
+              {isNotaVenta 
+                ? 'Guardando comprobante de venta interna y actualizando inventario local...' 
+                : 'Firmando el comprobante electrónico y comunicando con el SRI.'}
               <br/>
               <span style={{ fontSize: '0.8rem', fontStyle: 'italic', marginTop: '0.5rem', display: 'block', color: 'var(--accent)' }}>
                 Por favor, espere unos segundos...
