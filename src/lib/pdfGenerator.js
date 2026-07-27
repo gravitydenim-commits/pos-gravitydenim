@@ -81,7 +81,7 @@ async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAc
       const dirCliente = customer.direccion || 'S/N';
       const correoCliente = customer.correo || customer.email || 'S/N';
       const telCliente = customer.telefono || 'S/N';
-      const vendedorNombre = customer.vendedor || 'PUNTO DE VENTA';
+      const vendedorNombre = razonSocialEmisor || issuerData.name || 'PUNTO DE VENTA';
       const observacionesTexto = customer.observaciones || '---';
 
       // 6. Formas de pago (Líneas mixtas o línea única)
@@ -237,9 +237,9 @@ async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAc
                   const desc = Number(item.descuento || 0);
                   const totalLine = (qty * price) - desc;
 
-                  // Evitar IDs aleatorios autogenerados de Firestore en la columna Cod. Principal
-                  let codeVal = String(item.sku || item.codigo || item.codigoBarras || item.codigoComercial || item.codigoPrincipal || '').trim();
-                  if (!codeVal || codeVal === item.id || /^[A-Za-z0-9]{18,}$/.test(codeVal)) {
+                  // Usar únicamente el SKU del producto, si no existe usar '-'
+                  let codeVal = String(item.sku || '').trim();
+                  if (!codeVal) {
                     codeVal = '-';
                   }
 
