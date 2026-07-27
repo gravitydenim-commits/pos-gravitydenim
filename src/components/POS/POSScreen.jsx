@@ -104,6 +104,11 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
   const [transferQrs, setTransferQrs] = useState({});
   const [liveIssuerDoc, setLiveIssuerDoc] = useState(null);
 
+  // --- MATH / VAT LOGIC (Función única centralizada calculateTotals) ---
+  const { subtotal, baseImponible, ivaAmount, total } = useMemo(() => {
+    return calculateTotals(cart, vatIncluded, isNotaVenta);
+  }, [cart, vatIncluded, isNotaVenta]);
+
   // --- MÚLTIPLES FORMAS DE PAGO (PAGO MIXTO / COMBINADO) ---
   const [paymentsList, setPaymentsList] = useState([
     {
@@ -434,11 +439,6 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       item.id === id ? { ...item, price: isNaN(val) ? 0 : val } : item
     ));
   };
-
-  // --- MATH / VAT LOGIC (Función única centralizada calculateTotals) ---
-  const { subtotal, baseImponible, ivaAmount, total } = useMemo(() => {
-    return calculateTotals(cart, vatIncluded, isNotaVenta);
-  }, [cart, vatIncluded, isNotaVenta]);
 
   // --- SINCRONIZACIÓN PANTALLA SECUNDARIA ---
   useEffect(() => {
