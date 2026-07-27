@@ -117,22 +117,17 @@ export default function FacturasSRI() {
       if (response.ok && (sriData.estado === 'AUTORIZADO' || sriData.estadoSri === 'AUTORIZADO')) {
         alert(`✅ Factura ${sriData.numeroComprobante || claveAcceso} AUTORIZADA por el SRI.`);
       } else {
-        // Formatear error exacto del SRI
-        const est = (sriData.estadoRespuestaSRI || sriData.estado || '').toUpperCase();
-        if (est === 'PENDIENTE_ENVIO' || est === 'CONTINGENCIA_LOCAL' || !response.ok && response.status === 504) {
-          alert('No fue posible comunicarse con el SRI.');
-        } else {
-          const cod = sriData.codigoRespuesta || sriData.mensajes?.[0]?.identificador || '';
-          const msg = sriData.mensajeRespuesta || sriData.mensajes?.[0]?.mensaje || sriData.error || 'Error en comprobante';
-          const info = sriData.informacionAdicional || sriData.mensajes?.[0]?.informacionAdicional || '';
+        const est = (sriData.estadoRespuestaSRI || sriData.estado || 'PENDIENTE_ENVIO').toUpperCase();
+        const cod = sriData.codigoRespuesta || sriData.mensajes?.[0]?.identificador || '';
+        const msg = sriData.mensajeRespuesta || sriData.mensajes?.[0]?.mensaje || sriData.error || 'Fallo en la comunicación con el SRI';
+        const info = sriData.informacionAdicional || sriData.mensajes?.[0]?.informacionAdicional || '';
 
-          const header = `SRI ${est}${cod ? ` [${cod}]` : ''}`;
-          const lines = [header, msg];
-          if (info && info.trim() !== '' && info.trim() !== 'Sin información adicional') {
-            lines.push(info.trim());
-          }
-          alert(lines.join('\n'));
+        const header = `⚠️ Estado SRI: ${est}${cod ? ` [${cod}]` : ''} (HTTP ${response.status})`;
+        const lines = [header, `Motivo Real:\n${msg}`];
+        if (info && info.trim() !== '' && info.trim() !== 'Sin información adicional') {
+          lines.push(`Información Adicional:\n${info.trim()}`);
         }
+        alert(lines.join('\n\n'));
       }
     } catch (error) {
       alert(`No fue posible comunicarse con el SRI.\nDetalle: ${error.message}`);

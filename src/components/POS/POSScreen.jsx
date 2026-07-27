@@ -882,7 +882,8 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       }
 
       if (estadoFactura === 'PENDIENTE_ENVIO' || estadoFactura === 'CONTINGENCIA_LOCAL') {
-        alert(`⚠️ Sin conexión o fallo temporal con el SRI (HTTP ${response.status}). La venta se guardó localmente en estado PENDIENTE_ENVIO.\nMotivo: ${sriData.error || 'Timeout'}\nClave temporal: ${claveAcceso}`);
+        const motivoReal = sriData.error || sriData.informacionAdicional || sriData.mensajeRespuesta || 'No se recibió respuesta del Web Service del SRI';
+        alert(`⚠️ Estado SRI: PENDIENTE_ENVIO (HTTP ${response.status})\n\nURL SRI: https://cel.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl\nAmbiente: PRODUCCIÓN (2)\n\nMotivo Real del Fallo:\n${motivoReal}\n\nClave de Acceso: ${claveAcceso}\n\nPuedes reintentar el envío desde la pestaña "Facturas SRI / Contingencia".`);
       } else if (estadoFactura === 'DEVUELTA' || estadoFactura === 'NO_AUTORIZADO' || estadoFactura === 'RECHAZADA') {
         const msgs = Array.isArray(sriData.mensajes) && sriData.mensajes.length > 0 
           ? `\nDetalles: ` + sriData.mensajes.map(m => `[${m.identificador}] ${m.mensaje} - ${m.informacionAdicional}`).join(' | ')

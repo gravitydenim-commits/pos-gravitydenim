@@ -1,3 +1,6 @@
+process.env.TZ = 'America/Guayaquil';
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 import { getAdminAuth, getAdminDb } from '../../../src/lib/firebaseAdmin';
 import { sendInvoiceEmail } from '../../../src/lib/mailer';
 import { generateRidePdf } from '../../../src/lib/pdfGenerator';

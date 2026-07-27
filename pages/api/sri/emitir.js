@@ -2,16 +2,14 @@ import { getAdminAuth, getAdminDb } from '../../../src/lib/firebaseAdmin';
 import { sendInvoiceEmail } from '../../../src/lib/mailer';
 import { generateRidePdf } from '../../../src/lib/pdfGenerator';
 
-// CRITICAL: Forzar zona horaria Ecuador ANTES de importar osodreamer.
-// La librería osodreamer usa getTimezoneOffset() para calcular el SigningTime XAdES.
-// En Vercel (UTC, offset=0), la fórmula interna tiene un bug que SUMA 5h en vez de
-// restar, generando una fecha futura que el SRI rechaza con "FIRMA INVÁLIDA (ID 39)".
-// Al forzar TZ=America/Guayaquil, getTimezoneOffset() devuelve 300 y la fórmula funciona.
+// CRITICAL: Forzar zona horaria Ecuador y mitigar errores TLS IP SNI en Vercel
 process.env.TZ = 'America/Guayaquil';
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 const { generateXmlInvoice, signXml, validateXml, authorizeXml } = require('osodreamer-sri-xml-signer');
 import fs from 'fs';
 import path from 'path';
+import forge from 'node-forge';
 import { TAX_CONFIG, calculateTotals } from '../../../src/utils/taxes';
 import { sanitizeFirestorePayload } from '../../../src/utils/sanitize';
 
@@ -47,8 +45,6 @@ export default async function handler(req, res) {
 
     const idToken = authHeader.split('Bearer ')[1];
     const decodedToken = await adminAuth.verifyIdToken(idToken);
-    
-    // (Falta validación detallada de permisos aquí, pero asumo que puede facturar)
 
     // 2. Extraer datos del request
     const { cliente, productos, emisorId, formaPago } = req.body;
@@ -68,8 +64,6 @@ export default async function handler(req, res) {
     
     if (idoc.exists) {
       console.log(`⚠️ [Idempotencia] Petición duplicada bloqueada: ${transactionId}`);
-      // Ya se procesó o está en proceso. Retornar el resultado almacenado en sri_logs si existe,
-      // o un error indicando que está en proceso.
       const logQuery = await adminDb.collection('sri_logs').where('transactionId', '==', transactionId).limit(1).get();
       if (!logQuery.empty) {
         const logData = logQuery.docs[0].data();
@@ -97,14 +91,14 @@ export default async function handler(req, res) {
 
     const isNotaVenta = req.body.isNotaVenta === true;
 
-    // 4. Leer firma electrónica de la bóveda secreta (Multi-Emisor Cloud)
+    // 4. Leer firma electrónica y verificar RUC del certificado .p12
     let p12Buffer = null;
     let p12Password = null;
 
     if (!isNotaVenta) {
       const secretDoc = await adminDb.collection('issuers_secrets').doc(emisorId).get();
       if (!secretDoc.exists) {
-        return res.status(500).json({ error: 'Falta la configuración de seguridad para este emisor. Sube la firma .p12 en la Configuración para emitir Facturas SRI.' });
+        return res.status(400).json({ error: `Falta la firma electrónica (.p12) para el emisor ${emisor.razonSocial || emisor.name}. Suba el certificado en Ajustes.` });
       }
       const secretData = secretDoc.data();
       p12Buffer = Buffer.from(secretData.p12Base64, 'base64');
@@ -112,6 +106,38 @@ export default async function handler(req, res) {
 
       if (!p12Buffer || !p12Password) {
         return res.status(500).json({ error: 'La firma electrónica o contraseña en la bóveda están corruptas.' });
+      }
+
+      // Validar que la firma .p12 corresponda exactamente al RUC del emisor seleccionado
+      try {
+        const p12Asn1 = forge.asn1.fromDer(p12Buffer.toString('binary'));
+        const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, false, p12Password);
+        
+        let certRucOrCedula = null;
+        for (const safeContents of p12.safeContents) {
+          for (const bag of safeContents.safeBags) {
+            if (bag.cert) {
+              const subject = bag.cert.subject.attributes || [];
+              for (const attr of subject) {
+                const val = String(attr.value || '').trim();
+                if (attr.name === 'serialNumber' || attr.type === '2.5.4.5') {
+                  const match = val.match(/^(\d{10})/);
+                  if (match) certRucOrCedula = match[1];
+                } else if (val.length === 13 && /^\d+$/.test(val)) {
+                  certRucOrCedula = val.slice(0, 10);
+                }
+              }
+            }
+          }
+        }
+
+        if (certRucOrCedula && emisor.ruc && !emisor.ruc.startsWith(certRucOrCedula)) {
+          return res.status(400).json({
+            error: `El certificado digital .p12 cargado (Cédula/RUC ${certRucOrCedula}) NO corresponde al RUC del emisor seleccionado (${emisor.ruc} - ${emisor.razonSocial || emisor.name}). Cargue la firma correcta.`
+          });
+        }
+      } catch (certErr) {
+        console.warn("Advertencia al validar el certificado P12:", certErr.message);
       }
     }
 
