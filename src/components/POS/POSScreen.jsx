@@ -172,6 +172,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
   });
   
   const [isSearchingClient, setIsSearchingClient] = useState(false);
+  const [clientNoticeMessage, setClientNoticeMessage] = useState('');
 
   const handleCustomerChange = (e) => {
     const { name, value } = e.target;
@@ -218,43 +219,93 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     }
   };
 
-  // --- BÚSQUEDA AUTOMÁTICA DE CLIENTES ---
+  // --- BÚSQUEDA AUTOMÁTICA DE CLIENTES POR IDENTIFICACIÓN OFICIAL ---
   const manejarBuscarCliente = async () => {
     const numId = (customer.numeroIdentificacion || '').trim();
+    setClientNoticeMessage('');
+
     if (!numId || numId.length < 5) return;
-    if (customer.tipoDocumento === 'CONSUMIDOR_FINAL') return;
+    if (customer.tipoDocumento === 'CONSUMIDOR_FINAL' || numId === '9999999999999' || numId === '9999999999') return;
 
     setIsSearchingClient(true);
-    console.log(`🔍 Buscando cliente con CI/RUC: ${numId}...`);
+    console.log(`🔍 Validando e iniciando búsqueda para identificación: ${numId}...`);
 
     try {
-      // Búsqueda directa en la colección 'clientes' usando el ID del documento
+      // 1. Validar primero que la identificación ecuatoriana sea correcta
+      const esCedula = numId.length === 10;
+      const esRuc = numId.length === 13;
+
+      let esValido = false;
+      if (esCedula) esValido = validarCedula(numId);
+      else if (esRuc) esValido = validarRUC(numId);
+
+      if (!esValido) {
+        console.warn(`⚠️ Identificación ecuatoriana no válida: ${numId}`);
+        setClientNoticeMessage("⚠️ Número de cédula o RUC ecuatoriano no válido.");
+        setIsSearchingClient(false);
+        return;
+      }
+
+      // 2. Búsqueda primero en la base de datos local 'clientes' de Firestore
       const docRef = doc(db, 'clientes', numId);
       const docSnap = await getDoc(docRef);
-      
+
       if (docSnap.exists()) {
         const clienteEncontrado = docSnap.data();
-        console.log("✅ Cliente encontrado en Firestore.");
-        setCustomer({
-          ...customer,
+        console.log("✅ Cliente cargado desde la base local de Firestore.");
+        setCustomer(prev => ({
+          ...prev,
+          tipoDocumento: esRuc ? 'RUC' : 'CEDULA',
           nombre: clienteEncontrado.nombre || '',
           correo: clienteEncontrado.correo || '',
           direccion: clienteEncontrado.direccion || '',
           telefono: clienteEncontrado.telefono || ''
-        });
-      } else {
-        // Sin alertas intrusivas, simplemente limpiamos para ingreso manual
-        console.log("🌐 Cliente no existe en base de datos. Inputs habilitados para ingreso manual.");
-        setCustomer({
-          ...customer,
-          nombre: '',
-          correo: '',
-          direccion: '',
-          telefono: ''
-        });
+        }));
+        setClientNoticeMessage("✅ Datos de cliente cargados desde la base local.");
+        setIsSearchingClient(false);
+        return;
       }
+
+      // 3. Si no existe en base de datos local, consultar al servicio oficial del SRI por API
+      console.log("🌐 Consultando catastro público oficial del SRI...");
+      const res = await fetch(`/api/sri/consulta-ruc?ruc=${numId}`);
+      const data = await res.json();
+
+      if (data.success && data.razonSocial) {
+        console.log("✅ Contribuyente encontrado en SRI oficial:", data.razonSocial);
+        const nuevoClienteData = {
+          tipoDocumento: esRuc ? 'RUC' : 'CEDULA',
+          numeroIdentificacion: numId,
+          nombre: data.razonSocial,
+          correo: customer.correo || '',
+          direccion: data.direccion || customer.direccion || '',
+          telefono: customer.telefono || ''
+        };
+
+        setCustomer(nuevoClienteData);
+        setClientNoticeMessage("✅ Datos públicos encontrados en el SRI y guardados en base de clientes.");
+
+        // Guardar automáticamente en Firestore 'clientes' para no consultar nuevamente al SRI en cada venta
+        try {
+          await setDoc(docRef, {
+            ...nuevoClienteData,
+            fechaRegistro: new Date().toISOString(),
+            origen: 'SRI_OFICIAL'
+          }, { merge: true });
+          console.log("💾 Cliente guardado automáticamente en la colección 'clientes'.");
+        } catch (errDb) {
+          console.error("Error guardando cliente en Firestore:", errDb);
+        }
+
+      } else {
+        // Si es cédula sin RUC o el SRI no devuelve información pública
+        console.log("ℹ️ Mensaje SRI:", data.message || "No se encontraron datos públicos en el SRI.");
+        setClientNoticeMessage("No se encontraron datos públicos en el SRI. Ingrese el nombre manualmente");
+      }
+
     } catch (error) {
-      console.error("❌ Error en la búsqueda de cliente:", error);
+      console.error("❌ Error no bloqueante en búsqueda de cliente:", error);
+      setClientNoticeMessage("No se encontraron datos públicos en el SRI. Ingrese el nombre manualmente");
     } finally {
       setIsSearchingClient(false);
     }
@@ -873,6 +924,21 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
               <h4 style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--accent)' }}>
                 <User size={16} /> Datos del Cliente (SRI)
               </h4>
+
+              {clientNoticeMessage && (
+                <div style={{
+                  fontSize: '0.78rem',
+                  marginBottom: '0.75rem',
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  background: clientNoticeMessage.includes('No se encontraron') ? 'rgba(245, 158, 11, 0.12)' : (clientNoticeMessage.includes('⚠️') ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)'),
+                  color: clientNoticeMessage.includes('No se encontraron') ? '#f59e0b' : (clientNoticeMessage.includes('⚠️') ? '#f87171' : '#10b981'),
+                  border: `1px solid ${clientNoticeMessage.includes('No se encontraron') ? 'rgba(245, 158, 11, 0.3)' : (clientNoticeMessage.includes('⚠️') ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)')}`,
+                  fontWeight: '500'
+                }}>
+                  {clientNoticeMessage}
+                </div>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
                 <div>
                   <select 
