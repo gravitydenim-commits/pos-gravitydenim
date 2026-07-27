@@ -19,8 +19,8 @@ const bwipjs = require('bwip-js');
 async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAcceso, numeroComprobante, fecha }) {
   return new Promise(async (resolve, reject) => {
     try {
-      // 1. Determinar ambiente real a partir del dígito 24 de la Clave de Acceso o variable de entorno
-      const isProd = (claveAcceso && claveAcceso.length === 49 && claveAcceso[23] === '2') || process.env.SRI_ENVIRONMENT === 'production';
+      // 1. Determinar ambiente real a partir del dígito 24 de la Clave de Acceso o emisor
+      const isProd = (claveAcceso && claveAcceso.length === 49 && claveAcceso[23] === '2') || issuerData.ambiente === '2' || process.env.SRI_ENVIRONMENT === 'production';
       const ambienteTexto = isProd ? 'PRODUCCIÓN' : 'PRUEBAS';
 
       // 2. Generar Código de Barras Code 128 en PNG Base64
@@ -38,9 +38,18 @@ async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAc
         console.error("Error generando código de barras Code 128:", errBar);
       }
 
-      // Formatear fecha de autorización
-      const fechaAuthObj = fecha ? (fecha.seconds ? new Date(fecha.seconds * 1000) : new Date(fecha)) : new Date();
+      // Formatear fechas sin Invalid Date ni undefined
+      let fechaAuthObj;
+      if (fecha) {
+        if (fecha.seconds) fechaAuthObj = new Date(fecha.seconds * 1000);
+        else fechaAuthObj = new Date(fecha);
+      } else {
+        fechaAuthObj = new Date();
+      }
+      if (isNaN(fechaAuthObj.getTime())) fechaAuthObj = new Date();
+
       const fechaAuthStr = fechaAuthObj.toLocaleString('es-EC');
+      const fechaEmisionStr = fechaAuthObj.toLocaleDateString('es-EC');
 
       const docDefinition = {
         defaultStyle: {
@@ -48,21 +57,21 @@ async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAc
           fontSize: 8
         },
         content: [
-          // CABECERA (Izquierda Logo, Derecha Info)
+          // CABECERA (Izquierda Logo/Emisor, Derecha Info SRI)
           {
             columns: [
               // Logo y Datos Emisor
               {
                 width: '50%',
                 stack: [
-                  { text: 'GRAVITY DENIM', fontSize: 20, bold: true, margin: [0, 20, 0, 20], color: '#e53e3e' },
+                  { text: 'GRAVITY DENIM', fontSize: 20, bold: true, margin: [0, 10, 0, 15], color: '#e53e3e' },
                   {
                     table: {
                       widths: ['*'],
                       body: [
-                        [{ text: issuerData.name || issuerData.razonSocial || 'EMISOR', bold: true, fontSize: 10, border: [true, true, true, false] }],
-                        [{ text: `Dirección Matriz: ${issuerData.direccionMatriz || 'N/A'}`, border: [true, false, true, false] }],
-                        [{ text: `Contribuyente Especial: ${issuerData.contribuyenteEspecial || 'N/A'}`, border: [true, false, true, false] }],
+                        [{ text: issuerData.razonSocial || issuerData.name || 'DOMINGO FABIAN SANCHEZ RAMIREZ', bold: true, fontSize: 10, border: [true, true, true, false] }],
+                        [{ text: `Dirección Matriz: ${issuerData.direccionMatriz || issuerData.address || 'AMBATO / AV. CEVALLOS Y SEVILLA'}`, border: [true, false, true, false] }],
+                        [{ text: `Contribuyente Especial: ${issuerData.contribuyenteEspecial || 'NO'}`, border: [true, false, true, false] }],
                         [{ text: `OBLIGADO A LLEVAR CONTABILIDAD: ${issuerData.obligadoContabilidad ? 'SI' : 'NO'}`, border: [true, false, true, true] }]
                       ]
                     }
@@ -79,20 +88,20 @@ async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAc
                     [
                       {
                         stack: [
-                          { text: `R.U.C.: ${issuerData.ruc}`, fontSize: 12, bold: true },
+                          { text: `R.U.C.: ${issuerData.ruc || '1804632659001'}`, fontSize: 12, bold: true },
                           { text: 'FACTURA', fontSize: 14, bold: true, margin: [0, 5, 0, 5] },
-                          { text: `No. ${numeroComprobante}`, bold: true },
-                          { text: 'NÚMERO DE AUTORIZACIÓN:', margin: [0, 8, 0, 2] },
-                          { text: claveAcceso, fontSize: 8.5, bold: true },
-                          { text: `FECHA Y HORA DE AUTORIZACIÓN: ${fechaAuthStr}`, margin: [0, 8, 0, 4] },
+                          { text: `No. ${numeroComprobante || '001-100-000000354'}`, bold: true },
+                          { text: 'NÚMERO DE AUTORIZACIÓN:', margin: [0, 6, 0, 2] },
+                          { text: claveAcceso, fontSize: 8, bold: true },
+                          { text: `FECHA Y HORA DE AUTORIZACIÓN: ${fechaAuthStr}`, margin: [0, 6, 0, 4] },
                           { text: `AMBIENTE: ${ambienteTexto}`, bold: true, margin: [0, 0, 0, 2] },
                           { text: 'EMISIÓN: NORMAL', margin: [0, 0, 0, 6] },
                           { text: 'CLAVE DE ACCESO', bold: true },
-                          ...(barcodeDataUrl ? [{ image: barcodeDataUrl, width: 220, alignment: 'center', margin: [0, 6, 0, 3] }] : []),
+                          ...(barcodeDataUrl ? [{ image: barcodeDataUrl, fit: [205, 42], alignment: 'center', margin: [0, 4, 0, 3] }] : []),
                           { text: claveAcceso, fontSize: 7.5, alignment: 'center', margin: [0, 2, 0, 0] }
                         ],
                         border: [true, true, true, true],
-                        padding: [10, 10, 10, 10]
+                        padding: [8, 8, 8, 8]
                       }
                     ]
                   ]
@@ -102,7 +111,7 @@ async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAc
           },
           // DATOS DEL CLIENTE
           {
-            margin: [0, 20, 0, 10],
+            margin: [0, 15, 0, 10],
             table: {
               widths: ['*'],
               body: [
@@ -112,16 +121,16 @@ async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAc
                       {
                         width: '70%',
                         stack: [
-                          { text: `Razón Social / Nombres y Apellidos: ${customer.nombre}` },
-                          { text: `Identificación: ${customer.numeroIdentificacion}` },
-                          { text: `Dirección: ${customer.direccion || 'N/A'}` },
-                          { text: `Fecha Emisión: ${fecha.toLocaleDateString('es-EC')}` }
+                          { text: `Razón Social / Nombres: ${customer.nombre || 'CONSUMIDOR FINAL'}` },
+                          { text: `Identificación: ${customer.numeroIdentificacion || '9999999999999'}` },
+                          { text: `Dirección: ${customer.direccion || 'S/N'}` },
+                          { text: `Fecha Emisión: ${fechaEmisionStr}` }
                         ]
                       },
                       {
                         width: '30%',
                         stack: [
-                          { text: `Guía de Remisión: ` }
+                          { text: `Guía de Remisión: S/N` }
                         ]
                       }
                     ],

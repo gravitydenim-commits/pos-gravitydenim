@@ -273,11 +273,11 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
   const secKeyNV = `${currentEstab}_${currentPtoEmi}_NV`;
   const secuencialesMap = activeIssuerData.secuenciales || {};
 
-  const currentSecSriNum = secuencialesMap[secKeySRI] || 0;
-  const currentSecNvNum = secuencialesMap[secKeyNV] || 0;
+  const currentSecSriNum = secuencialesMap[secKeySRI] || 1;
+  const currentSecNvNum = secuencialesMap[secKeyNV] || 1;
 
-  const nextSecSriStr = String(currentSecSriNum + 1).padStart(9, '0');
-  const nextSecNvStr = String(currentSecNvNum + 1).padStart(9, '0');
+  const nextSecSriStr = String(currentSecSriNum).padStart(9, '0');
+  const nextSecNvStr = String(currentSecNvNum).padStart(9, '0');
 
   const proximoNumeroComprobanteSRI = `${currentEstab}-${currentPtoEmi}-${nextSecSriStr}`;
   const proximoNumeroComprobanteNV = `NV-${currentEstab}-${currentPtoEmi}-${nextSecNvStr}`;

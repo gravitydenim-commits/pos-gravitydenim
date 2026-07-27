@@ -146,59 +146,37 @@ export default async function handler(req, res) {
     const estab = emisor.estab || emisor.establecimiento || '001';
     const ptoEmi = emisor.ptoEmi || emisor.puntoEmision || '001';
     const secKey = `${estab}_${ptoEmi}`;
-
-    // 6. Generar Secuencial de forma ATÓMICA (Evita race conditions)
-    // Se ejecuta solo después de que TODAS las validaciones pasaron
-    let nextSecuencial = 0;
     const secKeyNV = `${estab}_${ptoEmi}_NV`;
-    
+
+    // 6. Leer Secuencial Actual guardado en Firestore (Ej: 354)
+    const secuencialesMap = emisor.secuenciales || {};
+    let currentSecuencial = 1;
+
     if (!isNotaVenta) {
-      nextSecuencial = await adminDb.runTransaction(async (t) => {
-        const ref = adminDb.collection('issuers').doc(emisorId);
-        const doc = await t.get(ref);
-        const data = doc.data();
-        
-        // Manejar la estructura anidada de secuenciales
-        const secuenciales = data.secuenciales || {};
-        const current = secuenciales[secKey] || 0;
-        const next = current + 1;
-        
-        // Actualizar específicamente el contador para esta combinación estab_pto sin borrar los demás
-        t.update(ref, { [`secuenciales.${secKey}`]: next });
-        return next;
-      });
+      currentSecuencial = secuencialesMap[secKey] || 1;
     } else {
-      // Secuencial atómico para Nota de Venta
-      nextSecuencial = await adminDb.runTransaction(async (t) => {
-        const ref = adminDb.collection('issuers').doc(emisorId);
-        const doc = await t.get(ref);
-        const data = doc.data();
-        
-        const secuenciales = data.secuenciales || {};
-        const current = secuenciales[secKeyNV] || 0;
-        const next = current + 1;
-        
-        t.update(ref, { [`secuenciales.${secKeyNV}`]: next });
-        return next;
-      });
+      currentSecuencial = secuencialesMap[secKeyNV] || 1;
     }
 
-    const secStr = String(nextSecuencial).padStart(9, '0');
+    const secStr = String(currentSecuencial).padStart(9, '0');
     const numeroComprobanteCompleto = isNotaVenta ? `NV-${estab}-${ptoEmi}-${secStr}` : `${estab}-${ptoEmi}-${secStr}`;
+
+    // Determinar ambiente real (2 = PRODUCCIÓN)
+    const ambienteEmisor = (emisor.ambiente === '2' || process.env.SRI_ENVIRONMENT === 'production') ? 2 : 1;
 
     const invoiceData = {
       infoTributaria: {
-        ambiente: process.env.SRI_ENVIRONMENT === 'production' ? 2 : 1,
+        ambiente: ambienteEmisor,
         tipoEmision: 1,
-        razonSocial: isNotaVenta ? 'GRAVITY DENIM' : (emisor.razonSocial || emisor.name || 'Sin Razón Social'),
-        nombreComercial: isNotaVenta ? 'GRAVITY DENIM' : (emisor.nombreComercial || emisor.razonSocial || emisor.name || 'Sin Nombre Comercial'),
+        razonSocial: isNotaVenta ? 'GRAVITY DENIM' : (emisor.razonSocial || emisor.name || 'DOMINGO FABIAN SANCHEZ RAMIREZ'),
+        nombreComercial: isNotaVenta ? 'GRAVITY DENIM' : (emisor.nombreComercial || emisor.razonSocial || emisor.name || 'GRAVITY DENIM'),
         ruc: emisor.ruc,
         claveAcceso: 'GENERADA_AUTOMATICAMENTE_POR_OSODREAMER',
         codDoc: '01',
         estab: estab,
         ptoEmi: ptoEmi,
         secuencial: secStr,
-        dirMatriz: emisor.direccionMatriz
+        dirMatriz: emisor.direccionMatriz || 'AMBATO / AV. CEVALLOS Y SEVILLA'
       },
       infoFactura: {
         fechaEmision: new Date().toISOString(),
@@ -312,6 +290,23 @@ export default async function handler(req, res) {
           password: p12Password,
           xmlBuffer: Buffer.from(xmlUnsigned, 'utf8')
         });
+
+        // INCREMENTAR SECUENCIAL EN FIRESTORE ÚNICAMENTE SI LA FIRMA DEL XML FUE EXITOSA
+        try {
+          await adminDb.runTransaction(async (t) => {
+            const ref = adminDb.collection('issuers').doc(emisorId);
+            const docSnap = await t.get(ref);
+            if (docSnap.exists()) {
+              const data = docSnap.data();
+              const secuenciales = data.secuenciales || {};
+              const current = secuenciales[secKey] || currentSecuencial;
+              t.update(ref, { [`secuenciales.${secKey}`]: current + 1 });
+            }
+          });
+          console.log(`✅ [SECUENCIAL INCREMENTADO ATÓMICAMENTE] Firestore guardó el nuevo secuencial disponible: ${currentSecuencial + 1}`);
+        } catch (tErr) {
+          console.error("Error al actualizar secuencial en Firestore:", tErr);
+        }
       } catch (e) {
         console.error("Error interno generando/firmando XML:", e);
         errorTecnico = "Fallo de Generación/Firma: " + e.message;
