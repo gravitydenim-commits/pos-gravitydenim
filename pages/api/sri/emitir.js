@@ -174,14 +174,31 @@ export default async function handler(req, res) {
     const secKey = `${estab}_${ptoEmi}`;
     const secKeyNV = `${estab}_${ptoEmi}_NV`;
 
-    // 6. Leer Secuencial Actual guardado en Firestore (Ej: 354)
-    const secuencialesMap = emisor.secuenciales || {};
+    // 6. Reservar el Secuencial de forma atómica al inicio de la petición
     let currentSecuencial = 1;
-
-    if (!isNotaVenta) {
-      currentSecuencial = secuencialesMap[secKey] || 1;
-    } else {
-      currentSecuencial = secuencialesMap[secKeyNV] || 1;
+    const issuerRef = adminDb.collection('issuers').doc(emisorId);
+    
+    try {
+      await adminDb.runTransaction(async (t) => {
+        const docSnap = await t.get(issuerRef);
+        if (!docSnap.exists) {
+          throw new Error('Emisor no encontrado');
+        }
+        const data = docSnap.data();
+        const secuenciales = data.secuenciales || {};
+        
+        if (!isNotaVenta) {
+          currentSecuencial = secuenciales[secKey] || 1;
+          t.update(issuerRef, { [`secuenciales.${secKey}`]: currentSecuencial + 1 });
+        } else {
+          currentSecuencial = secuenciales[secKeyNV] || 1;
+          t.update(issuerRef, { [`secuenciales.${secKeyNV}`]: currentSecuencial + 1 });
+        }
+      });
+      console.log(`🔒 [SECUENCIAL RESERVADO ATÓMICAMENTE]: Reservado: ${currentSecuencial}, Siguiente: ${currentSecuencial + 1}`);
+    } catch (reserveErr) {
+      console.error("Error reservando secuencial atómicamente:", reserveErr);
+      return res.status(500).json({ error: "Error de concurrencia al reservar secuencial: " + reserveErr.message });
     }
 
     const secStr = String(currentSecuencial).padStart(9, '0');
@@ -317,22 +334,7 @@ export default async function handler(req, res) {
           xmlBuffer: Buffer.from(xmlUnsigned, 'utf8')
         });
 
-        // INCREMENTAR SECUENCIAL EN FIRESTORE ÚNICAMENTE SI LA FIRMA DEL XML FUE EXITOSA
-        try {
-          await adminDb.runTransaction(async (t) => {
-            const ref = adminDb.collection('issuers').doc(emisorId);
-            const docSnap = await t.get(ref);
-            if (docSnap.exists()) {
-              const data = docSnap.data();
-              const secuenciales = data.secuenciales || {};
-              const current = secuenciales[secKey] || currentSecuencial;
-              t.update(ref, { [`secuenciales.${secKey}`]: current + 1 });
-            }
-          });
-          console.log(`✅ [SECUENCIAL INCREMENTADO ATÓMICAMENTE] Firestore guardó el nuevo secuencial disponible: ${currentSecuencial + 1}`);
-        } catch (tErr) {
-          console.error("Error al actualizar secuencial en Firestore:", tErr);
-        }
+        // El secuencial ya fue reservado e incrementado de forma atómica al inicio de la petición.
       } catch (e) {
         console.error("Error interno generando/firmando XML:", e);
         errorTecnico = "Fallo de Generación/Firma: " + e.message;
@@ -565,6 +567,27 @@ export default async function handler(req, res) {
     console.log(JSON.stringify(comprobanteData, null, 2));
 
     const nuevaVentaRef = adminDb.collection('ventas').doc(finalClaveAcceso);
+    
+    // Validar unicidad para evitar sobreescribir facturas existentes en Firestore
+    const existingDoc = await nuevaVentaRef.get();
+    if (existingDoc.exists) {
+      console.error(`❌ [DUPLICADO DETECTADO EN EMITIR]: La clave de acceso ${finalClaveAcceso} ya existe en Firestore! Abortando sobreescritura.`);
+      
+      const duplicateRef = adminDb.collection('ventas').doc(`${finalClaveAcceso}-DUPLICADO`);
+      await duplicateRef.set({
+        ...comprobanteData,
+        estado: 'ERROR_DUPLICADO',
+        errorSRI: 'CLAVE ACCESO REGISTRADA (DUPLICIDAD DETECTADA EN BASE DE DATOS)'
+      });
+
+      return res.status(400).json({
+        success: false,
+        error: "Esta factura ya fue procesada anteriormente.",
+        claveAcceso: finalClaveAcceso,
+        sriStatus: "ERROR_DUPLICADO"
+      });
+    }
+
     batch.set(nuevaVentaRef, comprobanteData);
 
     // REDUCCIÓN DE STOCK (SIEMPRE SE DESCUENTA UNA SOLA VEZ)
