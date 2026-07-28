@@ -119,14 +119,14 @@ function App() {
     let unsubIssuers;
 
     if (currentUser && !permissionsLoading) {
-      if (isAdmin || hasPermission('clientes', 'ver')) {
+      if (isAdmin || hasPermission('clientes', 'ver') || hasPermission('caja', 'ver')) {
         unsubClientes = onSnapshot(collection(db, 'clientes'), (snapshot) => {
           const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
           setCustomersDB(data);
         }, (err) => console.error(`ERROR EN [clientes] (uid=${currentUser.uid}, rol=${userRole}):`, err));
       }
 
-      if (isAdmin || hasPermission('inventario', 'ver')) {
+      if (isAdmin || hasPermission('inventario', 'ver') || hasPermission('caja', 'ver')) {
         unsubProductos = onSnapshot(collection(db, 'productos'), (snapshot) => {
           const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
           setProductsDB(data);
