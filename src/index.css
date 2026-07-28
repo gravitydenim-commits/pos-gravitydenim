@@ -212,8 +212,12 @@ h1, h2, h3 {
   border-left: none;
   border-top: none;
   border-bottom: none;
-  overflow-y: auto;
-  overflow-x: hidden;
+  height: calc(100dvh - 50px);
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+  touch-action: pan-y !important;
   /* Scrollbar delgado y elegante para la sidebar */
   scrollbar-width: thin;
   scrollbar-color: var(--accent) transparent;
