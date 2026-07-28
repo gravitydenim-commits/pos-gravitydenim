@@ -39,7 +39,6 @@ export default function InventarioScreen({ productsDB, onEdit, onDelete, onAdd }
       const { doc, updateDoc } = await import('firebase/firestore');
       const { db } = await import('../../firebase/config');
       
-      // Actualizar secuencialmente en lotes
       for (const prod of productsDB) {
         await updateDoc(doc(db, 'products', prod.id), {
           ownerId: selectedBulkOwnerId,
@@ -55,23 +54,30 @@ export default function InventarioScreen({ productsDB, onEdit, onDelete, onAdd }
     }
   };
 
+  const isIminMode = typeof window !== 'undefined' && (
+    localStorage.getItem('iminSwanEnabled') === 'true' || 
+    /imin|iMin|I24D03|DS2-25/i.test(navigator.userAgent)
+  );
+
+  const cellPadding = isIminMode ? '0.5rem 0.75rem' : '1rem';
+
   return (
-    <div className="animate-fade-in" style={{ padding: '2rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div className="animate-fade-in" style={{ padding: isIminMode ? '0.75rem' : '2rem', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isIminMode ? '0.75rem' : '2rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
-          <h2 style={{ color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Package size={28} /> Inventario Central
+          <h2 style={{ color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, fontSize: isIminMode ? '1.5rem' : '1.8rem' }}>
+            <Package size={isIminMode ? 22 : 28} /> Inventario Central
           </h2>
-          <p style={{ color: 'var(--text-muted)' }}>Gestiona los productos, precios y stock del catálogo general.</p>
+          <p style={{ color: 'var(--text-muted)', margin: '2px 0 0 0', fontSize: isIminMode ? '0.85rem' : '1rem' }}>Gestiona los productos, precios y stock del catálogo general.</p>
         </div>
         
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '10px 15px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Asignación Masiva:</span>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: isIminMode ? '6px 12px' : '10px 15px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Asignación Masiva:</span>
           <select 
             value={selectedBulkOwnerId} 
             onChange={(e) => setSelectedBulkOwnerId(e.target.value)}
-            style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white', fontSize: '0.85rem' }}
+            style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white', fontSize: '0.8rem' }}
           >
             <option value="">Seleccionar Hermano...</option>
             {owners.map(name => (
@@ -82,28 +88,28 @@ export default function InventarioScreen({ productsDB, onEdit, onDelete, onAdd }
             onClick={handleBulkAssign}
             disabled={applyingBulk}
             className="btn-primary" 
-            style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+            style={{ padding: '5px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
           >
-            <UserCheck size={16} /> {applyingBulk ? 'Aplicando...' : 'Asignar a Todos'}
+            <UserCheck size={14} /> {applyingBulk ? 'Aplicando...' : 'Asignar a Todos'}
           </button>
         </div>
 
-        <button className="btn-success" onClick={onAdd} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '12px 20px' }}>
-          <PlusCircle size={20} /> Nuevo Producto
+        <button className="btn-success" onClick={onAdd} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: isIminMode ? '8px 16px' : '12px 20px', fontSize: isIminMode ? '0.9rem' : '1.05rem' }}>
+          <PlusCircle size={isIminMode ? 18 : 20} /> Nuevo Producto
         </button>
       </div>
 
-      <div className="glass-panel" style={{ flex: 1, overflowY: 'auto', padding: '0' }}>
+      <div className="glass-panel" style={{ flex: 1, overflowY: 'auto', padding: '0', border: '1px solid var(--panel-border)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-          <thead style={{ background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid var(--panel-border)' }}>
+          <thead style={{ background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid var(--panel-border)', position: 'sticky', top: 0, zIndex: 1 }}>
             <tr>
-              <th style={{ padding: '1rem', color: 'var(--text-muted)' }}>SKU / Ref</th>
-              <th style={{ padding: '1rem', color: 'var(--text-muted)' }}>Producto</th>
-              <th style={{ padding: '1rem', color: 'var(--text-muted)' }}>Propietario / Hermano</th>
-              <th style={{ padding: '1rem', color: 'var(--text-muted)' }}>Categoría</th>
-              <th style={{ padding: '1rem', color: 'var(--text-muted)' }}>Precio Base</th>
-              <th style={{ padding: '1rem', color: 'var(--text-muted)' }}>Stock</th>
-              <th style={{ padding: '1rem', color: 'var(--text-muted)', textAlign: 'right' }}>Acciones</th>
+              <th style={{ padding: cellPadding, color: 'var(--text-muted)', fontSize: isIminMode ? '0.85rem' : '1rem' }}>SKU / Ref</th>
+              <th style={{ padding: cellPadding, color: 'var(--text-muted)', fontSize: isIminMode ? '0.85rem' : '1rem' }}>Producto</th>
+              <th style={{ padding: cellPadding, color: 'var(--text-muted)', fontSize: isIminMode ? '0.85rem' : '1rem' }}>Propietario / Hermano</th>
+              <th style={{ padding: cellPadding, color: 'var(--text-muted)', fontSize: isIminMode ? '0.85rem' : '1rem' }}>Categoría</th>
+              <th style={{ padding: cellPadding, color: 'var(--text-muted)', fontSize: isIminMode ? '0.85rem' : '1rem' }}>Precio Base</th>
+              <th style={{ padding: cellPadding, color: 'var(--text-muted)', fontSize: isIminMode ? '0.85rem' : '1rem' }}>Stock</th>
+              <th style={{ padding: cellPadding, color: 'var(--text-muted)', textAlign: 'right', fontSize: isIminMode ? '0.85rem' : '1rem' }}>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -115,68 +121,68 @@ export default function InventarioScreen({ productsDB, onEdit, onDelete, onAdd }
               </tr>
             ) : (
               productsDB.map(prod => (
-                <tr key={prod.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                  <td style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                <tr key={prod.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: isIminMode ? '0.9rem' : '1rem' }}>
+                  <td style={{ padding: cellPadding, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                     {prod.codigoBarras || `#${prod.id.slice(-4)}`}
                   </td>
-                  <td style={{ padding: '1rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <td style={{ padding: cellPadding, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {(() => {
                       if (prod.icono) {
-                        if (prod.icono === 'Shirt') return <Shirt size={18} color="var(--accent)"/>;
-                        if (prod.icono === 'ShoppingBag') return <ShoppingBag size={18} color="var(--accent)"/>;
-                        if (prod.icono === 'Tag') return <Tag size={18} color="var(--accent)"/>;
-                        if (prod.icono === 'Scissors') return <Scissors size={18} color="var(--accent)"/>;
-                        if (prod.icono === 'Package') return <Package size={18} color="var(--accent)"/>;
-                        if (prod.icono === 'Briefcase') return <Briefcase size={18} color="var(--accent)"/>;
-                        if (prod.icono === 'Glasses') return <Glasses size={18} color="var(--accent)"/>;
-                        if (prod.icono === 'Watch') return <Watch size={18} color="var(--accent)"/>;
-                        if (prod.icono === 'Gem') return <Gem size={18} color="var(--accent)"/>;
-                        return <span style={{ fontSize: '18px', lineHeight: 1 }}>{prod.icono}</span>;
+                        if (prod.icono === 'Shirt') return <Shirt size={isIminMode ? 16 : 18} color="var(--accent)"/>;
+                        if (prod.icono === 'ShoppingBag') return <ShoppingBag size={isIminMode ? 16 : 18} color="var(--accent)"/>;
+                        if (prod.icono === 'Tag') return <Tag size={isIminMode ? 16 : 18} color="var(--accent)"/>;
+                        if (prod.icono === 'Scissors') return <Scissors size={isIminMode ? 16 : 18} color="var(--accent)"/>;
+                        if (prod.icono === 'Package') return <Package size={isIminMode ? 16 : 18} color="var(--accent)"/>;
+                        if (prod.icono === 'Briefcase') return <Briefcase size={isIminMode ? 16 : 18} color="var(--accent)"/>;
+                        if (prod.icono === 'Glasses') return <Glasses size={isIminMode ? 16 : 18} color="var(--accent)"/>;
+                        if (prod.icono === 'Watch') return <Watch size={isIminMode ? 16 : 18} color="var(--accent)"/>;
+                        if (prod.icono === 'Gem') return <Gem size={isIminMode ? 16 : 18} color="var(--accent)"/>;
+                        return <span style={{ fontSize: isIminMode ? '16px' : '18px', lineHeight: 1 }}>{prod.icono}</span>;
                       }
                       
                       const cat = (prod.categoria || '').toLowerCase();
-                      if (cat.includes('jeans')) return <Shirt size={18} color="var(--accent)"/>;
-                      if (cat.includes('chaqueta')) return <ShoppingBag size={18} color="var(--accent)"/>;
-                      if (cat.includes('camisa')) return <Shirt size={18} color="var(--accent)"/>;
-                      if (cat.includes('accesorio')) return <Tag size={18} color="var(--accent)"/>;
-                      if (cat.includes('sastreria') || cat.includes('costura')) return <Scissors size={18} color="var(--accent)"/>;
-                      return <Package size={18} color="var(--accent)"/>;
+                      if (cat.includes('jeans')) return <Shirt size={isIminMode ? 16 : 18} color="var(--accent)"/>;
+                      if (cat.includes('chaqueta')) return <ShoppingBag size={isIminMode ? 16 : 18} color="var(--accent)"/>;
+                      if (cat.includes('camisa')) return <Shirt size={isIminMode ? 16 : 18} color="var(--accent)"/>;
+                      if (cat.includes('accesorio')) return <Tag size={isIminMode ? 16 : 18} color="var(--accent)"/>;
+                      if (cat.includes('sastreria') || cat.includes('costura')) return <Scissors size={isIminMode ? 16 : 18} color="var(--accent)"/>;
+                      return <Package size={isIminMode ? 16 : 18} color="var(--accent)"/>;
                     })()}
                     {prod.nombre || prod.name}
                   </td>
-                  <td style={{ padding: '1rem', fontStyle: prod.ownerName ? 'normal' : 'italic', color: prod.ownerName ? 'white' : 'var(--text-muted)' }}>
+                  <td style={{ padding: cellPadding, fontStyle: prod.ownerName ? 'normal' : 'italic', color: prod.ownerName ? 'white' : 'var(--text-muted)' }}>
                     {prod.ownerName || 'Sin asignar'}
                   </td>
-                  <td style={{ padding: '1rem' }}>
-                    <span style={{ background: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '12px', fontSize: '0.8rem' }}>
+                  <td style={{ padding: cellPadding }}>
+                    <span style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '12px', fontSize: '0.75rem' }}>
                       {prod.categoria || 'General'}
                     </span>
                   </td>
-                  <td style={{ padding: '1rem', color: 'var(--success)' }}>
+                  <td style={{ padding: cellPadding, color: 'var(--success)' }}>
                     ${(prod.precioBase || prod.price || 0).toFixed(2)}
                   </td>
-                  <td style={{ padding: '1rem' }}>
+                  <td style={{ padding: cellPadding }}>
                     {prod.stock < 5 ? (
-                      <span style={{ color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 'bold' }}>
-                        <AlertTriangle size={16} /> {prod.stock || 0}
+                      <span style={{ color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '0.2rem', fontWeight: 'bold' }}>
+                        <AlertTriangle size={isIminMode ? 14 : 16} /> {prod.stock || 0}
                       </span>
                     ) : (
                       <span>{prod.stock || 0}</span>
                     )}
                   </td>
-                  <td style={{ padding: '1rem', textAlign: 'right' }}>
-                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                  <td style={{ padding: cellPadding, textAlign: 'right' }}>
+                    <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'flex-end' }}>
                       <button 
                         className="btn-primary" 
-                        style={{ padding: '6px' }}
+                        style={{ padding: isIminMode ? '4px' : '6px' }}
                         onClick={() => onEdit(prod)}
                         title="Editar Producto"
                       >
-                        <Edit2 size={16} />
+                        <Edit2 size={isIminMode ? 14 : 16} />
                       </button>
                       <button 
                         className="btn-danger" 
-                        style={{ padding: '6px' }}
+                        style={{ padding: isIminMode ? '4px' : '6px' }}
                         onClick={() => {
                           if(window.confirm(`¿Seguro que deseas eliminar "${prod.nombre || prod.name}"?`)) {
                             onDelete(prod.id);
@@ -184,7 +190,7 @@ export default function InventarioScreen({ productsDB, onEdit, onDelete, onAdd }
                         }}
                         title="Eliminar Producto"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={isIminMode ? 14 : 16} />
                       </button>
                     </div>
                   </td>

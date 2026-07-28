@@ -230,5 +230,98 @@ export default function PantallaCliente() {
     );
   }
 
+  // 4. Cart View Mode (Visualización de productos del carrito y totales en tiempo real)
+  if (csState.status === 'cart_view') {
+    const items = csState.cartItems || [];
+    return (
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#0f172a', color: 'white', overflow: 'hidden' }}>
+        {/* Cabecera compacta */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 2.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)', background: '#1e293b' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <img src="/logo.jpg" alt="Logo" style={{ height: '40px', borderRadius: '6px' }} onError={(e) => e.target.style.display='none'} />
+            <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#38bdf8', margin: 0 }}>Su Compra</h1>
+          </div>
+          <span style={{ fontSize: '1.2rem', color: '#94a3b8' }}>Gravity Denim POS</span>
+        </div>
+
+        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+          {/* Tabla de Productos (Izquierda) */}
+          <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
+            {items.length === 0 ? (
+              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '1.4rem' }}>
+                Esperando productos...
+              </div>
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid rgba(255,255,255,0.1)' }}>
+                    <th style={{ textAlign: 'left', padding: '1rem', color: '#38bdf8', fontSize: '1.1rem' }}>Descripción</th>
+                    <th style={{ textAlign: 'center', padding: '1rem', color: '#38bdf8', fontSize: '1.1rem', width: '100px' }}>Cant</th>
+                    <th style={{ textAlign: 'right', padding: '1rem', color: '#38bdf8', fontSize: '1.1rem', width: '120px' }}>P. Unit</th>
+                    <th style={{ textAlign: 'right', padding: '1rem', color: '#38bdf8', fontSize: '1.1rem', width: '140px' }}>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item, idx) => {
+                    const qty = item.qty || item.cantidad || 1;
+                    const price = item.price || item.precio || 0;
+                    const desc = item.descuento || 0;
+                    const totalLine = (qty * price) - desc;
+                    return (
+                      <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '1.2rem' }}>
+                        <td style={{ padding: '1rem', fontWeight: '500' }}>
+                          {item.name || item.nombre}
+                          {desc > 0 && (
+                            <div style={{ fontSize: '0.9rem', color: '#f87171', marginTop: '0.2rem' }}>
+                              Descuento aplicado: -{formatCurrency(desc)}
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ padding: '1rem', textAlign: 'center', fontWeight: 'bold' }}>{qty}</td>
+                        <td style={{ padding: '1rem', textAlign: 'right' }}>{formatCurrency(price)}</td>
+                        <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 'bold', color: '#38bdf8' }}>{formatCurrency(totalLine)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Resumen de Totales (Derecha) */}
+          <div style={{ width: '350px', background: 'rgba(30, 41, 59, 0.5)', borderLeft: '1px solid rgba(255,255,255,0.08)', padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div>
+              <h2 style={{ fontSize: '1.5rem', color: '#38bdf8', marginBottom: '1.5rem', marginTop: 0 }}>Resumen</h2>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', fontSize: '1.1rem' }}>
+                <span style={{ color: '#94a3b8' }}>Subtotal:</span>
+                <span>{formatCurrency(csState.subtotal)}</span>
+              </div>
+              {csState.totalDescuentos > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', fontSize: '1.1rem', color: '#f87171' }}>
+                  <span>Descuentos:</span>
+                  <span>-{formatCurrency(csState.totalDescuentos)}</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', fontSize: '1.1rem' }}>
+                <span style={{ color: '#94a3b8' }}>IVA 15%:</span>
+                <span>{formatCurrency(csState.ivaAmount)}</span>
+              </div>
+            </div>
+
+            <div style={{ borderTop: '2px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <span style={{ fontSize: '1.4rem', color: '#38bdf8', fontWeight: 'bold' }}>Total:</span>
+                <span style={{ fontSize: '2.5rem', color: '#22c55e', fontWeight: 'bold', textShadow: '0 0 15px rgba(34, 197, 94, 0.2)' }}>
+                  {formatCurrency(csState.total)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return null;
 }

@@ -40,7 +40,7 @@ export default function DailyReport({ issuers, sales }) {
   const totalGlobal = reportData.reduce((acc, data) => acc + data.totalAmount, 0);
 
   return (
-    <div className="report-container animate-fade-in" style={{ padding: '2rem', height: '100%', overflowY: 'auto' }}>
+    <div className="report-container animate-fade-in" style={{ padding: '2rem' }}>
       <div className="header" style={{ marginBottom: '2rem' }}>
         <h2><LayoutDashboard className="inline" style={{verticalAlign: 'bottom'}}/> Reporte de Ventas (Cierre de Caja)</h2>
         <span style={{color: 'var(--text-muted)'}}>{new Date().toLocaleDateString()}</span>

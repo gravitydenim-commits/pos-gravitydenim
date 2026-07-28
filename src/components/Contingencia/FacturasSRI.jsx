@@ -225,7 +225,7 @@ export default function FacturasSRI() {
   };
 
   return (
-    <div className="report-container animate-fade-in" style={{ padding: '2rem', height: '100%', overflowY: 'auto' }}>
+    <div className="report-container animate-fade-in" style={{ padding: '2rem' }}>
       <div className="header" style={{ marginBottom: '2rem' }}>
         <h2><AlertTriangle className="inline" style={{verticalAlign: 'bottom'}}/> Facturación Electrónica SRI</h2>
         <span style={{color: 'var(--text-muted)'}}>Contingencia y Documentos Emitidos</span>

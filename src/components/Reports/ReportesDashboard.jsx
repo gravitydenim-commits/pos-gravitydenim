@@ -699,7 +699,7 @@ export default function ReportesDashboard({ sales, issuers }) {
   };
 
   return (
-    <div className="report-container animate-fade-in" style={{ padding: '2rem', height: '100%', overflowY: 'auto' }}>
+    <div className="report-container animate-fade-in" style={{ padding: '2rem' }}>
       <style>{`
         .pos-table th, .pos-table td {
           padding: 14px 18px !important;

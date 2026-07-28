@@ -61,6 +61,7 @@ export default function ConfiguracionGeneral() {
   const [csMessage, setCsMessage] = useState('Bienvenidos a Gravity Denim');
   const [csShowTotal, setCsShowTotal] = useState(true);
   const [csShowQR, setCsShowQR] = useState(true);
+  const [iminSwanEnabled, setIminSwanEnabled] = useState(false);
 
   useEffect(() => {
     const savedEnabled = localStorage.getItem('csEnabled');
@@ -68,12 +69,14 @@ export default function ConfiguracionGeneral() {
     const savedMsg = localStorage.getItem('csMessage');
     const savedTotal = localStorage.getItem('csShowTotal');
     const savedQR = localStorage.getItem('csShowQR');
+    const savedImin = localStorage.getItem('iminSwanEnabled');
 
     if (savedEnabled !== null) setCsEnabled(savedEnabled === 'true');
     if (savedType) setCsWelcomeType(savedType);
     if (savedMsg) setCsMessage(savedMsg);
     if (savedTotal !== null) setCsShowTotal(savedTotal === 'true');
     if (savedQR !== null) setCsShowQR(savedQR === 'true');
+    if (savedImin !== null) setIminSwanEnabled(savedImin === 'true');
   }, []);
 
   const handleCsChange = (key, value) => {
@@ -84,6 +87,7 @@ export default function ConfiguracionGeneral() {
       case 'csMessage': setCsMessage(value); break;
       case 'csShowTotal': setCsShowTotal(value); break;
       case 'csShowQR': setCsShowQR(value); break;
+      case 'iminSwanEnabled': setIminSwanEnabled(value); break;
     }
   };
 
@@ -444,7 +448,7 @@ export default function ConfiguracionGeneral() {
   };
 
   return (
-    <div className="report-container animate-fade-in" style={{ padding: '2rem', height: '100%', overflowY: 'auto' }}>
+    <div className="report-container animate-fade-in" style={{ padding: '2rem' }}>
       <div className="header" style={{ marginBottom: '2rem' }}>
         <h2><ShieldCheck className="inline" style={{verticalAlign: 'bottom'}}/> Configuración de Emisores SRI</h2>
         <span style={{color: 'var(--text-muted)'}}>Firmas Electrónicas (.p12) y Perfiles Multi-RUC</span>
@@ -826,6 +830,32 @@ export default function ConfiguracionGeneral() {
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
                 Durante el proceso de compra, el cliente no verá los productos, precios ni información interna. Esta pantalla solo se activará al momento de dar click en "Cobrar".
               </p>
+            </div>
+          </div>
+        </div>
+
+        {/* --- MODO POS IMIN SWAN 2 --- */}
+        <div className="glass-panel" style={{ padding: '2rem', marginTop: '2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h3 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#60a5fa' }}>
+                🖥️ Modo POS iMin Swan 2 (DS2-25 / I24D03)
+              </h3>
+              <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>
+                Optimiza la resolución, fuentes, catálogo de productos y activa la impresión térmica directa y pantalla secundaria nativa.
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <input 
+                type="checkbox" 
+                id="iminSwanEnabled" 
+                checked={iminSwanEnabled}
+                onChange={(e) => handleCsChange('iminSwanEnabled', e.target.checked)}
+                style={{ width: '22px', height: '22px', cursor: 'pointer' }}
+              />
+              <label htmlFor="iminSwanEnabled" style={{ color: 'var(--text-main)', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer' }}>
+                Activar Modo POS iMin
+              </label>
             </div>
           </div>
         </div>

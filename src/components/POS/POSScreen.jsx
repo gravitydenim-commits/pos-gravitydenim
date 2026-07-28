@@ -741,39 +741,52 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         const format = localStorage.getItem('printerFormat') || '80mm';
         const method = localStorage.getItem('printerMethod') || 'sistema';
 
-        if (format === '58mm' && method === 'bluetooth_58') {
-          import('../../lib/Printer58Service').then(async (module) => {
-            try {
-              await module.printer58Service.printTicket(
+        let wasIminPrinted = false;
+        if (isIminMode) {
+          try {
+            const iminMod = await import('../../utils/iminPrinter');
+            await iminMod.printTicketImin(issuerData, cart, totalsData, customer, resultNV.numeroComprobante, paymentMethod, true, paymentDetails);
+            wasIminPrinted = true;
+          } catch(e) {
+            console.error("Error al imprimir con iMin en Nota de Venta:", e);
+          }
+        }
+
+        if (!wasIminPrinted) {
+          if (format === '58mm' && method === 'bluetooth_58') {
+            import('../../lib/Printer58Service').then(async (module) => {
+              try {
+                await module.printer58Service.printTicket(
+                  issuerData, 
+                  customer, 
+                  cart, 
+                  totalsData.subtotal, 
+                  totalsData.ivaAmount, 
+                  totalsData.total, 
+                  { numeroComprobante: resultNV.numeroComprobante, isNotaVenta: true },
+                  paymentMethod
+                );
+              } catch (err) {
+                import('../../utils/printTicket').then(fallbackMod => {
+                  fallbackMod.imprimirTicket(issuerData, cart, totalsData, customer, resultNV.numeroComprobante, paymentMethod, paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, true, format);
+                });
+              }
+            });
+          } else {
+            import('../../utils/printTicket').then(module => {
+              module.imprimirTicket(
                 issuerData, 
-                customer, 
                 cart, 
-                totalsData.subtotal, 
-                totalsData.ivaAmount, 
-                totalsData.total, 
-                { numeroComprobante: resultNV.numeroComprobante, isNotaVenta: true },
-                paymentMethod
+                totalsData, 
+                customer, 
+                resultNV.numeroComprobante, 
+                paymentMethod, 
+                paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, 
+                true, 
+                format
               );
-            } catch (err) {
-              import('../../utils/printTicket').then(fallbackMod => {
-                fallbackMod.imprimirTicket(issuerData, cart, totalsData, customer, resultNV.numeroComprobante, paymentMethod, paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, true, format);
-              });
-            }
-          });
-        } else {
-          import('../../utils/printTicket').then(module => {
-            module.imprimirTicket(
-              issuerData, 
-              cart, 
-              totalsData, 
-              customer, 
-              resultNV.numeroComprobante, 
-              paymentMethod, 
-              paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, 
-              true, 
-              format
-            );
-          });
+            });
+          }
         }
       }
 
@@ -963,40 +976,53 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         const format = localStorage.getItem('printerFormat') || '80mm';
         const method = localStorage.getItem('printerMethod') || 'sistema';
 
-        if (format === '58mm' && method === 'bluetooth_58') {
-          import('../../lib/Printer58Service').then(async (module) => {
-            try {
-              await module.printer58Service.printTicket(
+        let wasIminPrinted = false;
+        if (isIminMode) {
+          try {
+            const iminMod = await import('../../utils/iminPrinter');
+            await iminMod.printTicketImin(issuerData, cart, totalsData, customer, claveAcceso, paymentMethod, isNotaVenta, paymentDetails);
+            wasIminPrinted = true;
+          } catch(e) {
+            console.error("Error al imprimir con iMin en Factura SRI:", e);
+          }
+        }
+
+        if (!wasIminPrinted) {
+          if (format === '58mm' && method === 'bluetooth_58') {
+            import('../../lib/Printer58Service').then(async (module) => {
+              try {
+                await module.printer58Service.printTicket(
+                  issuerData, 
+                  customer, 
+                  cart, 
+                  subtotal, 
+                  ivaAmount, 
+                  total, 
+                  { numeroComprobante: sriData.numeroComprobante || '', claveAcceso, isNotaVenta },
+                  paymentMethod
+                );
+              } catch (err) {
+                console.error("Fallo impresión 58mm Web Bluetooth, usando sistema:", err);
+                import('../../utils/printTicket').then(fallbackMod => {
+                  fallbackMod.imprimirTicket(issuerData, cart, totalsData, customer, claveAcceso, paymentMethod, paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, isNotaVenta, format);
+                });
+              }
+            });
+          } else {
+            import('../../utils/printTicket').then(module => {
+              module.imprimirTicket(
                 issuerData, 
-                customer, 
                 cart, 
-                subtotal, 
-                ivaAmount, 
-                total, 
-                { numeroComprobante: sriData.numeroComprobante || '', claveAcceso, isNotaVenta },
-                paymentMethod
+                totalsData, 
+                customer, 
+                claveAcceso, 
+                paymentMethod, 
+                paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, 
+                isNotaVenta, 
+                format
               );
-            } catch (err) {
-              console.error("Fallo impresión 58mm Web Bluetooth, usando sistema:", err);
-              import('../../utils/printTicket').then(fallbackMod => {
-                fallbackMod.imprimirTicket(issuerData, cart, totalsData, customer, claveAcceso, paymentMethod, paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, isNotaVenta, format);
-              });
-            }
-          });
-        } else {
-          import('../../utils/printTicket').then(module => {
-            module.imprimirTicket(
-              issuerData, 
-              cart, 
-              totalsData, 
-              customer, 
-              claveAcceso, 
-              paymentMethod, 
-              paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, 
-              isNotaVenta, 
-              format
-            );
-          });
+            });
+          }
         }
       } else {
         console.log("🖨️ [RIDE] Impresión física omitida por el operador.");
