@@ -137,6 +137,42 @@ export default function FacturasSRI() {
     }
   };
 
+  const handleReemitir = async (venta) => {
+    if (!confirm("¿Está seguro de que desea reemitir esta factura?\n\nSe reservará un NUEVO secuencial de forma atómica y se generará una nueva clave de acceso en el SRI, descartando el secuencial anterior.")) {
+      return;
+    }
+    setProcesando(true);
+    try {
+      const claveAcceso = venta.claveAcceso || venta.id;
+      console.log(`Reemitiendo factura ${claveAcceso} con nuevo secuencial...`);
+
+      const { getAuth } = await import('firebase/auth');
+      const auth = getAuth();
+      const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : '';
+
+      const response = await fetch('/api/sri/reemitir', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ claveAcceso })
+      });
+
+      const sriData = await response.json();
+
+      if (response.ok && sriData.success) {
+        alert(`✅ Factura reemitida con éxito!\n\nNuevo comprobante: ${sriData.numeroComprobante}\nEstado: ${sriData.estado}`);
+      } else {
+        alert(`❌ Error al reemitir: ${sriData.error || 'Fallo desconocido'}`);
+      }
+    } catch (error) {
+      alert(`No fue posible reemitir la factura.\nDetalle: ${error.message}`);
+    } finally {
+      setProcesando(false);
+    }
+  };
+
   const [selectedVenta, setSelectedVenta] = useState(null);
 
   const handleReimprimir = async (venta, format) => {
@@ -331,6 +367,14 @@ export default function FacturasSRI() {
                           >
                             <RefreshCw size={14} className={procesando ? "animate-spin" : ""} /> 
                             {procesando ? 'Enviando...' : 'Reenviar SRI'}
+                          </button>
+                          <button 
+                            onClick={() => handleReemitir(venta)}
+                            disabled={procesando}
+                            style={{ padding: '6px 12px', background: '#e11d48', color: 'white', border: 'none', borderRadius: '4px', cursor: procesando ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                          >
+                            <RefreshCw size={14} className={procesando ? "animate-spin" : ""} /> 
+                            Reemitir (Nuevo Secuencial)
                           </button>
                         </div>
                        ) : (
