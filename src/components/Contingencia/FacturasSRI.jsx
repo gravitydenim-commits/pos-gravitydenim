@@ -48,14 +48,15 @@ export default function FacturasSRI() {
     return () => unsub();
   }, []);
 
-  // Filtrar base por pestaña
+  // Filtrar base por pestaña (excluyendo registros de error por duplicado)
   const baseList = React.useMemo(() => {
+    const validVentas = ventas.filter(v => (v.estado || v.status || '').toUpperCase() !== 'ERROR_DUPLICADO');
     return activeTab === 'contingencia'
-      ? ventas.filter(v => {
+      ? validVentas.filter(v => {
           const est = (v.estadoSri || v.status || 'PENDIENTE_ENVIO').toUpperCase();
           return est !== 'AUTORIZADO' && est !== 'AUTORIZADA' && est !== 'NOTA_DE_VENTA';
         })
-      : ventas;
+      : validVentas;
   }, [ventas, activeTab]);
 
   // Aplicar filtros dinámicos

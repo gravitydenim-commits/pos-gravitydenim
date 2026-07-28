@@ -49,6 +49,7 @@ export default function ReportesDashboard({ sales, issuers }) {
 
   const filteredSales = useMemo(() => {
     return sales.filter(sale => {
+      if ((sale.status || sale.estado || '').toUpperCase() === 'ERROR_DUPLICADO') return false;
       if (filterDate) {
         const saleDate = parseSaleDate(sale);
         if (!saleDate) return false;

@@ -6,7 +6,7 @@ export default function DailyReport({ issuers, sales }) {
   // Procesamiento de datos: Agrupar ventas por emisor (hermano)
   const reportData = useMemo(() => {
     return issuers.map(issuer => {
-      const issuerSales = sales.filter(s => s.issuerId === issuer.id);
+      const issuerSales = sales.filter(s => s.issuerId === issuer.id && (s.status || s.estado || '').toUpperCase() !== 'ERROR_DUPLICADO');
       const sriSales = issuerSales.filter(s => s.status !== 'NOTA_DE_VENTA');
       const notaVentaSales = issuerSales.filter(s => s.status === 'NOTA_DE_VENTA');
 
