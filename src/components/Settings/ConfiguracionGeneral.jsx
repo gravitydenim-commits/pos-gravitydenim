@@ -62,6 +62,7 @@ export default function ConfiguracionGeneral() {
   const [csShowTotal, setCsShowTotal] = useState(true);
   const [csShowQR, setCsShowQR] = useState(true);
   const [iminSwanEnabled, setIminSwanEnabled] = useState(false);
+  const [deviceModel, setDeviceModel] = useState('Navegador Genérico');
 
   useEffect(() => {
     const savedEnabled = localStorage.getItem('csEnabled');
@@ -77,6 +78,23 @@ export default function ConfiguracionGeneral() {
     if (savedTotal !== null) setCsShowTotal(savedTotal === 'true');
     if (savedQR !== null) setCsShowQR(savedQR === 'true');
     if (savedImin !== null) setIminSwanEnabled(savedImin === 'true');
+
+    if (typeof navigator !== 'undefined' && navigator.userAgent) {
+      const ua = navigator.userAgent;
+      let detected = 'Navegador Genérico';
+      const match = ua.match(/Android\s+[^;]+;\s+([^;)]+)\)/);
+      if (match && match[1]) {
+        const rawModel = match[1].trim();
+        if (/I24D03|DS2-25/i.test(rawModel)) {
+          detected = "iMin Swan 2 (I24D03)";
+        } else {
+          detected = rawModel;
+        }
+      } else if (/imin/i.test(ua)) {
+        detected = "Dispositivo iMin POS";
+      }
+      setDeviceModel(detected);
+    }
   }, []);
 
   const handleCsChange = (key, value) => {
@@ -751,8 +769,11 @@ export default function ConfiguracionGeneral() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
             <div>
               <h3 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                📺 Pantalla del Cliente (iMin D4-504)
+                📺 Pantalla Secundaria del Cliente
               </h3>
+              <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                Dispositivo detectado: <strong style={{ color: 'var(--accent)' }}>{deviceModel}</strong>
+              </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <input 
                   type="checkbox" 
