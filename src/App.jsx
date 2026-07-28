@@ -17,11 +17,11 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, onSnapshot, addDoc, doc, setDoc, deleteDoc, query, where } from 'firebase/firestore';
 import './index.css';
 
-const ADMIN_UID = 'AHo5ztrPExZndYJPIr1aByebMsN2';
+// UID de emergencia — solo para usePermissions (fallback si se borra el documento Firestore del admin)
+// La lógica de negocio NO depende de este UID; los permisos se leen de Firestore (RBAC puro).
 
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
-  const [userRole, setUserRole] = useState(null); // 'admin' o 'ventas'
   const [authLoading, setAuthLoading] = useState(true);
   const [isLightTheme, setIsLightTheme] = useState(false);
 
@@ -54,7 +54,7 @@ function App() {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
         setCurrentUser(user);
-        setUserRole(user.uid === ADMIN_UID ? 'admin' : 'ventas');
+        // permisos se resuelven por usePermissions desde Firestore (RBAC puro)
       } else {
         setCurrentUser(null);
         setUserRole(null);
@@ -123,14 +123,14 @@ function App() {
         unsubClientes = onSnapshot(collection(db, 'clientes'), (snapshot) => {
           const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
           setCustomersDB(data);
-        }, (err) => console.error(`ERROR EN [clientes] (uid=${currentUser.uid}, rol=${userRole}):`, err));
+        }, (err) => console.error(`ERROR EN [clientes] (uid=${currentUser.uid}):`, err));
       }
 
       if (isAdmin || hasPermission('inventario', 'ver') || hasPermission('caja', 'ver')) {
         unsubProductos = onSnapshot(collection(db, 'productos'), (snapshot) => {
           const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
           setProductsDB(data);
-        }, (err) => console.error(`ERROR EN [productos] (uid=${currentUser.uid}, rol=${userRole}):`, err));
+        }, (err) => console.error(`ERROR EN [productos] (uid=${currentUser.uid}):`, err));
       }
 
       if (isAdmin || hasPermission('caja', 'ver')) {
@@ -140,7 +140,7 @@ function App() {
         unsubVentas = onSnapshot(qVentas, (snapshot) => {
           const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
           setSalesDB(data);
-        }, (err) => console.error(`ERROR EN [ventas] (uid=${currentUser.uid}, rol=${userRole}):`, err));
+        }, (err) => console.error(`ERROR EN [ventas] (uid=${currentUser.uid}):`, err));
       }
 
 
@@ -152,7 +152,7 @@ function App() {
         } else {
           setIssuers(MOCK_ISSUERS);
         }
-      }, (err) => console.error(`ERROR EN [issuers] (uid=${currentUser.uid}, rol=${userRole}):`, err));
+      }, (err) => console.error(`ERROR EN [issuers] (uid=${currentUser.uid}):`, err));
 
     }
 
@@ -162,7 +162,7 @@ function App() {
       if (unsubVentas) unsubVentas();
       if (unsubIssuers) unsubIssuers();
     };
-  }, [currentUser, permissionsLoading, isAdmin, permissions, hasPermission, userRole]);
+  }, [currentUser, permissionsLoading, isAdmin, permissions, hasPermission]);
 
 
 
@@ -371,7 +371,7 @@ function App() {
           })()}
 
           <span style={{ fontSize: '0.8rem', background: 'rgba(59, 130, 246, 0.2)', color: 'var(--accent)', padding: '4px 10px', borderRadius: '6px', fontWeight: 'bold' }}>
-            {isAdmin ? '🛡️ Admin' : '👤 Ventas'}
+            {isAdmin ? '🛡️ Admin' : '👤 ' + (currentUser?.displayName?.split(' ')[0] || 'Usuario')}
           </span>
         </div>
       </header>
@@ -422,41 +422,45 @@ function App() {
               <span className="nav-btn-text">Caja</span>
             </button>
             
-            {isAdmin && (
-              <>
-                <button 
-                  className={`nav-btn ${currentView === 'inventory' ? 'active' : ''}`}
-                  onClick={() => setCurrentView('inventory')}
-                >
-                  <Package size={24} />
-                  <span className="nav-btn-text">Inventario</span>
-                </button>
-
-                <button 
-                  className={`nav-btn ${currentView === 'customers' ? 'active' : ''}`}
-                  onClick={() => setCurrentView('customers')}
-                >
-                  <Users size={24} />
-                  <span className="nav-btn-text">Clientes</span>
-                </button>
-
-                <button 
-                  className={`nav-btn ${currentView === 'report' ? 'active' : ''}`}
-                  onClick={() => setCurrentView('report')}
-                >
-                  <LayoutDashboard size={24} />
-                  <span className="nav-btn-text">Reportes</span>
-                </button>
-              </>
+            {hasPermission('inventario', 'ver') && (
+              <button 
+                className={`nav-btn ${currentView === 'inventory' ? 'active' : ''}`}
+                onClick={() => setCurrentView('inventory')}
+              >
+                <Package size={24} />
+                <span className="nav-btn-text">Inventario</span>
+              </button>
             )}
 
-            <button 
-              className={`nav-btn ${currentView === 'sri' ? 'active' : ''}`}
-              onClick={() => setCurrentView('sri')}
-            >
-              <AlertTriangle size={24} />
-              <span className="nav-btn-text">Facturas SRI</span>
-            </button>
+            {hasPermission('clientes', 'ver') && (
+              <button 
+                className={`nav-btn ${currentView === 'customers' ? 'active' : ''}`}
+                onClick={() => setCurrentView('customers')}
+              >
+                <Users size={24} />
+                <span className="nav-btn-text">Clientes</span>
+              </button>
+            )}
+
+            {hasPermission('reportes', 'ver_ventas') && (
+              <button 
+                className={`nav-btn ${currentView === 'report' ? 'active' : ''}`}
+                onClick={() => setCurrentView('report')}
+              >
+                <LayoutDashboard size={24} />
+                <span className="nav-btn-text">Reportes</span>
+              </button>
+            )}
+
+            {isAdmin && (
+              <button 
+                className={`nav-btn ${currentView === 'sri' ? 'active' : ''}`}
+                onClick={() => setCurrentView('sri')}
+              >
+                <AlertTriangle size={24} />
+                <span className="nav-btn-text">Facturas SRI</span>
+              </button>
+            )}
 
             {isAdmin && (
               <>
