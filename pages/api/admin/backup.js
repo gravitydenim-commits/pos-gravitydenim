@@ -22,7 +22,32 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'No autorizado. Falta token.' });
     }
 
-    await adminAuth.verifyIdToken(idToken);
+    const decodedToken = await adminAuth.verifyIdToken(idToken);
+
+    // 2. Verificar que el usuario sea administrador (por UID o por rol en Firestore)
+    const SUPER_ADMIN_UID = 'AHo5ztrPExZndYJPIr1aByebMsN2';
+    let isAuthorized = decodedToken.uid === SUPER_ADMIN_UID;
+
+    if (!isAuthorized) {
+      const callerDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
+      if (callerDoc.exists) {
+        const callerData = callerDoc.data();
+        let perms = callerData.customPermissions;
+        if (!perms && callerData.roleId) {
+          const roleDoc = await adminDb.collection('roles').doc(callerData.roleId).get();
+          if (roleDoc.exists) {
+            const roleData = roleDoc.data();
+            if (roleData.name === 'Administrador' || roleData.name === 'Admin') isAuthorized = true;
+            else perms = roleData.permissions;
+          }
+        }
+        if (!isAuthorized && perms?.configuracion?.ver === true) isAuthorized = true;
+      }
+    }
+
+    if (!isAuthorized) {
+      return res.status(403).json({ error: 'Acceso denegado. Se requieren privilegios de administración.' });
+    }
     
     const collectionsToBackup = ['ventas', 'products', 'customers', 'sri_logs', 'issuers', 'settings'];
     const backupData = {

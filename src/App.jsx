@@ -526,6 +526,22 @@ function App() {
           {currentView === 'admin' && isAdmin && (
             <AdminScreen permissions={permissions} modulesConfig={modulesConfig} isSuperAdmin={isAdmin} />
           )}
+          {currentView === 'admin' && !isAdmin && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '1rem', color: 'var(--text-muted)' }}>
+              <Shield size={64} style={{ color: '#e11d48', opacity: 0.7 }} />
+              <h2 style={{ color: 'var(--text-main)', margin: 0 }}>Acceso Denegado</h2>
+              <p style={{ textAlign: 'center', maxWidth: '400px' }}>
+                No tienes permisos para acceder al módulo de Administración.<br />
+                Contacta a tu administrador si necesitas acceso.
+              </p>
+              <button
+                onClick={() => setCurrentView('pos')}
+                style={{ padding: '10px 24px', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
+              >
+                Volver a Caja
+              </button>
+            </div>
+          )}
           {(currentView === 'report' && hasPermission('reportes', 'ver_ventas')) && (
             <ReportesDashboard issuers={issuers} sales={salesDB} />
           )}
