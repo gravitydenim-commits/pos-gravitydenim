@@ -76,6 +76,15 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
   const [transferRecipientId, setTransferRecipientId] = useState(''); // brother user id
 
   useEffect(() => {
+    const csEnabled = localStorage.getItem('csEnabled') === 'true';
+    if (csEnabled) {
+      import('../../utils/iminDualScreen').then(mod => {
+        mod.initIminDualScreen();
+      });
+    }
+  }, []);
+
+  useEffect(() => {
     const fetchUsers = async () => {
       try {
         const { getDocs, collection } = await import('firebase/firestore');
@@ -326,9 +335,14 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     if (!csEnabled) return;
 
     if (forceOpen) {
-      if (!window.customerWindowRef || window.customerWindowRef.closed) {
-        window.customerWindowRef = window.open('/pantalla-cliente', 'SecondaryCustomerScreen', 'width=1000,height=700');
-      }
+      import('../../utils/iminDualScreen').then(mod => {
+        const wasNativeProjected = mod.initIminDualScreen();
+        if (!wasNativeProjected) {
+          if (!window.customerWindowRef || window.customerWindowRef.closed) {
+            window.customerWindowRef = window.open('/pantalla-cliente', 'SecondaryCustomerScreen', 'width=1000,height=700');
+          }
+        }
+      });
     }
 
     try {
