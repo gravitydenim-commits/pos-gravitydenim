@@ -231,6 +231,7 @@ export default async function handler(req, res) {
       claveAcceso: finalClaveAcceso,
       numeroComprobante: numeroComprobanteCompleto,
       estado: estadoFinalSri,
+      status: estadoFinalSri, // Sincronizar status y estado
       xmlFirmado: signedXml,
       xmlAutorizado: (authResult && (authResult.comprobante || authResult.xmlAutorizado)) || null,
       sriResponse: authResult ? {
@@ -238,16 +239,26 @@ export default async function handler(req, res) {
         numeroAutorizacion: finalClaveAcceso,
         fechaAutorizacion: authResult.fechaAutorizacion || new Date().toISOString()
       } : null,
-      errorTecnico: errorTecnico
+      errorTecnico: errorTecnico,
+      reemplazaA: claveAcceso // Guardar trazabilidad
     });
 
     batch.set(nuevaVentaRef, comprobanteData);
     
-    // 10. Eliminar el documento anterior fallido
-    batch.delete(oldVentaRef);
+    // 10. Actualizar el documento anterior a REEMPLAZADO solo si el nuevo quedó AUTORIZADO
+    if (estadoFinalSri === 'AUTORIZADO') {
+      batch.update(oldVentaRef, {
+        estado: 'REEMPLAZADO',
+        status: 'REEMPLAZADO',
+        reemplazadoPor: finalClaveAcceso,
+        fechaReemplazo: new Date().toISOString()
+      });
+      console.log(`✅ [REEMISIÓN EXITOSA]: Nueva clave de acceso: ${finalClaveAcceso}. Antigua clave ${claveAcceso} marcada como REEMPLAZADO.`);
+    } else {
+      console.log(`⚠️ [REEMISIÓN INCOMPLETA]: Nueva clave de acceso: ${finalClaveAcceso}. Antigua clave ${claveAcceso} conservada en estado pendiente.`);
+    }
 
     await batch.commit();
-    console.log(`✅ [REEMISIÓN EXITOSA]: Nueva clave de acceso: ${finalClaveAcceso}. Antigua clave ${claveAcceso} eliminada.`);
 
     return res.status(200).json({
       success: true,

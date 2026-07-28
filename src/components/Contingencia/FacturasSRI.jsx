@@ -48,9 +48,12 @@ export default function FacturasSRI() {
     return () => unsub();
   }, []);
 
-  // Filtrar base por pestaña (excluyendo registros de error por duplicado)
+  // Filtrar base por pestaña (excluyendo registros de error por duplicado y reemplazados)
   const baseList = React.useMemo(() => {
-    const validVentas = ventas.filter(v => (v.estado || v.status || '').toUpperCase() !== 'ERROR_DUPLICADO');
+    const validVentas = ventas.filter(v => {
+      const est = (v.estado || v.status || '').toUpperCase();
+      return est !== 'ERROR_DUPLICADO' && est !== 'REEMPLAZADO';
+    });
     return activeTab === 'contingencia'
       ? validVentas.filter(v => {
           const est = (v.estadoSri || v.status || 'PENDIENTE_ENVIO').toUpperCase();
