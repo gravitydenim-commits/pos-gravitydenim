@@ -85,14 +85,21 @@ export default function ConfiguracionGeneral() {
       const match = ua.match(/Android\s+[^;]+;\s+([^;)]+)\)/);
       if (match && match[1]) {
         const rawModel = match[1].trim();
-        if (/I24D03|DS2-25/i.test(rawModel)) {
+        if (/I20D01|D4-504|D4_504/i.test(rawModel)) {
+          detected = "iMin D4-504 (I20D01)";
+        } else if (/I24D03|DS2-25/i.test(rawModel)) {
           detected = "iMin Swan 2 (I24D03)";
         } else {
           detected = rawModel;
         }
       } else if (/imin/i.test(ua)) {
-        detected = "Dispositivo iMin POS";
+        detected = "Dispositivo iMin POS (D4-504)";
       }
+
+      if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.getDeviceModel === 'function') {
+        detected = window.AndroidBridge.getDeviceModel();
+      }
+
       setDeviceModel(detected);
     }
   }, []);

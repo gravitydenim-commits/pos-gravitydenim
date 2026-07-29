@@ -56,7 +56,8 @@ export default function InventarioScreen({ productsDB, onEdit, onDelete, onAdd }
 
   const isIminMode = typeof window !== 'undefined' && (
     localStorage.getItem('iminSwanEnabled') === 'true' || 
-    /imin|iMin|I24D03|DS2-25/i.test(navigator.userAgent)
+    /imin|iMin|I20D01|D4-504|I24D03|DS2-25/i.test(navigator.userAgent) ||
+    Boolean(window.AndroidBridge)
   );
 
   const cellPadding = isIminMode ? '0.5rem 0.75rem' : '1rem';

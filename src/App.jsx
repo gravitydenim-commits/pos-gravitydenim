@@ -52,17 +52,21 @@ function App() {
     }
 
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setCurrentUser(user);
-        // permisos se resuelven por usePermissions desde Firestore (RBAC puro)
-      } else {
-        setCurrentUser(null);
-        setUserRole(null);
-        setCustomersDB([]);
-        setProductsDB([]);
-        setSalesDB([]);
+      try {
+        if (user) {
+          setCurrentUser(user);
+          // permisos se resuelven por usePermissions desde Firestore (RBAC puro)
+        } else {
+          setCurrentUser(null);
+          setCustomersDB([]);
+          setProductsDB([]);
+          setSalesDB([]);
+        }
+      } catch (err) {
+        console.error("Error en onAuthStateChanged:", err);
+      } finally {
+        setAuthLoading(false);
       }
-      setAuthLoading(false);
     });
 
     return () => unsubscribeAuth();
