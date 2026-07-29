@@ -331,7 +331,8 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
   const [clientNoticeMessage, setClientNoticeMessage] = useState('');
 
   const syncSecondaryCustomerScreen = (updatedCust, forceOpen = false) => {
-    const csEnabled = localStorage.getItem('csEnabled') === 'true';
+    const isAndroidBridge = typeof window !== 'undefined' && Boolean(window.AndroidBridge);
+    const csEnabled = isAndroidBridge || localStorage.getItem('csEnabled') !== 'false';
     if (!csEnabled) return;
 
     if (forceOpen) {
@@ -345,42 +346,62 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       });
     }
 
+    const payload = {
+      status: 'customer_review',
+      customerData: {
+        nombre: updatedCust.nombre || '',
+        numeroIdentificacion: updatedCust.numeroIdentificacion || '',
+        direccion: updatedCust.direccion || '',
+        telefono: updatedCust.telefono || '',
+        correo: updatedCust.correo || '',
+        tipoDocumento: updatedCust.tipoDocumento || 'CEDULA'
+      }
+    };
+
+    // 1. Transmisión vía BroadcastChannel (ventas/pestañas secundarias en navegador)
     try {
       const channel = new BroadcastChannel('gravity_pos_channel');
       channel.postMessage({
         type: 'STATE_UPDATE',
-        payload: {
-          status: 'customer_review',
-          customerData: {
-            nombre: updatedCust.nombre || '',
-            numeroIdentificacion: updatedCust.numeroIdentificacion || '',
-            direccion: updatedCust.direccion || '',
-            telefono: updatedCust.telefono || '',
-            correo: updatedCust.correo || '',
-            tipoDocumento: updatedCust.tipoDocumento || 'CEDULA'
-          }
-        }
+        payload
       });
       channel.close();
     } catch (e) {
       console.error("Error transmitiendo datos de cliente a pantalla secundaria:", e);
     }
+
+    // 2. Transmisión nativa a iMin D4-504 vía AndroidBridge
+    if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.notifyCustomerScreen === 'function') {
+      try {
+        window.AndroidBridge.notifyCustomerScreen(JSON.stringify(payload));
+      } catch (e) {
+        console.error("Error transmitiendo a AndroidBridge:", e);
+      }
+    }
   };
 
   const closeSecondaryCustomerScreen = () => {
-    const csEnabled = localStorage.getItem('csEnabled') === 'true';
+    const isAndroidBridge = typeof window !== 'undefined' && Boolean(window.AndroidBridge);
+    const csEnabled = isAndroidBridge || localStorage.getItem('csEnabled') !== 'false';
     if (!csEnabled) return;
+
+    const payload = { status: 'idle' };
+
     try {
       const channel = new BroadcastChannel('gravity_pos_channel');
       channel.postMessage({
         type: 'STATE_UPDATE',
-        payload: {
-          status: 'idle'
-        }
+        payload
       });
       channel.close();
     } catch (e) {
       console.error("Error cerrando pantalla de cliente en secundaria:", e);
+    }
+
+    if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.notifyCustomerScreen === 'function') {
+      try {
+        window.AndroidBridge.notifyCustomerScreen(JSON.stringify(payload));
+      } catch (e) {}
     }
   };
 
@@ -580,32 +601,48 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
 
   // --- SINCRONIZACIÓN PANTALLA SECUNDARIA ---
   useEffect(() => {
-    // Si isProcessing es true, lo mostramos como 'paid' temporalmente (o 'checkout' procesando).
-    // Si showPreviewModal es true, está en 'checkout'.
-    // Si isProcessing termina, se limpia y vuelve a 'idle'.
     let status = 'idle';
-    if (showPreviewModal) status = 'checkout';
-    
-    // Si acabamos de procesar con éxito, el cart se limpia, pero queremos mandar un ping de éxito.
-    // Esto lo manejamos enviando 'paid' desde confirmCheckout, pero aquí mantenemos el estado actual.
+    if (showPreviewModal || paymentMethod === 'TRANSFERENCIA') {
+      status = 'checkout';
+    } else if (cart.length > 0) {
+      status = 'cart_view';
+    }
+
+    const payload = {
+      status,
+      total,
+      subtotal: totalsData.subtotal,
+      ivaAmount: totalsData.ivaAmount,
+      totalDescuentos: totalsData.totalDescuentos,
+      paymentMethod,
+      transferRecipient,
+      qrUrl: transferQrs[transferRecipient] || null,
+      cartItems: cart
+    };
+
+    const isAndroidBridge = typeof window !== 'undefined' && Boolean(window.AndroidBridge);
+    const csEnabled = isAndroidBridge || localStorage.getItem('csEnabled') !== 'false';
+    if (!csEnabled) return;
 
     try {
       const channel = new BroadcastChannel('gravity_pos_channel');
       channel.postMessage({
         type: 'STATE_UPDATE',
-        payload: {
-          status,
-          total,
-          paymentMethod,
-          transferRecipient,
-          qrUrl: transferQrs[transferRecipient] || null
-        }
+        payload
       });
       channel.close();
     } catch (e) {
       console.error("Error broadcasting to secondary screen", e);
     }
-  }, [total, paymentMethod, showPreviewModal, transferRecipient, transferQrs]);
+
+    if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.notifyCustomerScreen === 'function') {
+      try {
+        window.AndroidBridge.notifyCustomerScreen(JSON.stringify(payload));
+      } catch (e) {
+        console.error("Error transmitiendo a AndroidBridge:", e);
+      }
+    }
+  }, [total, paymentMethod, showPreviewModal, transferRecipient, transferQrs, cart, totalsData]);
 
 
   // --- PROCESAR PAGO (GATILLO DE VISTA PREVIA) ---
@@ -822,7 +859,21 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
 
       alert(`✅ Nota de Venta Interna emitida con éxito.\nComprobante No: ${resultNV.numeroComprobante}`);
 
-      // 3. Limpiar estado y carrito
+      // 3. Notificar éxito a pantalla secundaria
+      const paidPayload = { status: 'paid', total: totalsData.total, paymentMethod };
+      try {
+        const channel = new BroadcastChannel('gravity_pos_channel');
+        channel.postMessage({ type: 'STATE_UPDATE', payload: paidPayload });
+        channel.close();
+      } catch(e){}
+
+      if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.notifyCustomerScreen === 'function') {
+        try {
+          window.AndroidBridge.notifyCustomerScreen(JSON.stringify(paidPayload));
+        } catch(e){}
+      }
+
+      // 4. Limpiar estado y carrito
       setCart([]);
 
     } catch (errNV) {
@@ -1061,11 +1112,18 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       alert(`Venta guardada exitosamente por ${issuerData.name}\n${withPrint ? 'Ticket enviado a la impresora.' : 'Sin impresión física.'}`);
       
       // Ping a la pantalla secundaria
+      const paidPayload = { status: 'paid', total, paymentMethod };
       try {
         const channel = new BroadcastChannel('gravity_pos_channel');
-        channel.postMessage({ type: 'STATE_UPDATE', payload: { status: 'paid', total: 0, paymentMethod: 'EFECTIVO' } });
+        channel.postMessage({ type: 'STATE_UPDATE', payload: paidPayload });
         channel.close();
       } catch(e){}
+
+      if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.notifyCustomerScreen === 'function') {
+        try {
+          window.AndroidBridge.notifyCustomerScreen(JSON.stringify(paidPayload));
+        } catch(e){}
+      }
 
       // 5. Limpiar carrito y resetear form con retraso para asegurar impresión térmica
       setTimeout(() => {
