@@ -681,20 +681,19 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
 
       // 1. Transacción Atómica en Firestore: Secuencial interno NV + Descuento Stock + Guardado Venta
       const resultNV = await runTransaction(db, async (t) => {
-        // Leer emisor para secuencial NV
+        // =========================================================================
+        // FASE 1: TODAS LAS LECTURAS (t.get) SE EJECUTAN PRIMERO
+        // =========================================================================
+        
+        // 1.a Leer emisor para secuencial NV
         const issuerRef = doc(db, 'issuers', issuerData.id);
         const issuerSnap = await t.get(issuerRef);
         if (!issuerSnap.exists()) {
           throw new Error(`Emisor ${issuerData.id} no existe.`);
         }
-        const emisorData = issuerSnap.data();
-        const secuencialesMap = emisorData.secuenciales || {};
-        const currentSecNV = secuencialesMap[secKeyNV] || 0;
-        const nextSecNV = currentSecNV + 1;
-        const secStr = String(nextSecNV).padStart(9, '0');
-        const numComprobanteCompleto = `NV-${estab}-${ptoEmi}-${secStr}`;
 
-        // Descontar inventario una sola vez
+        // 1.b Leer TODOS los productos del carrito ANTES de realizar cualquier escritura
+        const stockUpdates = [];
         for (const item of cart) {
           if (item.id) {
             const prodRef = doc(db, 'productos', item.id);
@@ -702,15 +701,32 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
             if (prodSnap.exists()) {
               const currentStock = prodSnap.data().stock || 0;
               const newStock = Math.max(0, currentStock - item.qty);
-              t.update(prodRef, { stock: newStock });
+              stockUpdates.push({ ref: prodRef, newStock });
             }
           }
         }
 
-        // Reservar secuencial de Nota de Venta
+        // Calcular secuencial NV
+        const emisorData = issuerSnap.data();
+        const secuencialesMap = emisorData.secuenciales || {};
+        const currentSecNV = secuencialesMap[secKeyNV] || 0;
+        const nextSecNV = currentSecNV + 1;
+        const secStr = String(nextSecNV).padStart(9, '0');
+        const numComprobanteCompleto = `NV-${estab}-${ptoEmi}-${secStr}`;
+
+        // =========================================================================
+        // FASE 2: TODAS LAS ESCRITURAS (t.update, t.set) SE EJECUTAN DESPUÉS
+        // =========================================================================
+
+        // 2.a Actualizar inventarios calculados previamente
+        for (const updateData of stockUpdates) {
+          t.update(updateData.ref, { stock: updateData.newStock });
+        }
+
+        // 2.b Reservar secuencial de Nota de Venta
         t.update(issuerRef, { [`secuenciales.${secKeyNV}`]: nextSecNV });
 
-        // Crear la venta interna en la colección 'ventas'
+        // 2.c Crear la venta interna en la colección 'ventas'
         const ventaId = `nv-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
         const ventaRef = doc(db, 'ventas', ventaId);
 
