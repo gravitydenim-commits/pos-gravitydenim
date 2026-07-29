@@ -330,21 +330,10 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
   const [isSearchingClient, setIsSearchingClient] = useState(false);
   const [clientNoticeMessage, setClientNoticeMessage] = useState('');
 
-  const syncSecondaryCustomerScreen = (updatedCust, forceOpen = false) => {
+  const syncSecondaryCustomerScreen = (updatedCust) => {
     const isAndroidBridge = typeof window !== 'undefined' && Boolean(window.AndroidBridge);
     const csEnabled = isAndroidBridge || localStorage.getItem('csEnabled') !== 'false';
     if (!csEnabled) return;
-
-    if (forceOpen) {
-      import('../../utils/iminDualScreen').then(mod => {
-        const wasNativeProjected = mod.initIminDualScreen();
-        if (!wasNativeProjected) {
-          if (!window.customerWindowRef || window.customerWindowRef.closed) {
-            window.customerWindowRef = window.open('/pantalla-cliente', 'SecondaryCustomerScreen', 'width=1000,height=700');
-          }
-        }
-      });
-    }
 
     const payload = {
       status: 'customer_review',
@@ -426,7 +415,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         [name]: value,
         ...(name === 'numeroIdentificacion' ? { tipoDocumento: tipoDoc } : {})
       };
-      syncSecondaryCustomerScreen(updated, true);
+      syncSecondaryCustomerScreen(updated);
       return updated;
     });
   };
@@ -457,7 +446,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     if (tipo === 'CONSUMIDOR_FINAL') {
       closeSecondaryCustomerScreen();
     } else {
-      syncSecondaryCustomerScreen(updated, true);
+      syncSecondaryCustomerScreen(updated);
     }
   };
 
@@ -504,7 +493,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
           telefono: clienteEncontrado.telefono || ''
         };
         setCustomer(clienteCargado);
-        syncSecondaryCustomerScreen(clienteCargado, true);
+        syncSecondaryCustomerScreen(clienteCargado);
         setClientNoticeMessage("✅ Datos de cliente cargados desde la base local.");
         setIsSearchingClient(false);
         return;
@@ -527,7 +516,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         };
 
         setCustomer(nuevoClienteData);
-        syncSecondaryCustomerScreen(nuevoClienteData, true);
+        syncSecondaryCustomerScreen(nuevoClienteData);
         setClientNoticeMessage("✅ Datos públicos encontrados en el SRI y guardados en base de clientes.");
 
         // Guardar automáticamente en Firestore 'clientes' para no consultar nuevamente al SRI en cada venta
