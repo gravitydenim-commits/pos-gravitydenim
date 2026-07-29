@@ -32,6 +32,8 @@ export function usePermissions(user) {
       return;
     }
 
+    let unsubRole = null;
+
     // Cargar la configuración dinámica de módulos
     const unsubModules = onSnapshot(doc(db, 'settings', 'modulesConfig'), (docSnap) => {
       if (docSnap.exists()) {
@@ -75,26 +77,37 @@ export function usePermissions(user) {
       }
 
       const userData = userSnap.data();
-      let effectivePerms = {};
 
-      // 1. Permisos personalizados (tienen prioridad sobre el rol)
-      if (userData.customPermissions && Object.keys(userData.customPermissions).length > 0) {
-        effectivePerms = userData.customPermissions;
+      // Limpiar listener de rol previo si existe
+      if (unsubRole) {
+        unsubRole();
+        unsubRole = null;
       }
-      // 2. Permisos del rol asignado
-      else if (userData.roleId) {
-        const roleSnap = await getDoc(doc(db, 'roles', userData.roleId));
-        if (roleSnap.exists()) {
-          effectivePerms = roleSnap.data().permissions || {};
+
+      const updatePermissions = (roleData) => {
+        let effectivePerms = {};
+        // 1. Permisos personalizados (tienen prioridad sobre el rol)
+        if (userData.customPermissions && Object.keys(userData.customPermissions).length > 0) {
+          effectivePerms = userData.customPermissions;
         }
+        // 2. Permisos del rol asignado
+        else if (roleData) {
+          effectivePerms = roleData.permissions || {};
+        }
+
+        const isSuperAdmin = effectivePerms.superadmin === true;
+        setPermissions(effectivePerms);
+        setIsAdmin(isSuperAdmin);
+        setLoading(false);
+      };
+
+      if (userData.roleId) {
+        unsubRole = onSnapshot(doc(db, 'roles', userData.roleId), (roleSnap) => {
+          updatePermissions(roleSnap.exists() ? roleSnap.data() : null);
+        });
+      } else {
+        updatePermissions(null);
       }
-
-      // isAdmin se deriva SOLO de los permisos efectivos — nunca del nombre del rol
-      const isSuperAdmin = effectivePerms.superadmin === true;
-
-      setPermissions(effectivePerms);
-      setIsAdmin(isSuperAdmin);
-      setLoading(false);
     }, (error) => {
       console.error('ERROR en [users]:', error);
       // En caso de error de red, aplicar permisos vacíos (principio de mínimo privilegio)
@@ -107,6 +120,7 @@ export function usePermissions(user) {
     return () => {
       unsubModules();
       unsubUser();
+      if (unsubRole) unsubRole();
     };
   }, [user]);
 
