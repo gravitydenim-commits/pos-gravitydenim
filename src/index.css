@@ -40,9 +40,11 @@
   padding: 0;
 }
 
-html, body, #root, #__next {
-  height: 100dvh;
-  min-height: 100dvh;
+html, body {
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
 }
@@ -52,10 +54,8 @@ body {
   background-color: var(--bg-color);
   background-image: var(--bg-gradient);
   color: var(--text-main);
-  margin: 0;
-  padding: 0;
-  touch-action: pan-y;
-  -webkit-overflow-scrolling: touch;
+  height: 100vh;
+  overflow: hidden;
 }
 
 #root, #__next {
@@ -171,11 +171,12 @@ h1, h2, h3 {
 
 /* App Layout */
 .app-layout {
-  min-height: 100dvh;
-  height: 100dvh;
+  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   background: var(--bg-color);
+  overflow: hidden;
   width: 100vw;
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
@@ -203,14 +204,15 @@ h1, h2, h3 {
   display: flex;
   flex: 1;
   min-height: 0;
-  height: calc(100dvh - 50px);
+  height: calc(100vh - 50px);
   width: 100vw;
+  overflow: hidden;
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
 }
 
 .app-body.concentration-active {
-  height: 100dvh !important;
+  height: 100vh !important;
 }
 
 .sidebar {
