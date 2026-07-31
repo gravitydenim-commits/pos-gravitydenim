@@ -122,7 +122,11 @@ export default async function handler(req, res) {
       console.log(`✅ Respaldo de seguridad de factura ${claveAcceso} subido a Storage: ${backupPath}`);
     } catch (storageErr) {
       console.error('Error al subir el backup a Firebase Storage:', storageErr);
-      return res.status(500).json({ error: 'No se pudo realizar el respaldo de seguridad en Firebase Storage. Operación abortada.' });
+      return res.status(500).json({
+        error: 'No se pudo realizar el respaldo de seguridad en Firebase Storage. Operación abortada.',
+        details: storageErr.message,
+        stack: storageErr.stack
+      });
     }
 
     // 8. Ejecutar eliminaciones en un batch atómico

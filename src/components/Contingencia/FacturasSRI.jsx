@@ -204,7 +204,9 @@ export default function FacturasSRI({ isAdmin }) {
       if (response.ok && resData.success) {
         alert(`✅ Comprobante eliminado exitosamente.\nDetalle: ${resData.message}`);
       } else {
-        alert(`❌ Error al eliminar comprobante: ${resData.error || 'Fallo desconocido'}`);
+        const errorDetail = resData.error || 'Fallo desconocido';
+        const technicalDetails = resData.details ? `\n\nDetalles técnicos:\n${resData.details}\n\nStack:\n${resData.stack}` : '';
+        alert(`❌ Error al eliminar comprobante: ${errorDetail}${technicalDetails}`);
       }
     } catch (error) {
       alert(`No fue posible eliminar el comprobante.\nDetalle: ${error.message}`);
