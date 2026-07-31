@@ -21,8 +21,8 @@ export default async function handler(req, res) {
     const idToken = authHeader.split('Bearer ')[1];
     const decodedToken = await adminAuth.verifyIdToken(idToken);
 
-    // 2. Obtener claveAcceso o invoiceId
-    const { claveAcceso } = req.body;
+    // 2. Obtener claveAcceso o invoiceId y skipBackup
+    const { claveAcceso, skipBackup } = req.body;
     if (!claveAcceso) {
       return res.status(400).json({ error: 'Falta la clave de acceso (claveAcceso).' });
     }
@@ -103,31 +103,37 @@ export default async function handler(req, res) {
       }
     };
 
-    try {
-      const storage = getAdminStorage();
-      const bucket = storage.bucket();
-      console.log(`[BACKUP DEBUG] Target storage bucket name: "${bucket.name}"`);
-      const backupPath = `backups/ventas/deleted_invoice_${claveAcceso}_${dateTag}.json`;
-      const file = bucket.file(backupPath);
+    let backupSuccessful = false;
+    if (!skipBackup) {
+      try {
+        const storage = getAdminStorage();
+        const bucket = storage.bucket();
+        console.log(`[BACKUP DEBUG] Target storage bucket name: "${bucket.name}"`);
+        const backupPath = `backups/ventas/deleted_invoice_${claveAcceso}_${dateTag}.json`;
+        const file = bucket.file(backupPath);
 
-      await file.save(JSON.stringify(backupData, null, 2), {
-        metadata: {
-          contentType: 'application/json',
+        await file.save(JSON.stringify(backupData, null, 2), {
           metadata: {
-            executorEmail: decodedToken.email || 'unknown',
-            executorUid: decodedToken.uid,
-            deletedClaveAcceso: claveAcceso
+            contentType: 'application/json',
+            metadata: {
+              executorEmail: decodedToken.email || 'unknown',
+              executorUid: decodedToken.uid,
+              deletedClaveAcceso: claveAcceso
+            }
           }
-        }
-      });
-      console.log(`✅ Respaldo de seguridad de factura ${claveAcceso} subido a Storage: ${backupPath}`);
-    } catch (storageErr) {
-      console.error('Error al subir el backup a Firebase Storage:', storageErr);
-      return res.status(500).json({
-        error: 'No se pudo realizar el respaldo de seguridad en Firebase Storage. Operación abortada.',
-        details: storageErr.message,
-        stack: storageErr.stack
-      });
+        });
+        console.log(`✅ Respaldo de seguridad de factura ${claveAcceso} subido a Storage: ${backupPath}`);
+        backupSuccessful = true;
+      } catch (storageErr) {
+        console.error('Error al subir el backup a Firebase Storage:', storageErr);
+        return res.status(400).json({
+          success: false,
+          code: 'BACKUP_FAILED',
+          error: 'No se pudo realizar el respaldo de seguridad en Firebase Storage.',
+          details: storageErr.message,
+          stack: storageErr.stack
+        });
+      }
     }
 
     // 8. Ejecutar eliminaciones en un batch atómico
@@ -140,6 +146,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
+      backedUp: backupSuccessful,
       message: 'Comprobante y todos los registros relacionados eliminados correctamente.',
       summary: {
         ventas: 1,

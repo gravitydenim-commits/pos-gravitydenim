@@ -30,6 +30,7 @@ export default function FacturasSRI({ isAdmin }) {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('contingencia'); // 'contingencia' o 'historial'
   const [procesando, setProcesando] = useState(false);
+  const [eliminandoId, setEliminandoId] = useState(null);
 
   // Estados de filtros
   const [filterDateFrom, setFilterDateFrom] = useState('');
@@ -183,35 +184,90 @@ export default function FacturasSRI({ isAdmin }) {
       return;
     }
 
-    setProcesando(true);
+    setEliminandoId(venta.id);
     try {
       const claveAcceso = venta.claveAcceso || venta.id;
       const { getAuth } = await import('firebase/auth');
       const auth = getAuth();
       const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : '';
 
-      const response = await fetch('/api/admin/deleteTestInvoices', {
+      // Intento 1: Con respaldo
+      let response = await fetch('/api/admin/deleteTestInvoices', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${idToken}`
         },
-        body: JSON.stringify({ claveAcceso })
+        body: JSON.stringify({ claveAcceso, skipBackup: false })
       });
 
-      const resData = await response.json();
+      let resData = await response.json();
 
       if (response.ok && resData.success) {
-        alert(`✅ Comprobante eliminado exitosamente.\nDetalle: ${resData.message}`);
+        alert(`✅ Comprobante de prueba eliminado correctamente.`);
+        setSelectedVenta(null);
+        return;
+      }
+
+      // Si falló por el backup
+      if (resData.code === 'BACKUP_FAILED') {
+        const errorDetail = resData.details || resData.error || 'Fallo en Firebase Storage';
+        const secondConfirm = confirm(`⚠️ Firebase Storage no está habilitado (o falló el respaldo).\n\nMotivo: ${errorDetail}\n\nEl comprobante se eliminará sin respaldo.\n\n¿Desea continuar con la eliminación de todas formas sin respaldo?`);
+        
+        if (secondConfirm) {
+          // Intento 2: Saltándose el respaldo
+          response = await fetch('/api/admin/deleteTestInvoices', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({ claveAcceso, skipBackup: true })
+          });
+
+          resData = await response.json();
+
+          if (response.ok && resData.success) {
+            alert(`✅ Comprobante de prueba eliminado correctamente, sin respaldo.`);
+            setSelectedVenta(null);
+          } else {
+            alert(`❌ Error al eliminar comprobante sin respaldo: ${resData.error || 'Fallo desconocido'}`);
+          }
+        } else {
+          alert(`Operación cancelada. El comprobante no fue eliminado.`);
+        }
       } else {
+        // Otro error
         const errorDetail = resData.error || 'Fallo desconocido';
-        const technicalDetails = resData.details ? `\n\nDetalles técnicos:\n${resData.details}\n\nStack:\n${resData.stack}` : '';
-        alert(`❌ Error al eliminar comprobante: ${errorDetail}${technicalDetails}`);
+        const technicalDetails = resData.details ? `\n\nDetalles técnicos:\n${resData.details}` : '';
+        const secondConfirm = confirm(`⚠️ El respaldo falló debido a un error técnico:\n${errorDetail}${technicalDetails}\n\n¿Desea continuar con la eliminación de todas formas sin respaldo?`);
+
+        if (secondConfirm) {
+          response = await fetch('/api/admin/deleteTestInvoices', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({ claveAcceso, skipBackup: true })
+          });
+
+          resData = await response.json();
+
+          if (response.ok && resData.success) {
+            alert(`✅ Comprobante de prueba eliminado correctamente, sin respaldo.`);
+            setSelectedVenta(null);
+          } else {
+            alert(`❌ Error al eliminar comprobante sin respaldo: ${resData.error || 'Fallo desconocido'}`);
+          }
+        } else {
+          alert(`Operación cancelada. El comprobante no fue eliminado.`);
+        }
       }
     } catch (error) {
-      alert(`No fue posible eliminar el comprobante.\nDetalle: ${error.message}`);
+      alert(`No fue posible comunicarse con el servidor.\nDetalle: ${error.message}`);
     } finally {
-      setProcesando(false);
+      setEliminandoId(null);
     }
   };
 
@@ -425,10 +481,10 @@ export default function FacturasSRI({ isAdmin }) {
                           {isAdmin && ['DEVUELTO', 'DEVUELTA', 'ERROR', 'RECHAZADO', 'RECHAZADA', 'ERROR_INTERNO', 'ERROR_FIRMA', 'TIMEOUT'].includes(est) && !venta.numeroAutorizacion && !venta.fechaAutorizacion && (
                             <button 
                               onClick={() => handleEliminar(venta)}
-                              disabled={procesando}
-                              style={{ padding: '6px 12px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: procesando ? 'not-allowed' : 'pointer', fontSize: '0.8rem' }}
+                              disabled={eliminandoId !== null}
+                              style={{ padding: '6px 12px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: (eliminandoId !== null) ? 'not-allowed' : 'pointer', fontSize: '0.8rem' }}
                             >
-                              Eliminar prueba
+                              {eliminandoId === venta.id ? 'Eliminando...' : 'Eliminar prueba'}
                             </button>
                           )}
                         </div>
@@ -555,11 +611,11 @@ export default function FacturasSRI({ isAdmin }) {
                </button>
                {isAdmin && ['DEVUELTO', 'DEVUELTA', 'ERROR', 'RECHAZADO', 'RECHAZADA', 'ERROR_INTERNO', 'ERROR_FIRMA', 'TIMEOUT'].includes((selectedVenta.estadoSri || selectedVenta.status || '').toUpperCase()) && !selectedVenta.numeroAutorizacion && !selectedVenta.fechaAutorizacion && (
                   <button 
-                    onClick={() => { handleEliminar(selectedVenta); setSelectedVenta(null); }}
-                    disabled={procesando}
-                    style={{ padding: '8px 16px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: procesando ? 'not-allowed' : 'pointer' }}
+                    onClick={() => { handleEliminar(selectedVenta); }}
+                    disabled={eliminandoId !== null}
+                    style={{ padding: '8px 16px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: (eliminandoId !== null) ? 'not-allowed' : 'pointer' }}
                   >
-                    Eliminar prueba
+                    {eliminandoId === selectedVenta.id ? 'Eliminando...' : 'Eliminar prueba'}
                   </button>
                 )}
                <button onClick={() => setSelectedVenta(null)} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '4px', cursor: 'pointer' }}>
