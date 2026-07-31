@@ -27,6 +27,17 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.hardware.usb.UsbManager
+import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbDeviceConnection
+import android.hardware.usb.UsbInterface
+import android.hardware.usb.UsbEndpoint
+import android.hardware.usb.UsbConstants
+import android.app.PendingIntent
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.BroadcastReceiver
+import android.widget.Toast
 
 class MainActivity : Activity(), DisplayManager.DisplayListener {
 
@@ -236,6 +247,29 @@ class MainActivity : Activity(), DisplayManager.DisplayListener {
         errorOverlay?.addView(retryBtn)
         rootLayout?.addView(errorOverlay)
 
+        // Registrar receptor de permiso USB
+        registerReceiver(usbReceiver, IntentFilter("com.example.gravitydenimpos.USB_PERMISSION"))
+
+        // Botón temporal TEST USB DIRECTO MASUNG
+        val testMasungBtn = Button(this).apply {
+            text = "TEST USB DIRECTO MASUNG"
+            textSize = 11f
+            setPadding(16, 8, 16, 8)
+            setBackgroundColor(0xFFDC2626.toInt()) // Rojo
+            setTextColor(0xFFFFFFFF.toInt())
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity = Gravity.BOTTOM or Gravity.END
+                setMargins(0, 0, 32, 100) // Posicionar sobre esquina inferior derecha
+            }
+            setOnClickListener {
+                runDirectMasungUsbPrintTest()
+            }
+        }
+        rootLayout?.addView(testMasungBtn)
+
         setContentView(rootLayout)
 
         // Restaurar estado del WebView si existe, o cargar la URL por primera vez
@@ -318,6 +352,9 @@ class MainActivity : Activity(), DisplayManager.DisplayListener {
     override fun onDestroy() {
         super.onDestroy()
         try {
+            unregisterReceiver(usbReceiver)
+        } catch (e: Exception) {}
+        try {
             Log.i("MainActivity", "[IMIN-SDK] Desvinculando servicio (onDestroy)")
             com.imin.printer.PrinterHelper.getInstance().deInitPrinterService(this)
         } catch (e: Exception) {
@@ -335,6 +372,164 @@ class MainActivity : Activity(), DisplayManager.DisplayListener {
             primaryWebView?.goBack()
         } else {
             super.onBackPressed()
+        }
+    }
+
+    private val usbReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val action = intent.action
+            if ("com.example.gravitydenimpos.USB_PERMISSION" == action) {
+                synchronized(this) {
+                    val device: UsbDevice? = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
+                    if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
+                        device?.let {
+                            performDirectUsbPrint(it)
+                        }
+                    } else {
+                        Log.d("MainActivity", "Permiso denegado para el dispositivo $device")
+                        showDiagDialog("Permiso denegado", "El usuario denegó el permiso para usar la impresora USB.")
+                    }
+                }
+            }
+        }
+    }
+
+    private fun showDiagDialog(title: String, message: String) {
+        runOnUiThread {
+            try {
+                android.app.AlertDialog.Builder(this)
+                    .setTitle(title)
+                    .setMessage(message)
+                    .setPositiveButton("OK", null)
+                    .show()
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error mostrando diálogo: ${e.message}")
+                Toast.makeText(this, "$title: $message", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun runDirectMasungUsbPrintTest() {
+        val usbManager = getSystemService(Context.USB_SERVICE) as UsbManager
+        val deviceList = usbManager.deviceList
+        var targetDevice: UsbDevice? = null
+        
+        for (device in deviceList.values) {
+            // VID 1305 (0x0519), PID 8211 (0x2013)
+            if (device.vendorId == 1305 && device.productId == 8211) {
+                targetDevice = device
+                break
+            }
+        }
+
+        if (targetDevice == null) {
+            showDiagDialog(
+                "Impresora no encontrada", 
+                "No se encontró ningún dispositivo USB con VID 1305 y PID 8211.\n\nDispositivos conectados:\n" +
+                deviceList.values.joinToString("\n") { "VID=${it.vendorId} PID=${it.productId} Name=${it.deviceName}" }
+            )
+            return
+        }
+
+        if (!usbManager.hasPermission(targetDevice)) {
+            val permissionIntent = PendingIntent.getBroadcast(
+                this, 0, Intent("com.example.gravitydenimpos.USB_PERMISSION"),
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
+            )
+            usbManager.requestPermission(targetDevice, permissionIntent)
+        } else {
+            performDirectUsbPrint(targetDevice)
+        }
+    }
+
+    private fun performDirectUsbPrint(device: UsbDevice) {
+        val usbManager = getSystemService(Context.USB_SERVICE) as UsbManager
+        val diagLog = java.lang.StringBuilder()
+        diagLog.append("=== DIAGNÓSTICO IMPRESIÓN DIRECTA USB ===\n")
+        diagLog.append("Dispositivo: ${device.deviceName}\n")
+        diagLog.append("VID: ${device.vendorId} (0x${Integer.toHexString(device.vendorId)})\n")
+        diagLog.append("PID: ${device.productId} (0x${Integer.toHexString(device.productId)})\n")
+
+        var connection: UsbDeviceConnection? = null
+        var usbInterface: UsbInterface? = null
+        var bulkOutEndpoint: UsbEndpoint? = null
+
+        try {
+            val interfaceCount = device.interfaceCount
+            diagLog.append("Interfaces encontradas: $interfaceCount\n")
+            
+            for (i in 0 until interfaceCount) {
+                val iface = device.getInterface(i)
+                diagLog.append("Interfaz $i: class=${iface.interfaceClass}, subclass=${iface.interfaceSubclass}\n")
+                
+                var outEp: UsbEndpoint? = null
+                for (j in 0 until iface.endpointCount) {
+                    val ep = iface.getEndpoint(j)
+                    diagLog.append("  EP $j: type=${ep.type}, dir=${ep.direction}\n")
+                    if (ep.type == UsbConstants.USB_ENDPOINT_XFER_BULK && 
+                        ep.direction == UsbConstants.USB_DIR_OUT) {
+                        outEp = ep
+                    }
+                }
+                if (outEp != null) {
+                    usbInterface = iface
+                    bulkOutEndpoint = outEp
+                    diagLog.append("-> Seleccionada Interfaz $i y EP Bulk Out\n")
+                    break
+                }
+            }
+
+            if (usbInterface == null || bulkOutEndpoint == null) {
+                diagLog.append("ERROR: No se encontró interfaz o endpoint BULK OUT adecuado.\n")
+                showDiagDialog("Error de Interface/Endpoint", diagLog.toString())
+                return
+            }
+
+            connection = usbManager.openDevice(device)
+            if (connection == null) {
+                diagLog.append("ERROR: No se pudo abrir la conexión con el dispositivo USB.\n")
+                showDiagDialog("Error de Conexión", diagLog.toString())
+                return
+            }
+
+            val claimRes = connection.claimInterface(usbInterface, true)
+            diagLog.append("Reclamar interfaz: $claimRes\n")
+            if (!claimRes) {
+                diagLog.append("ERROR: Falló al reclamar la interfaz USB.\n")
+                showDiagDialog("Error al Reclamar Interfaz", diagLog.toString())
+                connection.close()
+                return
+            }
+
+            val escInit = byteArrayOf(0x1B, 0x40) // ESC @ (Inicializar)
+            val printText = "PRUEBA GRAVITY DENIM\n".toByteArray(Charsets.UTF_8)
+            val escFeed = byteArrayOf(0x0A, 0x0A, 0x0A, 0x0A, 0x0A) // LF * 5
+            val escCut = byteArrayOf(0x1D, 0x56, 0x00) // GS V 0 (Corte)
+
+            val bytesToSend = escInit + printText + escFeed + escCut
+            diagLog.append("Total de bytes a enviar: ${bytesToSend.size}\n")
+
+            val result = connection.bulkTransfer(bulkOutEndpoint, bytesToSend, bytesToSend.size, 5000)
+            diagLog.append("Resultado de bulkTransfer(): $result\n")
+
+            if (result >= 0) {
+                diagLog.append("🎉 ¡ÉXITO! Se enviaron $result bytes a la impresora.\n")
+                showDiagDialog("Prueba Exitosa", diagLog.toString())
+            } else {
+                diagLog.append("❌ ERROR en bulkTransfer(): código $result\n")
+                showDiagDialog("Error en Bulk Transfer", diagLog.toString())
+            }
+
+            connection.releaseInterface(usbInterface)
+            connection.close()
+
+        } catch (e: Exception) {
+            diagLog.append("EXCEPCIÓN: ${e.message}\n")
+            Log.e("MainActivity", "Error en performDirectUsbPrint: ${e.message}", e)
+            showDiagDialog("Excepción de Conexión", diagLog.toString())
+            try {
+                connection?.close()
+            } catch (ex: Exception) {}
         }
     }
 }
