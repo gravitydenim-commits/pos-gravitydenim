@@ -203,8 +203,8 @@ export default function PantallaCliente() {
       );
     }
 
-    // 2. Standby / Paid view
-    if (csState.status === 'idle' || csState.status === 'paid') {
+    // 2. Standby / Paid view / Cart view
+    if (csState.status === 'idle' || csState.status === 'paid' || csState.status === 'cart_view') {
       return (
         <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white', textAlign: 'center', padding: '20px', boxSizing: 'border-box' }}>
           {csState.status === 'paid' && (
@@ -313,102 +313,7 @@ export default function PantallaCliente() {
       );
     }
 
-    // 4. Cart View Mode (Visualización de productos del carrito)
-    if (csState.status === 'cart_view') {
-      const items = csState.cartItems || [];
-      return (
-        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: '#0f172a', color: 'white', overflow: 'hidden', boxSizing: 'border-box' }}>
-          {/* Cabecera compacta */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 15px', borderBottom: '1px solid rgba(255,255,255,0.08)', background: '#1e293b', flexShrink: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <img src="/logo.jpg" alt="Logo" style={{ height: '26px', borderRadius: '4px', objectFit: 'contain' }} onError={(e) => e.target.style.display='none'} />
-              <h1 style={{ fontSize: '15px', fontWeight: 'bold', color: '#38bdf8', margin: 0 }}>Su Compra</h1>
-            </div>
-            <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 'bold' }}>Gravity Denim POS</span>
-          </div>
 
-          <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
-            {/* Tabla de Productos (Izquierda) */}
-            <div style={{ flex: 1, padding: '10px', overflowY: 'auto', minHeight: 0 }}>
-              {items.length === 0 ? (
-                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '15px' }}>
-                  Esperando productos...
-                </div>
-              ) : (
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1.5px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.02)' }}>
-                      <th style={{ textAlign: 'left', padding: '6px 8px', color: '#38bdf8', fontSize: '11px', textTransform: 'uppercase', fontWeight: 'bold' }}>Descripción</th>
-                      <th style={{ textAlign: 'center', padding: '6px 8px', color: '#38bdf8', fontSize: '11px', textTransform: 'uppercase', fontWeight: 'bold', width: '50px' }}>Cant</th>
-                      <th style={{ textAlign: 'right', padding: '6px 8px', color: '#38bdf8', fontSize: '11px', textTransform: 'uppercase', fontWeight: 'bold', width: '80px' }}>P. Unit</th>
-                      <th style={{ textAlign: 'right', padding: '6px 8px', color: '#38bdf8', fontSize: '11px', textTransform: 'uppercase', fontWeight: 'bold', width: '90px' }}>Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((item, idx) => {
-                      const qty = item.qty || item.cantidad || 1;
-                      const price = item.price || item.precio || 0;
-                      const desc = item.descuento || 0;
-                      const totalLine = (qty * price) - desc;
-                      const pName = item.name || item.nombre || '';
-                      
-                      return (
-                        <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                          <td style={{ padding: '6px 8px', fontWeight: '500', verticalAlign: 'middle' }}>
-                            <div style={{ fontSize: getProductNameFontSize(pName), color: '#ffffff', fontWeight: 'bold', wordBreak: 'break-word', lineHeight: 1.1 }}>
-                              {pName}
-                            </div>
-                            {desc > 0 && (
-                              <div style={{ fontSize: '9px', color: '#f87171', marginTop: '1px' }}>
-                                Desc: -{formatCurrency(desc)}
-                              </div>
-                            )}
-                          </td>
-                          <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: 'bold', fontSize: '13px', verticalAlign: 'middle' }}>{qty}</td>
-                          <td style={{ padding: '6px 8px', textAlign: 'right', fontSize: '12px', color: '#cbd5e1', verticalAlign: 'middle' }}>{formatCurrency(price)}</td>
-                          <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold', color: '#38bdf8', fontSize: '13px', verticalAlign: 'middle' }}>{formatCurrency(totalLine)}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </div>
-
-            {/* Resumen de Totales (Derecha) */}
-            <div style={{ width: '250px', background: 'rgba(30, 41, 59, 0.7)', borderLeft: '1px solid rgba(255,255,255,0.08)', padding: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', flexShrink: 0 }}>
-              <div>
-                <h2 style={{ fontSize: '14px', fontWeight: 'bold', color: '#38bdf8', marginBottom: '10px', marginTop: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Resumen</h2>
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '12px' }}>
-                  <span style={{ color: '#94a3b8' }}>Subtotal:</span>
-                  <span style={{ fontWeight: '500' }}>{formatCurrency(csState.subtotal)}</span>
-                </div>
-                {csState.totalDescuentos > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '12px', color: '#f87171' }}>
-                    <span>Descuentos:</span>
-                    <span style={{ fontWeight: 'bold' }}>-{formatCurrency(csState.totalDescuentos)}</span>
-                  </div>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px' }}>
-                  <span style={{ color: '#94a3b8' }}>IVA 15%:</span>
-                  <span style={{ fontWeight: '500' }}>{formatCurrency(csState.ivaAmount)}</span>
-                </div>
-              </div>
-
-              <div style={{ borderTop: '1.5px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '13px', color: '#38bdf8', fontWeight: 'bold', textTransform: 'uppercase' }}>Total:</span>
-                  <span style={{ fontSize: '24px', color: '#22c55e', fontWeight: 'bold', textShadow: '0 0 10px rgba(34, 197, 94, 0.2)', lineHeight: 1 }}>
-                    {formatCurrency(csState.total)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
 
     return null;
   };
