@@ -22,8 +22,6 @@ dependencyResolutionManagement {
             }
         }
         mavenCentral()
-        // SDK oficial de iMin (IminPrinterLibrary) — requerido para D4-504
-        maven { url = uri("https://jitpack.io") }
     }
 }
 

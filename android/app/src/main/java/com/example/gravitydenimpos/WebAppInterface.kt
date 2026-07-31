@@ -6,26 +6,20 @@ import android.os.Handler
 import android.os.Looper
 import android.webkit.JavascriptInterface
 import android.widget.Toast
-import com.imin.printer.PrinterHelper
 import org.json.JSONArray
 import org.json.JSONObject
+import android.hardware.usb.UsbDevice
 
 /**
  * WebAppInterface — Puente JavaScript ↔ Android nativo
  *
- * Integración de impresión: SDK oficial iMin IminPrinterLibrary V1.0.0.15
- * Dispositivo objetivo: iMin D4-504 (Android 11)
+ * Integración de impresión directa mediante USB ESC/POS.
+ * Sin dependencias del SDK oficial de iMin para evitar fallos.
  */
 class WebAppInterface(
     private val context: Context,
     private val onCustomerUpdateListener: ((String) -> Unit)? = null
 ) {
-    // Instancia singleton del SDK oficial de iMin V1.0.x
-    private val iminPrint = PrinterHelper.getInstance()
-
-    // Estado de inicialización
-    @Volatile
-    private var printerReady = false
 
     // ─────────────────────────────────────────
     // INFORMACIÓN DEL DISPOSITIVO
@@ -33,7 +27,7 @@ class WebAppInterface(
 
     @JavascriptInterface
     fun getDeviceModel(): String {
-        return "iMin D4-504 (I20D01) — SDK: IminPrinterLibrary V1.0.0.15"
+        return "iMin D4-504 (I20D01) — USB Directo ESC/POS Masung"
     }
 
     @JavascriptInterface
@@ -56,22 +50,21 @@ class WebAppInterface(
     }
 
     // ─────────────────────────────────────────
-    // INICIALIZACIÓN DE IMPRESORA — SDK OFICIAL
+    // INICIALIZACIÓN DE IMPRESORA — USB DIRECTO
     // ─────────────────────────────────────────
 
     @JavascriptInterface
     fun initPrinter(): String {
-        return try {
-            android.util.Log.i("WebAppInterface", "[IMIN-SDK] Iniciando initPrinter")
-            iminPrint.initPrinter("USB", null)
-            printerReady = true
-            android.util.Log.i("WebAppInterface", "[IMIN-SDK] initPrinter() completado — printerReady=true")
-            "IMIN_SDK_INIT_OK — printerReady=true"
-        } catch (e: Exception) {
-            val err = "[IMIN-SDK] INIT_ERROR: ${e.javaClass.simpleName}: ${e.message}"
-            android.util.Log.e("WebAppInterface", err, e)
-            printerReady = false
-            err
+        val device = UsbPrinterHelper.getUsbDevice(context)
+        return if (device != null) {
+            if (UsbPrinterHelper.hasPermission(context, device)) {
+                "USB_PRINTER_READY"
+            } else {
+                UsbPrinterHelper.requestPermission(context, device)
+                "USB_PRINTER_PERMISSION_REQUESTED"
+            }
+        } else {
+            "USB_PRINTER_NOT_FOUND"
         }
     }
 
@@ -81,15 +74,12 @@ class WebAppInterface(
 
     @JavascriptInterface
     fun getPrinterStatus(): String {
-        return try {
-            val status = iminPrint.getPrinterStatus()
-            val msg = "[IMIN-SDK] getPrinterStatus() = $status | printerReady=$printerReady"
-            android.util.Log.i("WebAppInterface", msg)
-            msg
-        } catch (e: Exception) {
-            val err = "[IMIN-SDK] STATUS_ERROR: ${e.javaClass.simpleName}: ${e.message}"
-            android.util.Log.e("WebAppInterface", err, e)
-            err
+        val device = UsbPrinterHelper.getUsbDevice(context)
+        return if (device != null) {
+            val hasPerm = UsbPrinterHelper.hasPermission(context, device)
+            "USB_DETECTED | Permission=$hasPerm"
+        } else {
+            "USB_NOT_FOUND"
         }
     }
 
@@ -99,45 +89,27 @@ class WebAppInterface(
 
     @JavascriptInterface
     fun printTestTicket(): String {
-        val log = StringBuilder()
         return try {
-            android.util.Log.i("WebAppInterface", "[IMIN-SDK] === INICIO printTestTicket() ===")
-
-            if (!printerReady) {
-                log.append("[1] Llamando initPrinter... ")
-                iminPrint.initPrinter("USB", null)
-                printerReady = true
-                log.append("OK\n")
+            val device = UsbPrinterHelper.getUsbDevice(context) ?: return "ERROR: Impresora no encontrada"
+            if (!UsbPrinterHelper.hasPermission(context, device)) {
+                UsbPrinterHelper.requestPermission(context, device)
+                return "ERROR: Sin permiso USB"
             }
 
-            log.append("[2] setFontBold(true)... ")
-            iminPrint.setFontBold(true)
-            log.append("OK\n")
+            val builder = EscPosBuilder().init()
+                .bold(true)
+                .align(1)
+                .text("PRUEBA GRAVITY DENIM\n\n")
+                .bold(false)
+                .text("--------------------------------\n")
+                .feed(5)
+                .cut()
 
-            log.append("[3] printTextWithAli(PRUEBA GRAVITY DENIM, 1)... ")
-            iminPrint.printTextWithAli("PRUEBA GRAVITY DENIM\n\n", 1, null)
-            log.append("OK\n")
-
-            log.append("[4] setFontBold(false)... ")
-            iminPrint.setFontBold(false)
-            log.append("OK\n")
-            
-            log.append("[5] printText(--------------------------------)... ")
-            iminPrint.printText("--------------------------------\n", null)
-
-            log.append("[6] printAndFeedPaper(5)... ")
-            iminPrint.printAndFeedPaper(5)
-            log.append("OK\n")
-            
-            log.append("[RESULTADO] PRUEBA_EXITOSA — revisa si salió papel físicamente")
-            val result = log.toString()
-            android.util.Log.i("WebAppInterface", "[IMIN-SDK] $result")
-            result
-
+            val bytes = builder.build()
+            val result = UsbPrinterHelper.printRawBytes(context, device, bytes)
+            if (result == "SUCCESS") "TICKET_IMPRESO_OK" else result
         } catch (e: Exception) {
-            val err = "[IMIN-SDK] PRINT_TEST_ERROR:\n$log\nException: ${e.javaClass.simpleName}: ${e.message}"
-            android.util.Log.e("WebAppInterface", err, e)
-            err
+            "ERROR: ${e.message}"
         }
     }
 
@@ -148,81 +120,132 @@ class WebAppInterface(
     @JavascriptInterface
     fun printTicket(payloadJson: String): String {
         return try {
-            if (!printerReady) {
-                iminPrint.initPrinter("USB", null)
-                printerReady = true
+            val device = UsbPrinterHelper.getUsbDevice(context) ?: return "ERROR: Impresora no encontrada"
+            if (!UsbPrinterHelper.hasPermission(context, device)) {
+                UsbPrinterHelper.requestPermission(context, device)
+                return "ERROR: Sin permiso USB"
             }
 
             val payload = JSONObject(payloadJson)
+            val builder = EscPosBuilder().init()
 
-            // ── ENCABEZADO ──
-            iminPrint.setFontBold(true)
-            val titulo = payload.optString("titulo", "GRAVITY DENIM")
-            iminPrint.printTextWithAli("$titulo\n", 1, null)
+            // Si hay un arreglo de líneas pre-formateadas (generado por printTicket.js o iminPrinter.js)
+            val linesArray = payload.optJSONArray("lines")
+            if (linesArray != null) {
+                for (i in 0 until linesArray.length()) {
+                    val lineObj = linesArray.getJSONObject(i)
+                    val text = lineObj.optString("text", "")
+                    val align = lineObj.optInt("align", 0) // 0=left, 1=center, 2=right
+                    val size = lineObj.optInt("size", 18)
+                    val bold = lineObj.optBoolean("bold", false)
 
-            iminPrint.setFontBold(false)
-            val subtitulo = payload.optString("subtitulo", "")
-            if (subtitulo.isNotEmpty()) iminPrint.printTextWithAli("$subtitulo\n", 1, null)
+                    builder.align(align).bold(bold)
+                    if (size >= 24) {
+                        builder.doubleSize(true)
+                    } else {
+                        builder.doubleSize(false)
+                    }
+                    builder.text(text + "\n")
+                }
 
-            iminPrint.printTextWithAli("================================\n", 1, null)
+                // Generación de Barcode/QR si viene la clave de acceso en el payload
+                val numeroComprobante = payload.optString("numeroComprobante", "")
+                val isNotaVenta = payload.optBoolean("isNotaVenta", false)
 
-            // ── DATOS DEL CLIENTE ──
-            val fecha = payload.optString("fecha", "")
-            val cliente = payload.optString("cliente", "")
-            if (fecha.isNotEmpty()) iminPrint.printText("Fecha: $fecha\n", null)
-            if (cliente.isNotEmpty()) iminPrint.printText("Cliente: $cliente\n", null)
-            iminPrint.printText("--------------------------------\n", null)
+                if (numeroComprobante.isNotEmpty()) {
+                    builder.align(1).feed(1)
+                    if (!isNotaVenta && numeroComprobante.length == 49) {
+                        // Código de barras (Clave de Acceso)
+                        builder.text("CLAVE DE ACCESO SRI:\n")
+                        builder.barcode(numeroComprobante)
+                        builder.feed(1)
 
-            // ── ITEMS ──
-            val items: JSONArray = payload.optJSONArray("items") ?: JSONArray()
-            for (i in 0 until items.length()) {
-                val item = items.getJSONObject(i)
-                val desc = item.optString("descripcion", "Item")
-                val qty = item.optInt("cantidad", 1)
-                val precio = item.optDouble("precio", 0.0)
-                val subtot = qty * precio
-                
-                iminPrint.printText("$desc\n", null)
-                
-                val qtyPrecio = "  ${qty} x ${"%.2f".format(precio)}"
-                val subtotStr = "${"%.2f".format(subtot)}"
-                val spaces = " ".repeat(maxOf(1, 32 - qtyPrecio.length - subtotStr.length))
-                iminPrint.printText("$qtyPrecio$spaces$subtotStr\n", null)
+                        // Código QR (URL SRI)
+                        val qrUrl = "https://declaraciones.sri.gob.ec/comprobantes-electronicos-internet/publico/detalleComprobante.jsf?claveAcceso=$numeroComprobante"
+                        builder.qrCode(qrUrl)
+                        builder.feed(1)
+                        builder.text("Escanea para verificar en el SRI\n")
+                    } else if (isNotaVenta) {
+                        // Nota de Venta
+                        builder.text("Nº Venta: $numeroComprobante\n")
+                        if (numeroComprobante.matches(Regex("[0-9A-Za-z-]+"))) {
+                            builder.barcode(numeroComprobante)
+                        }
+                        builder.feed(1)
+                    }
+                }
+
+                builder.feed(5).cut()
+            } else {
+                // Fallback de parseo del payload antiguo
+                builder.align(1).bold(true)
+                val titulo = payload.optString("titulo", "GRAVITY DENIM")
+                builder.text("$titulo\n")
+
+                builder.bold(false)
+                val subtitulo = payload.optString("subtitulo", "")
+                if (subtitulo.isNotEmpty()) builder.text("$subtitulo\n")
+
+                builder.text("================================\n")
+
+                builder.align(0)
+                val fecha = payload.optString("fecha", "")
+                val cliente = payload.optString("cliente", "")
+                if (fecha.isNotEmpty()) builder.text("Fecha: $fecha\n")
+                if (cliente.isNotEmpty()) builder.text("Cliente: $cliente\n")
+                builder.text("--------------------------------\n")
+
+                val items: JSONArray = payload.optJSONArray("items") ?: JSONArray()
+                for (i in 0 until items.length()) {
+                    val item = items.getJSONObject(i)
+                    val desc = item.optString("descripcion", "Item")
+                    val qty = item.optInt("cantidad", 1)
+                    val precio = item.optDouble("precio", 0.0)
+                    val subtot = qty * precio
+                    
+                    builder.text("$desc\n")
+                    
+                    val qtyPrecio = "  ${qty} x ${"%.2f".format(precio)}"
+                    val subtotStr = "${"%.2f".format(subtot)}"
+                    val spaces = " ".repeat(maxOf(1, 32 - qtyPrecio.length - subtotStr.length))
+                    builder.text("$qtyPrecio$spaces$subtotStr\n")
+                }
+
+                builder.text("--------------------------------\n")
+
+                val subtotal = payload.optDouble("subtotal", 0.0)
+                val descuento = payload.optDouble("descuento", 0.0)
+                val total = payload.optDouble("total", 0.0)
+                val formaPago = payload.optString("formaPago", "")
+
+                if (subtotal != total) {
+                    builder.text("Subtotal:          ${"%.2f".format(subtotal)}\n")
+                }
+                if (descuento > 0.0) {
+                    builder.text("Descuento:        -${"%.2f".format(descuento)}\n")
+                }
+
+                builder.bold(true)
+                builder.text("TOTAL:             ${"%.2f".format(total)}\n")
+                builder.bold(false)
+
+                if (formaPago.isNotEmpty()) builder.text("Forma de Pago: $formaPago\n")
+
+                builder.align(1)
+                builder.text("================================\n")
+                val pie = payload.optString("pie", "Gracias por su compra")
+                builder.text("$pie\n")
+
+                builder.feed(6).cut()
             }
 
-            iminPrint.printText("--------------------------------\n", null)
+            val bytes = builder.build()
+            val result = UsbPrinterHelper.printRawBytes(context, device, bytes)
 
-            // ── TOTALES ──
-            val subtotal = payload.optDouble("subtotal", 0.0)
-            val descuento = payload.optDouble("descuento", 0.0)
-            val total = payload.optDouble("total", 0.0)
-            val formaPago = payload.optString("formaPago", "")
-
-            if (subtotal != total) {
-                iminPrint.printText("Subtotal:          ${"%.2f".format(subtotal)}\n", null)
-            }
-            if (descuento > 0.0) {
-                iminPrint.printText("Descuento:        -${"%.2f".format(descuento)}\n", null)
-            }
-
-            iminPrint.setFontBold(true)
-            iminPrint.printText("TOTAL:             ${"%.2f".format(total)}\n", null)
-            iminPrint.setFontBold(false)
-
-            if (formaPago.isNotEmpty()) iminPrint.printText("Forma de Pago: $formaPago\n", null)
-
-            // ── PIE ──
-            iminPrint.printTextWithAli("================================\n", 1, null)
-            val pie = payload.optString("pie", "Gracias por su compra")
-            iminPrint.printTextWithAli("$pie\n", 1, null)
-
-            // ── AVANCE DE PAPEL ──
-            iminPrint.printAndFeedPaper(6)
-
-            "TICKET_IMPRESO_OK"
+            if (result == "SUCCESS") "TICKET_IMPRESO_OK" else result
 
         } catch (e: Exception) {
-            val err = "[IMIN-SDK] PRINT_TICKET_ERROR: ${e.message}"
+            val err = "[USB-DIRECT] PRINT_TICKET_ERROR: ${e.message}"
             android.util.Log.e("WebAppInterface", err, e)
             err
         }
@@ -235,136 +258,54 @@ class WebAppInterface(
     @JavascriptInterface
     fun printText(text: String, alignment: Int, textSize: Int, bold: Boolean): String {
         return try {
-            if (!printerReady) {
-                iminPrint.initPrinter("USB", null)
-                printerReady = true
+            val device = UsbPrinterHelper.getUsbDevice(context) ?: return "ERROR: Impresora no encontrada"
+            if (!UsbPrinterHelper.hasPermission(context, device)) {
+                UsbPrinterHelper.requestPermission(context, device)
+                return "ERROR: Sin permiso USB"
             }
-            iminPrint.setFontBold(bold)
-            iminPrint.printTextWithAli("$text\n", alignment, null)
-            iminPrint.setFontBold(false)
-            "PRINT_TEXT_OK"
+
+            val builder = EscPosBuilder().init()
+            builder.align(alignment)
+            builder.bold(bold)
+            if (textSize > 1) {
+                builder.doubleSize(true)
+            } else {
+                builder.doubleSize(false)
+            }
+            builder.text("$text\n")
+            
+            val bytes = builder.build()
+            val result = UsbPrinterHelper.printRawBytes(context, device, bytes)
+            if (result == "SUCCESS") "PRINT_TEXT_OK" else result
         } catch (e: Exception) {
-            "[IMIN-SDK] PRINT_TEXT_ERROR: ${e.message}"
+            "[USB-DIRECT] PRINT_TEXT_ERROR: ${e.message}"
         }
     }
 
     @JavascriptInterface
     fun feedPaper(lines: Int): String {
         return try {
-            iminPrint.printAndFeedPaper(lines)
-            "FEED_PAPER_OK"
+            val device = UsbPrinterHelper.getUsbDevice(context) ?: return "ERROR: Impresora no encontrada"
+            if (!UsbPrinterHelper.hasPermission(context, device)) {
+                return "ERROR: Sin permiso USB"
+            }
+
+            val builder = EscPosBuilder().init().feed(lines)
+            val bytes = builder.build()
+            val result = UsbPrinterHelper.printRawBytes(context, device, bytes)
+            if (result == "SUCCESS") "FEED_PAPER_OK" else result
         } catch (e: Exception) {
-            "[IMIN-SDK] FEED_PAPER_ERROR: ${e.message}"
+            "[USB-DIRECT] FEED_PAPER_ERROR: ${e.message}"
         }
     }
 
     @JavascriptInterface
     fun getInstalledIminPackages(): String {
-        return try {
-            val pm = context.packageManager
-            val packages = pm.getInstalledPackages(0)
-            val iminPkgs = packages.filter {
-                it.packageName.contains("imin", ignoreCase = true) ||
-                it.packageName.contains("print", ignoreCase = true) ||
-                it.packageName.contains("pos", ignoreCase = true)
-            }.map { "${it.packageName} (v${it.versionName})" }
-
-            val result = StringBuilder()
-            result.append("SDK EN USO: IminPrinterLibrary V1.0.0.15\n")
-            result.append("Clase: com.imin.printer.PrinterHelper\n")
-            result.append("printerReady=$printerReady\n\n")
-
-            if (iminPkgs.isEmpty()) {
-                result.append("No se encontraron paquetes imin/print/pos")
-            } else {
-                result.append("Paquetes relacionados:\n")
-                iminPkgs.forEach { result.append("  $it\n") }
-            }
-            result.toString()
-        } catch (e: Exception) {
-            "[IMIN-SDK] DIAG_ERROR: ${e.message}"
-        }
+        return "IMPRESORA DIRECTA USB HABILITADA (SIN DEPENDENCIAS DEL SDK DE IMIN)"
     }
-
-    // ─────────────────────────────────────────
-    // PRUEBA DIRECTA PARA DIAGNÓSTICO
-    // Firmware: MS-SGE-W27 / MASUNG (APP24-01-11 D1)
-    // getPrinterStatus() devuelve -1 en este firmware pero los
-    // comandos de impresión funcionan. Se elimina esa validación.
-    // ─────────────────────────────────────────
 
     @JavascriptInterface
     fun testNativePrintKotlinDirect(): String {
-        val log = StringBuilder()
-        log.append("=== TEST KOTLIN NATIVO (sin validación de status) ===\n")
-        try {
-            log.append("1. bindService: Gestionado en MainActivity.onCreate()\n")
-
-            // Inicializar con USB — impresora MS-SGE-W27 comunica por USB
-            log.append("2. initPrinter(\"USB\"): ")
-            try {
-                iminPrint.initPrinter("USB", null)
-                printerReady = true
-                Thread.sleep(300)
-                log.append("OK\n")
-            } catch (e: Exception) {
-                log.append("ERROR: ${e.message}\n")
-            }
-
-            // NO consultamos getPrinterStatus() — devuelve -1 en firmware MASUNG
-            // pero los comandos de impresión sí son procesados.
-            log.append("3. getPrinterStatus(): OMITIDO (firmware MS-SGE-W27 devuelve -1)\n")
-
-            log.append("4. setFontBold(true): ")
-            try {
-                iminPrint.setFontBold(true)
-                log.append("OK\n")
-            } catch (e: Exception) {
-                log.append("ERROR: ${e.message}\n")
-            }
-
-            log.append("5. printTextWithAli(\"HELLO WORLD\"): ")
-            try {
-                iminPrint.printTextWithAli("HELLO WORLD\n", 1, null)
-                log.append("OK\n")
-            } catch (e: Exception) {
-                log.append("ERROR: ${e.message}\n")
-            }
-
-            log.append("6. setFontBold(false): ")
-            try {
-                iminPrint.setFontBold(false)
-                log.append("OK\n")
-            } catch (e: Exception) {
-                log.append("ERROR: ${e.message}\n")
-            }
-
-            log.append("7. printTextWithAli(\"GRAVITY DENIM\"): ")
-            try {
-                iminPrint.printTextWithAli("GRAVITY DENIM\n", 1, null)
-                log.append("OK\n")
-            } catch (e: Exception) {
-                log.append("ERROR: ${e.message}\n")
-            }
-
-            log.append("8. printAndFeedPaper(6): ")
-            try {
-                iminPrint.printAndFeedPaper(6)
-                log.append("OK\n")
-            } catch (e: Exception) {
-                log.append("ERROR: ${e.message}\n")
-            }
-
-            log.append("==========================\n")
-            log.append("Si todas las líneas dicen OK, verifica si salió papel.\n")
-            val result = log.toString()
-            android.util.Log.i("IMIN_NATIVE", result)
-            return result
-        } catch (e: Exception) {
-            val err = "FATAL ERROR: ${e.javaClass.simpleName}: ${e.message}"
-            android.util.Log.e("IMIN_NATIVE", err, e)
-            log.append(err)
-            return log.toString()
-        }
+        return printTestTicket()
     }
 }

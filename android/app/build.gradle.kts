@@ -83,7 +83,4 @@ dependencies {
   implementation(libs.androidx.navigation3.runtime)
   implementation(libs.androidx.lifecycle.viewmodel.navigation3)
 
-  // SDK oficial de impresión iMin — D4-504 Android 11
-  // Fuente: https://github.com/iminsoftware/IminPrinterLibrary
-  implementation("com.github.iminsoftware:IminPrinterLibrary:V1.0.0.15")
 }

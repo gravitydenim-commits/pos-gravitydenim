@@ -73,19 +73,7 @@ class MainActivity : Activity(), DisplayManager.DisplayListener {
             )
         }
 
-        try {
-            Log.i("MainActivity", "[IMIN-SDK] Iniciando bindService en hilo principal (onCreate)")
-            com.imin.printer.PrinterHelper.getInstance().initPrinterService(this, object : com.imin.printer.InitPrinterCallback {
-                override fun onConnected() {
-                    Log.i("MainActivity", "[IMIN-SDK] SERVICIO DE IMPRESORA CONECTADO EXITOSAMENTE")
-                }
-                override fun onDisconnected() {
-                    Log.w("MainActivity", "[IMIN-SDK] SERVICIO DE IMPRESORA DESCONECTADO")
-                }
-            })
-        } catch (e: Exception) {
-            Log.e("MainActivity", "Error initPrinterService en onCreate: ${e.message}")
-        }
+
 
 
         // WebView Principal (Ocupa 100% de la pantalla)
@@ -354,12 +342,7 @@ class MainActivity : Activity(), DisplayManager.DisplayListener {
         try {
             unregisterReceiver(usbReceiver)
         } catch (e: Exception) {}
-        try {
-            Log.i("MainActivity", "[IMIN-SDK] Desvinculando servicio (onDestroy)")
-            com.imin.printer.PrinterHelper.getInstance().deInitPrinterService(this)
-        } catch (e: Exception) {
-            Log.e("MainActivity", "Error deInitPrinterService: ${e.message}")
-        }
+
         try {
             displayManager?.unregisterDisplayListener(this)
             customerPresentation?.dismiss()
@@ -410,126 +393,40 @@ class MainActivity : Activity(), DisplayManager.DisplayListener {
     }
 
     private fun runDirectMasungUsbPrintTest() {
-        val usbManager = getSystemService(Context.USB_SERVICE) as UsbManager
-        val deviceList = usbManager.deviceList
-        var targetDevice: UsbDevice? = null
-        
-        for (device in deviceList.values) {
-            // VID 1305 (0x0519), PID 8211 (0x2013)
-            if (device.vendorId == 1305 && device.productId == 8211) {
-                targetDevice = device
-                break
-            }
-        }
-
-        if (targetDevice == null) {
+        val device = UsbPrinterHelper.getUsbDevice(this)
+        if (device == null) {
+            val usbManager = getSystemService(Context.USB_SERVICE) as UsbManager
             showDiagDialog(
                 "Impresora no encontrada", 
-                "No se encontró ningún dispositivo USB con VID 1305 y PID 8211.\n\nDispositivos conectados:\n" +
-                deviceList.values.joinToString("\n") { "VID=${it.vendorId} PID=${it.productId} Name=${it.deviceName}" }
+                "No se detectó la impresora USB Masung (VID 1305, PID 8211).\n\nPeriféricos USB detectados:\n" +
+                usbManager.deviceList.values.joinToString("\n") { "VID=${it.vendorId} PID=${it.productId} Name=${it.deviceName}" }
             )
             return
         }
 
-        if (!usbManager.hasPermission(targetDevice)) {
-            val permissionIntent = PendingIntent.getBroadcast(
-                this, 0, Intent("com.example.gravitydenimpos.USB_PERMISSION"),
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
-            )
-            usbManager.requestPermission(targetDevice, permissionIntent)
+        if (!UsbPrinterHelper.hasPermission(this, device)) {
+            UsbPrinterHelper.requestPermission(this, device)
         } else {
-            performDirectUsbPrint(targetDevice)
+            performDirectUsbPrint(device)
         }
     }
 
     private fun performDirectUsbPrint(device: UsbDevice) {
-        val usbManager = getSystemService(Context.USB_SERVICE) as UsbManager
-        val diagLog = java.lang.StringBuilder()
-        diagLog.append("=== DIAGNÓSTICO IMPRESIÓN DIRECTA USB ===\n")
-        diagLog.append("Dispositivo: ${device.deviceName}\n")
-        diagLog.append("VID: ${device.vendorId} (0x${Integer.toHexString(device.vendorId)})\n")
-        diagLog.append("PID: ${device.productId} (0x${Integer.toHexString(device.productId)})\n")
-
-        var connection: UsbDeviceConnection? = null
-        var usbInterface: UsbInterface? = null
-        var bulkOutEndpoint: UsbEndpoint? = null
-
-        try {
-            val interfaceCount = device.interfaceCount
-            diagLog.append("Interfaces encontradas: $interfaceCount\n")
-            
-            for (i in 0 until interfaceCount) {
-                val iface = device.getInterface(i)
-                diagLog.append("Interfaz $i: class=${iface.interfaceClass}, subclass=${iface.interfaceSubclass}\n")
-                
-                var outEp: UsbEndpoint? = null
-                for (j in 0 until iface.endpointCount) {
-                    val ep = iface.getEndpoint(j)
-                    diagLog.append("  EP $j: type=${ep.type}, dir=${ep.direction}\n")
-                    if (ep.type == UsbConstants.USB_ENDPOINT_XFER_BULK && 
-                        ep.direction == UsbConstants.USB_DIR_OUT) {
-                        outEp = ep
-                    }
-                }
-                if (outEp != null) {
-                    usbInterface = iface
-                    bulkOutEndpoint = outEp
-                    diagLog.append("-> Seleccionada Interfaz $i y EP Bulk Out\n")
-                    break
-                }
-            }
-
-            if (usbInterface == null || bulkOutEndpoint == null) {
-                diagLog.append("ERROR: No se encontró interfaz o endpoint BULK OUT adecuado.\n")
-                showDiagDialog("Error de Interface/Endpoint", diagLog.toString())
-                return
-            }
-
-            connection = usbManager.openDevice(device)
-            if (connection == null) {
-                diagLog.append("ERROR: No se pudo abrir la conexión con el dispositivo USB.\n")
-                showDiagDialog("Error de Conexión", diagLog.toString())
-                return
-            }
-
-            val claimRes = connection.claimInterface(usbInterface, true)
-            diagLog.append("Reclamar interfaz: $claimRes\n")
-            if (!claimRes) {
-                diagLog.append("ERROR: Falló al reclamar la interfaz USB.\n")
-                showDiagDialog("Error al Reclamar Interfaz", diagLog.toString())
-                connection.close()
-                return
-            }
-
-            val escInit = byteArrayOf(0x1B, 0x40) // ESC @ (Inicializar)
-            val printText = "PRUEBA GRAVITY DENIM\n".toByteArray(Charsets.UTF_8)
-            val escFeed = byteArrayOf(0x0A, 0x0A, 0x0A, 0x0A, 0x0A) // LF * 5
-            val escCut = byteArrayOf(0x1D, 0x56, 0x00) // GS V 0 (Corte)
-
-            val bytesToSend = escInit + printText + escFeed + escCut
-            diagLog.append("Total de bytes a enviar: ${bytesToSend.size}\n")
-
-            val result = connection.bulkTransfer(bulkOutEndpoint, bytesToSend, bytesToSend.size, 5000)
-            diagLog.append("Resultado de bulkTransfer(): $result\n")
-
-            if (result >= 0) {
-                diagLog.append("🎉 ¡ÉXITO! Se enviaron $result bytes a la impresora.\n")
-                showDiagDialog("Prueba Exitosa", diagLog.toString())
-            } else {
-                diagLog.append("❌ ERROR en bulkTransfer(): código $result\n")
-                showDiagDialog("Error en Bulk Transfer", diagLog.toString())
-            }
-
-            connection.releaseInterface(usbInterface)
-            connection.close()
-
-        } catch (e: Exception) {
-            diagLog.append("EXCEPCIÓN: ${e.message}\n")
-            Log.e("MainActivity", "Error en performDirectUsbPrint: ${e.message}", e)
-            showDiagDialog("Excepción de Conexión", diagLog.toString())
-            try {
-                connection?.close()
-            } catch (ex: Exception) {}
+        val builder = EscPosBuilder().init()
+            .bold(true)
+            .align(1)
+            .text("PRUEBA GRAVITY DENIM\n")
+            .bold(false)
+            .feed(5)
+            .cut()
+        
+        val bytes = builder.build()
+        val result = UsbPrinterHelper.printRawBytes(this, device, bytes)
+        
+        if (result == "SUCCESS") {
+            showDiagDialog("Prueba Exitosa", "🎉 ¡ÉXITO! Se enviaron los comandos ESC/POS a la impresora y se reportó SUCCESS.")
+        } else {
+            showDiagDialog("Error en Impresión Directa", "Resultado: $result")
         }
     }
 }

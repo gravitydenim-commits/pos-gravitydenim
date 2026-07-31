@@ -1,4 +1,13 @@
 export const imprimirTicket = (issuerData, cartData, totalsData, customerData, claveAcceso, paymentMethod, transferRecipient, isNotaVenta, format = '80mm', isReprint = false, paymentDetails = null) => {
+  if (typeof window !== 'undefined' && window.AndroidBridge) {
+    import('./iminPrinter').then(m => {
+      m.printTicketImin(issuerData, cartData, totalsData, customerData, claveAcceso, paymentMethod, isNotaVenta, paymentDetails);
+    }).catch(err => {
+      console.error("Error importing iminPrinter:", err);
+    });
+    return;
+  }
+
   console.log(`🖨️ Conectando con ticketera térmica en pestaña actual (formato ${format})...`);
   const is58 = format === '58mm';
 
