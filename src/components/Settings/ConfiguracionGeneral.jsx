@@ -13,15 +13,28 @@ export default function ConfiguracionGeneral() {
   const [resetSequentials, setResetSequentials] = useState(false);
   const [resetMonth, setResetMonth] = useState('');
   const [resetYear, setResetYear] = useState('');
+  const [hasNativePrinter, setHasNativePrinter] = useState(false);
 
   useEffect(() => {
     // Cargar preferencias
     const savedFormat = localStorage.getItem('printerFormat');
     const savedMethod = localStorage.getItem('printerMethod');
     const savedPrinter58 = localStorage.getItem('printer58_device_name');
+    
+    let currentFormat = savedFormat || '80mm';
     if (savedFormat) setPrintFormat(savedFormat);
-    if (savedMethod) setPrintMethod(savedMethod);
     if (savedPrinter58) setPrinter58Name(savedPrinter58);
+
+    if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.printTestTicket === 'function') {
+      setHasNativePrinter(true);
+      if (currentFormat === '80mm') {
+        setPrintMethod('imin_native');
+      } else if (savedMethod) {
+        setPrintMethod(savedMethod);
+      }
+    } else if (savedMethod) {
+      setPrintMethod(savedMethod);
+    }
   }, []);
 
   const handlePrintPreferenceChange = (key, value) => {
@@ -1092,13 +1105,13 @@ export default function ConfiguracionGeneral() {
             <div>
               <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Método de Conexión</label>
               <select 
-                value={typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.printTestTicket === 'function' && printFormat === '80mm' ? 'imin_native' : printMethod} 
+                value={hasNativePrinter && printFormat === '80mm' ? 'imin_native' : printMethod} 
                 onChange={(e) => handlePrintPreferenceChange('method', e.target.value)}
                 style={{ width: '100%', padding: '12px', background: 'var(--input-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', borderRadius: '8px' }}
-                disabled={printFormat === '80mm' && (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.printTestTicket === 'function')}
+                disabled={printFormat === '80mm' && hasNativePrinter}
               >
                 {printFormat === '80mm' ? (
-                  (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.printTestTicket === 'function') 
+                  hasNativePrinter 
                     ? <option value="imin_native">Impresión Nativa iMin (SDK)</option>
                     : <option value="sistema">Impresión de Sistema (Navegador)</option>
                 ) : (
@@ -1142,7 +1155,7 @@ export default function ConfiguracionGeneral() {
           )}
 
           {!(printFormat === '58mm' && printMethod === 'bluetooth_58') && (
-            (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.printTestTicket === 'function') ? (
+            hasNativePrinter ? (
               <button 
                 onClick={() => {
                   alert("BOTÓN NATIVO PRESIONADO");
