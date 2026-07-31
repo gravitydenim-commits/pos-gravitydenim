@@ -7,7 +7,13 @@ export default function PantallaCliente() {
     status: 'idle', // 'idle' | 'customer_review' | 'checkout' | 'paid' | 'cart_view'
     customerData: null,
     total: 0,
-    paymentMethod: 'EFECTIVO'
+    paymentMethod: 'EFECTIVO',
+    cartItems: [],
+    subtotal: 0,
+    totalDescuentos: 0,
+    ivaAmount: 0,
+    transferRecipient: '',
+    qrUrl: ''
   });
 
   const [settings, setSettings] = useState({
@@ -17,6 +23,27 @@ export default function PantallaCliente() {
     showTotal: true,
     showQR: true
   });
+
+  const [scale, setScale] = useState(1);
+
+  // Proportional scaling calculator for secondary display (22cm x 13.5cm -> ~1.63 aspect ratio)
+  useEffect(() => {
+    const handleResize = () => {
+      const baseWidth = 800;
+      const baseHeight = 490;
+      const winWidth = window.innerWidth;
+      const winHeight = window.innerHeight;
+      
+      const scaleX = winWidth / baseWidth;
+      const scaleY = winHeight / baseHeight;
+      // Scale down or up to fit completely within the screen boundary
+      setScale(Math.min(scaleX, scaleY));
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Cargar configuración inicial
   useEffect(() => {
@@ -54,7 +81,15 @@ export default function PantallaCliente() {
     // Callback para puente nativo AndroidBridge
     if (typeof window !== 'undefined') {
       window.onCustomerScreenUpdate = (payload) => {
-        if (payload) setCsState(payload);
+        if (payload) {
+          try {
+            // Si el payload llega como string JSON (puente nativo antiguo), lo parseamos
+            const parsed = typeof payload === 'string' ? JSON.parse(payload) : payload;
+            setCsState(parsed);
+          } catch (e) {
+            console.error("Error al parsear update pantalla cliente:", e);
+          }
+        }
       };
     }
 
@@ -65,269 +100,346 @@ export default function PantallaCliente() {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
   };
 
+  const getCustomerNameFontSize = (name) => {
+    if (!name) return '24px';
+    const len = name.length;
+    if (len > 50) return '14px';
+    if (len > 35) return '17px';
+    if (len > 22) return '20px';
+    return '24px';
+  };
+
+  const getProductNameFontSize = (name) => {
+    if (!name) return '14px';
+    const len = name.length;
+    if (len > 40) return '10px';
+    if (len > 25) return '12px';
+    return '14px';
+  };
+
   if (!settings.enabled) {
     return (
-      <div style={{ height: '100dvh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white', padding: '1rem' }}>
-        <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>Pantalla secundaria deshabilitada en configuración.</p>
+      <div style={{ height: '100vh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white', padding: '1rem' }}>
+        <p style={{ color: '#64748b', fontSize: '1rem' }}>Pantalla secundaria deshabilitada en configuración.</p>
       </div>
     );
   }
 
-  // 1. Customer Review Mode (Revisión de Datos del Cliente)
-  if (csState.status === 'customer_review') {
-    const cData = csState.customerData || {};
-    return (
-      <div style={{ minHeight: '100dvh', height: '100dvh', width: '100vw', display: 'flex', flexDirection: 'column', background: '#0f172a', color: 'white', padding: '1rem', boxSizing: 'border-box', overflowY: 'auto' }}>
-        {/* Cabecera Adaptable */}
-        <div style={{ textAlign: 'center', marginBottom: '0.75rem', flexShrink: 0 }}>
-          <img src="/logo.jpg" alt="Logo" style={{ height: 'clamp(35px, 6vh, 50px)', marginBottom: '0.5rem', borderRadius: '8px', objectFit: 'contain' }} onError={(e) => e.target.style.display='none'} />
-          <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2.2rem)', fontWeight: 'bold', color: '#38bdf8', margin: '0 0 0.25rem 0', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
-            Por favor, revise sus datos
-          </h1>
-          <p style={{ fontSize: 'clamp(0.85rem, 2.2vw, 1.1rem)', color: '#94a3b8', margin: 0, fontWeight: '400' }}>
-            Indique al vendedor si necesita corregir alguna información.
-          </p>
-        </div>
-
-        {/* Tarjeta de Confirmación Adaptable */}
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0 }}>
-          <div style={{ 
-            width: '100%', 
-            maxWidth: '750px', 
-            background: 'rgba(30, 41, 59, 0.95)', 
-            borderRadius: '16px', 
-            border: '1.5px solid rgba(56, 189, 248, 0.4)', 
-            padding: '1.25rem', 
-            boxShadow: '0 15px 35px rgba(0,0,0,0.5)',
-            boxSizing: 'border-box'
-          }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-              
-              {/* Nombres / Razón Social */}
-              <div style={{ gridColumn: '1 / -1', background: 'rgba(255,255,255,0.04)', padding: '0.85rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <span style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#38bdf8', fontWeight: 'bold', marginBottom: '0.2rem' }}>
-                  Nombres / Razón Social
-                </span>
-                <span style={{ fontSize: 'clamp(1.1rem, 2.8vw, 1.6rem)', fontWeight: 'bold', color: '#ffffff', wordBreak: 'break-word', lineHeight: 1.2 }}>
-                  {cData.nombre || '—'}
-                </span>
+  const renderContent = () => {
+    // 1. Customer Review Mode (Revisión de Datos del Cliente)
+    if (csState.status === 'customer_review') {
+      const cData = csState.customerData || {};
+      return (
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: '#0f172a', color: 'white', padding: '15px', boxSizing: 'border-box', overflow: 'hidden' }}>
+          {/* Cabecera compacta */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '10px', marginBottom: '10px', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <img src="/logo.jpg" alt="Logo" style={{ height: '36px', borderRadius: '6px', objectFit: 'contain' }} onError={(e) => e.target.style.display='none'} />
+              <div>
+                <h1 style={{ fontSize: '18px', fontWeight: 'bold', color: '#38bdf8', margin: 0, lineHeight: 1.1 }}>
+                  Confirme sus Datos de Facturación
+                </h1>
+                <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0 }}>
+                  Por favor verifique que la información sea correcta
+                </p>
               </div>
+            </div>
+            <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 'bold', background: 'rgba(56, 189, 248, 0.1)', padding: '4px 8px', borderRadius: '4px' }}>GRAVITY DENIM</span>
+          </div>
 
-              {/* Cédula o RUC */}
-              <div style={{ background: 'rgba(255,255,255,0.04)', padding: '0.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <span style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#38bdf8', fontWeight: 'bold', marginBottom: '0.2rem' }}>
-                  {cData.tipoDocumento === 'RUC' ? 'RUC' : cData.tipoDocumento === 'CEDULA' ? 'Cédula' : 'Identificación'}
-                </span>
-                <span style={{ fontSize: 'clamp(1rem, 2.5vw, 1.4rem)', fontWeight: 'bold', color: '#38bdf8' }}>
-                  {cData.numeroIdentificacion || '—'}
-                </span>
-              </div>
+          {/* Grid de Datos del Cliente */}
+          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', minHeight: 0 }}>
+            {/* Nombres / Razón Social */}
+            <div style={{ gridColumn: '1 / -1', background: 'rgba(30, 41, 59, 0.7)', padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#38bdf8', fontWeight: 'bold', marginBottom: '2px' }}>
+                Nombres / Razón Social
+              </span>
+              <span style={{ fontSize: getCustomerNameFontSize(cData.nombre), fontWeight: 'bold', color: '#ffffff', wordBreak: 'break-word', lineHeight: 1.1 }}>
+                {cData.nombre || '—'}
+              </span>
+            </div>
 
-              {/* Teléfono */}
-              <div style={{ background: 'rgba(255,255,255,0.04)', padding: '0.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <span style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#38bdf8', fontWeight: 'bold', marginBottom: '0.2rem' }}>
-                  Teléfono
-                </span>
-                <span style={{ fontSize: 'clamp(0.95rem, 2.2vw, 1.3rem)', color: '#ffffff', fontWeight: '500' }}>
-                  {cData.telefono || '—'}
-                </span>
-              </div>
+            {/* Cédula o RUC */}
+            <div style={{ background: 'rgba(30, 41, 59, 0.7)', padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#38bdf8', fontWeight: 'bold', marginBottom: '2px' }}>
+                {cData.tipoDocumento === 'RUC' ? 'RUC' : cData.tipoDocumento === 'CEDULA' ? 'Cédula' : 'Identificación'}
+              </span>
+              <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#38bdf8' }}>
+                {cData.numeroIdentificacion || '—'}
+              </span>
+            </div>
 
-              {/* Dirección */}
-              <div style={{ gridColumn: '1 / -1', background: 'rgba(255,255,255,0.04)', padding: '0.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <span style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#38bdf8', fontWeight: 'bold', marginBottom: '0.2rem' }}>
-                  Dirección
-                </span>
-                <span style={{ fontSize: 'clamp(0.95rem, 2.2vw, 1.2rem)', color: '#ffffff', wordBreak: 'break-word', fontWeight: '500', lineHeight: 1.2 }}>
-                  {cData.direccion || '—'}
-                </span>
-              </div>
+            {/* Teléfono */}
+            <div style={{ background: 'rgba(30, 41, 59, 0.7)', padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#38bdf8', fontWeight: 'bold', marginBottom: '2px' }}>
+                Teléfono
+              </span>
+              <span style={{ fontSize: '17px', color: '#ffffff', fontWeight: 'bold' }}>
+                {cData.telefono || '—'}
+              </span>
+            </div>
 
-              {/* Correo electrónico */}
-              <div style={{ gridColumn: '1 / -1', background: 'rgba(255,255,255,0.04)', padding: '0.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <span style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#38bdf8', fontWeight: 'bold', marginBottom: '0.2rem' }}>
-                  Correo Electrónico
-                </span>
-                <span style={{ fontSize: 'clamp(0.95rem, 2.2vw, 1.2rem)', color: '#ffffff', wordBreak: 'break-word', fontWeight: '500', lineHeight: 1.2 }}>
-                  {cData.correo || '—'}
-                </span>
-              </div>
+            {/* Dirección */}
+            <div style={{ gridColumn: '1 / -1', background: 'rgba(30, 41, 59, 0.7)', padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#38bdf8', fontWeight: 'bold', marginBottom: '2px' }}>
+                Dirección
+              </span>
+              <span style={{ fontSize: '14px', color: '#ffffff', wordBreak: 'break-word', fontWeight: '500', lineHeight: 1.1 }}>
+                {cData.direccion || '—'}
+              </span>
+            </div>
 
+            {/* Correo electrónico */}
+            <div style={{ gridColumn: '1 / -1', background: 'rgba(30, 41, 59, 0.7)', padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#38bdf8', fontWeight: 'bold', marginBottom: '2px' }}>
+                Correo Electrónico
+              </span>
+              <span style={{ fontSize: '14px', color: '#ffffff', wordBreak: 'break-word', fontWeight: '500', lineHeight: 1.1 }}>
+                {cData.correo || '—'}
+              </span>
             </div>
           </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  // 2. Standby / Paid view
-  if (csState.status === 'idle' || csState.status === 'paid') {
-    return (
-      <div style={{ height: '100dvh', width: '100vw', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white', textAlign: 'center', padding: '1rem', boxSizing: 'border-box' }}>
-        {csState.status === 'paid' && (
-          <div style={{ marginBottom: '1.25rem', animation: 'fadeIn 0.5s ease-out' }}>
-            <h1 style={{ fontSize: 'clamp(1.8rem, 5vw, 2.8rem)', color: 'var(--success)', margin: '0 0 0.5rem 0' }}>¡Gracias por preferirnos!</h1>
-            <p style={{ fontSize: 'clamp(1rem, 2.5vw, 1.4rem)', color: 'var(--text-muted)', margin: 0 }}>Tu pago ha sido procesado exitosamente.</p>
+    // 2. Standby / Paid view
+    if (csState.status === 'idle' || csState.status === 'paid') {
+      return (
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white', textAlign: 'center', padding: '20px', boxSizing: 'border-box' }}>
+          {csState.status === 'paid' && (
+            <div style={{ marginBottom: '15px' }}>
+              <h1 style={{ fontSize: '32px', color: '#22c55e', margin: '0 0 4px 0', fontWeight: 'bold' }}>¡Gracias por preferirnos!</h1>
+              <p style={{ fontSize: '16px', color: '#94a3b8', margin: 0 }}>Tu pago ha sido procesado exitosamente.</p>
+            </div>
+          )}
+
+          {(settings.welcomeType === 'logo_msg' || settings.welcomeType === 'logo_only') && (
+            <img 
+              src="/logo.jpg" 
+              alt="Logo" 
+              style={{ width: '130px', height: '130px', marginBottom: '15px', borderRadius: '50%', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', objectFit: 'cover', border: '3px solid rgba(56, 189, 248, 0.3)' }} 
+              onError={(e) => e.target.style.display = 'none'}
+            />
+          )}
+          
+          {(settings.welcomeType === 'logo_msg' || settings.welcomeType === 'msg_only') && (
+            <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#38bdf8', margin: 0, textShadow: '0 2px 10px rgba(59, 130, 246, 0.3)' }}>
+              {settings.message}
+            </h2>
+          )}
+        </div>
+      );
+    }
+
+    // 3. Checkout view (Momento del cobro)
+    if (csState.status === 'checkout') {
+      const isTransfer = csState.paymentMethod === 'TRANSFERENCIA';
+      return (
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: '#0f172a', color: 'white', padding: '15px', boxSizing: 'border-box', overflow: 'hidden' }}>
+          {/* Cabecera compacta */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '10px', marginBottom: '15px', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <img src="/logo.jpg" alt="Logo" style={{ height: '36px', borderRadius: '6px', objectFit: 'contain' }} onError={(e) => e.target.style.display='none'} />
+              <h1 style={{ fontSize: '18px', fontWeight: 'bold', color: '#38bdf8', margin: 0 }}>Procesar Pago</h1>
+            </div>
+            <span style={{ fontSize: '12px', color: '#22c55e', fontWeight: 'bold', background: 'rgba(34, 197, 94, 0.1)', padding: '4px 8px', borderRadius: '4px' }}>GRAVITY DENIM</span>
           </div>
-        )}
 
-        {(settings.welcomeType === 'logo_msg' || settings.welcomeType === 'logo_only') && (
-          <img 
-            src="/logo.jpg" 
-            alt="Logo" 
-            style={{ width: 'clamp(140px, 30vw, 220px)', maxWidth: '70%', marginBottom: '1.25rem', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', objectFit: 'contain' }} 
-            onError={(e) => e.target.style.display = 'none'}
-          />
-        )}
-        
-        {(settings.welcomeType === 'logo_msg' || settings.welcomeType === 'msg_only') && (
-          <h2 style={{ fontSize: 'clamp(1.3rem, 3.8vw, 2.2rem)', fontWeight: 'bold', color: 'var(--accent)', margin: 0, textShadow: '0 2px 10px rgba(59, 130, 246, 0.3)' }}>
-            {settings.message}
-          </h2>
-        )}
-      </div>
-    );
-  }
-
-  // 3. Checkout view (Momento del cobro)
-  if (csState.status === 'checkout') {
-    return (
-      <div style={{ height: '100dvh', width: '100vw', display: 'flex', flexDirection: 'column', background: '#0f172a', color: 'white', padding: '1rem', boxSizing: 'border-box', overflowY: 'auto' }}>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          
-          <img src="/logo.jpg" alt="Logo" style={{ height: 'clamp(35px, 6vh, 50px)', marginBottom: '1rem', borderRadius: '8px', objectFit: 'contain' }} onError={(e) => e.target.style.display='none'} />
-          
-          {settings.showTotal ? (
-            <div style={{ background: 'rgba(30, 41, 59, 0.95)', padding: '1.5rem 2.5rem', borderRadius: '20px', border: '1px solid var(--panel-border)', textAlign: 'center', boxShadow: '0 15px 35px rgba(0,0,0,0.5)' }}>
-              <p style={{ fontSize: 'clamp(1rem, 2.5vw, 1.3rem)', color: 'var(--text-muted)', margin: '0 0 0.5rem 0' }}>Total a Cancelar</p>
-              <h1 style={{ fontSize: 'clamp(2.8rem, 8vw, 4.8rem)', margin: 0, color: 'var(--success)', fontWeight: 'bold', textShadow: '0 0 15px rgba(34, 197, 94, 0.4)', lineHeight: 1.1 }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', minHeight: 0 }}>
+            {/* Caja de Total (Izquierda) */}
+            <div style={{ 
+              flex: 1, 
+              background: 'rgba(30, 41, 59, 0.95)', 
+              padding: '20px', 
+              borderRadius: '16px', 
+              border: '1.5px solid rgba(56, 189, 248, 0.2)', 
+              textAlign: 'center', 
+              boxShadow: '0 15px 35px rgba(0,0,0,0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              height: '100%',
+              boxSizing: 'border-box'
+            }}>
+              <p style={{ fontSize: '15px', color: '#94a3b8', margin: '0 0 5px 0' }}>Total a Cancelar</p>
+              <h1 style={{ fontSize: '46px', margin: '0 0 10px 0', color: '#22c55e', fontWeight: 'bold', textShadow: '0 0 15px rgba(34, 197, 94, 0.4)', lineHeight: 1.1 }}>
                 {formatCurrency(csState.total)}
               </h1>
               
-              <div style={{ marginTop: '1rem', display: 'inline-block', padding: '6px 18px', background: 'var(--panel-bg)', borderRadius: '99px', border: '1px solid var(--panel-border)', fontSize: 'clamp(0.9rem, 2vw, 1.1rem)', color: 'var(--text-main)' }}>
-                {csState.paymentMethod === 'TRANSFERENCIA' ? '🏦 Pago por Transferencia' : '💵 Pago en Efectivo'}
+              <div style={{ alignSelf: 'center', padding: '6px 16px', background: 'rgba(255,255,255,0.05)', borderRadius: '99px', border: '1px solid rgba(255,255,255,0.1)', fontSize: '13px', fontWeight: 'bold', color: '#cbd5e1' }}>
+                {isTransfer ? '🏦 Transferencia Bancaria' : '💵 Pago en Efectivo'}
               </div>
             </div>
-          ) : (
-             <h2 style={{ fontSize: 'clamp(1.5rem, 4vw, 2.2rem)', color: 'var(--text-main)' }}>Procesando cobro...</h2>
-          )}
 
-          {settings.showQR && csState.paymentMethod === 'TRANSFERENCIA' && (
-            <div style={{ marginTop: '1.25rem', textAlign: 'center', animation: 'fadeIn 0.5s ease-out' }}>
-              <p style={{ color: 'var(--text-muted)', marginBottom: '0.5rem', fontSize: 'clamp(0.9rem, 2vw, 1.1rem)' }}>
-                {csState.transferRecipient 
-                  ? `Escanea para transferir a ${csState.transferRecipient}:` 
-                  : 'Escanea para transferir:'}
-              </p>
-              <div style={{ background: 'white', padding: '0.75rem', borderRadius: '12px', display: 'inline-block' }}>
-                {csState.qrUrl ? (
-                  <img src={csState.qrUrl} alt="QR Transferencia" style={{ width: 'clamp(120px, 20vw, 160px)', height: 'clamp(120px, 20vw, 160px)', objectFit: 'contain' }} />
-                ) : (
-                  <div style={{ width: 'clamp(120px, 20vw, 160px)', height: 'clamp(120px, 20vw, 160px)', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', borderRadius: '8px', border: '2px dashed #94a3b8', padding: '0.5rem', textAlign: 'center', fontSize: '0.8rem' }}>
-                    {csState.transferRecipient ? `No hay QR configurado para ${csState.transferRecipient}` : 'Seleccione destinatario en el POS'}
-                  </div>
+            {/* QR de Transferencia (Derecha - Solo si aplica) */}
+            {isTransfer && settings.showQR && (
+              <div style={{ 
+                width: '320px', 
+                height: '100%', 
+                background: 'rgba(30, 41, 59, 0.5)', 
+                borderRadius: '16px', 
+                border: '1px solid rgba(255,255,255,0.06)', 
+                padding: '12px', 
+                boxSizing: 'border-box',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <p style={{ color: '#cbd5e1', fontSize: '11px', fontWeight: 'bold', textAlign: 'center', margin: '0 0 8px 0', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {csState.transferRecipient 
+                    ? `Escanea QR para transferir a:` 
+                    : 'Escanea para transferir:'}
+                </p>
+                {csState.transferRecipient && (
+                  <p style={{ color: '#38bdf8', fontSize: '13px', fontWeight: 'bold', margin: '0 0 8px 0', textAlign: 'center', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {csState.transferRecipient}
+                  </p>
                 )}
+                <div style={{ background: 'white', padding: '6px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {csState.qrUrl ? (
+                    <img src={csState.qrUrl} alt="QR Transferencia" style={{ width: '130px', height: '130px', objectFit: 'contain' }} />
+                  ) : (
+                    <div style={{ width: '130px', height: '130px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', borderRadius: '6px', border: '1.5px dashed #cbd5e1', padding: '8px', textAlign: 'center', fontSize: '10px', boxSizing: 'border-box' }}>
+                      {csState.transferRecipient ? 'Sin QR configurado' : 'Selecciona destinatario en POS'}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
-
-        </div>
-      </div>
-    );
-  }
-
-  // 4. Cart View Mode (Visualización de productos del carrito)
-  if (csState.status === 'cart_view') {
-    const items = csState.cartItems || [];
-    return (
-      <div style={{ height: '100dvh', width: '100vw', display: 'flex', flexDirection: 'column', background: '#0f172a', color: 'white', overflow: 'hidden', boxSizing: 'border-box' }}>
-        {/* Cabecera compacta */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)', background: '#1e293b' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <img src="/logo.jpg" alt="Logo" style={{ height: '32px', borderRadius: '4px', objectFit: 'contain' }} onError={(e) => e.target.style.display='none'} />
-            <h1 style={{ fontSize: 'clamp(1.2rem, 3vw, 1.5rem)', fontWeight: 'bold', color: '#38bdf8', margin: 0 }}>Su Compra</h1>
-          </div>
-          <span style={{ fontSize: '1rem', color: '#94a3b8' }}>Gravity Denim POS</span>
-        </div>
-
-        <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
-          {/* Tabla de Productos (Izquierda) */}
-          <div style={{ flex: 1, padding: '1rem', overflowY: 'auto' }}>
-            {items.length === 0 ? (
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '1.1rem' }}>
-                Esperando productos...
-              </div>
-            ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid rgba(255,255,255,0.1)' }}>
-                    <th style={{ textAlign: 'left', padding: '0.5rem', color: '#38bdf8', fontSize: '0.95rem' }}>Descripción</th>
-                    <th style={{ textAlign: 'center', padding: '0.5rem', color: '#38bdf8', fontSize: '0.95rem', width: '70px' }}>Cant</th>
-                    <th style={{ textAlign: 'right', padding: '0.5rem', color: '#38bdf8', fontSize: '0.95rem', width: '90px' }}>P. Unit</th>
-                    <th style={{ textAlign: 'right', padding: '0.5rem', color: '#38bdf8', fontSize: '0.95rem', width: '100px' }}>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((item, idx) => {
-                    const qty = item.qty || item.cantidad || 1;
-                    const price = item.price || item.precio || 0;
-                    const desc = item.descuento || 0;
-                    const totalLine = (qty * price) - desc;
-                    return (
-                      <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.95rem' }}>
-                        <td style={{ padding: '0.5rem', fontWeight: '500' }}>
-                          {item.name || item.nombre}
-                          {desc > 0 && (
-                            <div style={{ fontSize: '0.8rem', color: '#f87171', marginTop: '0.1rem' }}>
-                              Descuento: -{formatCurrency(desc)}
-                            </div>
-                          )}
-                        </td>
-                        <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: 'bold' }}>{qty}</td>
-                        <td style={{ padding: '0.5rem', textAlign: 'right' }}>{formatCurrency(price)}</td>
-                        <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 'bold', color: '#38bdf8' }}>{formatCurrency(totalLine)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
             )}
           </div>
+        </div>
+      );
+    }
 
-          {/* Resumen de Totales (Derecha) */}
-          <div style={{ width: '280px', background: 'rgba(30, 41, 59, 0.7)', borderLeft: '1px solid rgba(255,255,255,0.08)', padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-            <div>
-              <h2 style={{ fontSize: '1.2rem', color: '#38bdf8', marginBottom: '1rem', marginTop: 0 }}>Resumen</h2>
-              
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: '0.95rem' }}>
-                <span style={{ color: '#94a3b8' }}>Subtotal:</span>
-                <span>{formatCurrency(csState.subtotal)}</span>
-              </div>
-              {csState.totalDescuentos > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: '0.95rem', color: '#f87171' }}>
-                  <span>Descuentos:</span>
-                  <span>-{formatCurrency(csState.totalDescuentos)}</span>
+    // 4. Cart View Mode (Visualización de productos del carrito)
+    if (csState.status === 'cart_view') {
+      const items = csState.cartItems || [];
+      return (
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: '#0f172a', color: 'white', overflow: 'hidden', boxSizing: 'border-box' }}>
+          {/* Cabecera compacta */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 15px', borderBottom: '1px solid rgba(255,255,255,0.08)', background: '#1e293b', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <img src="/logo.jpg" alt="Logo" style={{ height: '26px', borderRadius: '4px', objectFit: 'contain' }} onError={(e) => e.target.style.display='none'} />
+              <h1 style={{ fontSize: '15px', fontWeight: 'bold', color: '#38bdf8', margin: 0 }}>Su Compra</h1>
+            </div>
+            <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 'bold' }}>Gravity Denim POS</span>
+          </div>
+
+          <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+            {/* Tabla de Productos (Izquierda) */}
+            <div style={{ flex: 1, padding: '10px', overflowY: 'auto', minHeight: 0 }}>
+              {items.length === 0 ? (
+                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '15px' }}>
+                  Esperando productos...
                 </div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1.5px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.02)' }}>
+                      <th style={{ textAlign: 'left', padding: '6px 8px', color: '#38bdf8', fontSize: '11px', textTransform: 'uppercase', fontWeight: 'bold' }}>Descripción</th>
+                      <th style={{ textAlign: 'center', padding: '6px 8px', color: '#38bdf8', fontSize: '11px', textTransform: 'uppercase', fontWeight: 'bold', width: '50px' }}>Cant</th>
+                      <th style={{ textAlign: 'right', padding: '6px 8px', color: '#38bdf8', fontSize: '11px', textTransform: 'uppercase', fontWeight: 'bold', width: '80px' }}>P. Unit</th>
+                      <th style={{ textAlign: 'right', padding: '6px 8px', color: '#38bdf8', fontSize: '11px', textTransform: 'uppercase', fontWeight: 'bold', width: '90px' }}>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item, idx) => {
+                      const qty = item.qty || item.cantidad || 1;
+                      const price = item.price || item.precio || 0;
+                      const desc = item.descuento || 0;
+                      const totalLine = (qty * price) - desc;
+                      const pName = item.name || item.nombre || '';
+                      
+                      return (
+                        <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                          <td style={{ padding: '6px 8px', fontWeight: '500', verticalAlign: 'middle' }}>
+                            <div style={{ fontSize: getProductNameFontSize(pName), color: '#ffffff', fontWeight: 'bold', wordBreak: 'break-word', lineHeight: 1.1 }}>
+                              {pName}
+                            </div>
+                            {desc > 0 && (
+                              <div style={{ fontSize: '9px', color: '#f87171', marginTop: '1px' }}>
+                                Desc: -{formatCurrency(desc)}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: 'bold', fontSize: '13px', verticalAlign: 'middle' }}>{qty}</td>
+                          <td style={{ padding: '6px 8px', textAlign: 'right', fontSize: '12px', color: '#cbd5e1', verticalAlign: 'middle' }}>{formatCurrency(price)}</td>
+                          <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold', color: '#38bdf8', fontSize: '13px', verticalAlign: 'middle' }}>{formatCurrency(totalLine)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', fontSize: '0.95rem' }}>
-                <span style={{ color: '#94a3b8' }}>IVA 15%:</span>
-                <span>{formatCurrency(csState.ivaAmount)}</span>
-              </div>
             </div>
 
-            <div style={{ borderTop: '2px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '1.1rem', color: '#38bdf8', fontWeight: 'bold' }}>Total:</span>
-                <span style={{ fontSize: '1.8rem', color: '#22c55e', fontWeight: 'bold', textShadow: '0 0 10px rgba(34, 197, 94, 0.2)' }}>
-                  {formatCurrency(csState.total)}
-                </span>
+            {/* Resumen de Totales (Derecha) */}
+            <div style={{ width: '250px', background: 'rgba(30, 41, 59, 0.7)', borderLeft: '1px solid rgba(255,255,255,0.08)', padding: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', flexShrink: 0 }}>
+              <div>
+                <h2 style={{ fontSize: '14px', fontWeight: 'bold', color: '#38bdf8', marginBottom: '10px', marginTop: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Resumen</h2>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '12px' }}>
+                  <span style={{ color: '#94a3b8' }}>Subtotal:</span>
+                  <span style={{ fontWeight: '500' }}>{formatCurrency(csState.subtotal)}</span>
+                </div>
+                {csState.totalDescuentos > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '12px', color: '#f87171' }}>
+                    <span>Descuentos:</span>
+                    <span style={{ fontWeight: 'bold' }}>-{formatCurrency(csState.totalDescuentos)}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px' }}>
+                  <span style={{ color: '#94a3b8' }}>IVA 15%:</span>
+                  <span style={{ fontWeight: '500' }}>{formatCurrency(csState.ivaAmount)}</span>
+                </div>
+              </div>
+
+              <div style={{ borderTop: '1.5px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '13px', color: '#38bdf8', fontWeight: 'bold', textTransform: 'uppercase' }}>Total:</span>
+                  <span style={{ fontSize: '24px', color: '#22c55e', fontWeight: 'bold', textShadow: '0 0 10px rgba(34, 197, 94, 0.2)', lineHeight: 1 }}>
+                    {formatCurrency(csState.total)}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  return null;
+    return null;
+  };
+
+  return (
+    <div style={{
+      width: '100vw',
+      height: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#0f172a',
+      overflow: 'hidden',
+      position: 'relative'
+    }}>
+      <div style={{
+        width: '800px',
+        height: '490px',
+        transform: `scale(${scale})`,
+        transformOrigin: 'center center',
+        flexShrink: 0,
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
+        background: '#0f172a',
+        position: 'relative',
+        borderRadius: '8px',
+        overflow: 'hidden'
+      }}>
+        {renderContent()}
+      </div>
+    </div>
+  );
 }

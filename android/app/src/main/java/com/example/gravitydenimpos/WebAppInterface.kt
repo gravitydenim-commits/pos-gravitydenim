@@ -134,7 +134,13 @@ class WebAppInterface(
             if (linesArray != null) {
                 for (i in 0 until linesArray.length()) {
                     val lineObj = linesArray.getJSONObject(i)
-                    val text = lineObj.optString("text", "")
+                    var text = lineObj.optString("text", "")
+                    
+                    // Compactamos: omitimos saltos de línea innecesarios de espaciado
+                    if (text.trim().isEmpty()) {
+                        continue
+                    }
+                    
                     val align = lineObj.optInt("align", 0) // 0=left, 1=center, 2=right
                     val size = lineObj.optInt("size", 18)
                     val bold = lineObj.optBoolean("bold", false)
@@ -145,7 +151,11 @@ class WebAppInterface(
                     } else {
                         builder.doubleSize(false)
                     }
-                    builder.text(text + "\n")
+                    
+                    if (!text.endsWith("\n")) {
+                        text += "\n"
+                    }
+                    builder.text(text)
                 }
 
                 // Generación de Barcode/QR si viene la clave de acceso en el payload
@@ -153,29 +163,27 @@ class WebAppInterface(
                 val isNotaVenta = payload.optBoolean("isNotaVenta", false)
 
                 if (numeroComprobante.isNotEmpty()) {
-                    builder.align(1).feed(1)
+                    builder.align(1)
                     if (!isNotaVenta && numeroComprobante.length == 49) {
                         // Código de barras (Clave de Acceso)
-                        builder.text("CLAVE DE ACCESO SRI:\n")
+                        builder.text("\nCÓDIGO DE BARRAS SRI:\n")
                         builder.barcode(numeroComprobante)
-                        builder.feed(1)
 
-                        // Código QR (URL SRI)
+                        // Texto "CLAVE DE ACCESO SRI" y QR directamente debajo sin feeds
+                        builder.text("\nCLAVE DE ACCESO SRI:\n")
                         val qrUrl = "https://declaraciones.sri.gob.ec/comprobantes-electronicos-internet/publico/detalleComprobante.jsf?claveAcceso=$numeroComprobante"
                         builder.qrCode(qrUrl)
-                        builder.feed(1)
-                        builder.text("Escanea para verificar en el SRI\n")
+                        builder.text("\nEscanea para verificar en el SRI\n")
                     } else if (isNotaVenta) {
                         // Nota de Venta
-                        builder.text("Nº Venta: $numeroComprobante\n")
+                        builder.text("\nNº Venta: $numeroComprobante\n")
                         if (numeroComprobante.matches(Regex("[0-9A-Za-z-]+"))) {
                             builder.barcode(numeroComprobante)
                         }
-                        builder.feed(1)
                     }
                 }
 
-                builder.feed(5).cut()
+                builder.feed(4).cut()
             } else {
                 // Fallback de parseo del payload antiguo
                 builder.align(1).bold(true)
