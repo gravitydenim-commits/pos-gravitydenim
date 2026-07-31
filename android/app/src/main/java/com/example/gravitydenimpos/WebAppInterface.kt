@@ -62,9 +62,7 @@ class WebAppInterface(
     @JavascriptInterface
     fun initPrinter(): String {
         return try {
-            android.util.Log.i("WebAppInterface", "[IMIN-SDK] Iniciando initPrinterService")
-            iminPrint.initPrinterService(context)
-            Thread.sleep(1000)
+            android.util.Log.i("WebAppInterface", "[IMIN-SDK] Iniciando initPrinter")
             iminPrint.initPrinter("USB", null)
             printerReady = true
             android.util.Log.i("WebAppInterface", "[IMIN-SDK] initPrinter() completado — printerReady=true")
@@ -106,9 +104,7 @@ class WebAppInterface(
             android.util.Log.i("WebAppInterface", "[IMIN-SDK] === INICIO printTestTicket() ===")
 
             if (!printerReady) {
-                log.append("[1] Llamando initPrinterService... ")
-                iminPrint.initPrinterService(context)
-                Thread.sleep(1000)
+                log.append("[1] Llamando initPrinter... ")
                 iminPrint.initPrinter("USB", null)
                 printerReady = true
                 log.append("OK\n")
@@ -153,8 +149,6 @@ class WebAppInterface(
     fun printTicket(payloadJson: String): String {
         return try {
             if (!printerReady) {
-                iminPrint.initPrinterService(context)
-                Thread.sleep(1000)
                 iminPrint.initPrinter("USB", null)
                 printerReady = true
             }
@@ -242,8 +236,6 @@ class WebAppInterface(
     fun printText(text: String, alignment: Int, textSize: Int, bold: Boolean): String {
         return try {
             if (!printerReady) {
-                iminPrint.initPrinterService(context)
-                Thread.sleep(1000)
                 iminPrint.initPrinter("USB", null)
                 printerReady = true
             }
@@ -291,6 +283,62 @@ class WebAppInterface(
             result.toString()
         } catch (e: Exception) {
             "[IMIN-SDK] DIAG_ERROR: ${e.message}"
+        }
+    }
+
+    // ─────────────────────────────────────────
+    // PRUEBA DIRECTA PARA DIAGNÓSTICO
+    // ─────────────────────────────────────────
+
+    @JavascriptInterface
+    fun testNativePrintKotlinDirect(): String {
+        val log = StringBuilder()
+        log.append("=== TEST KOTLIN NATIVO ===\n")
+        try {
+            log.append("1. bindService: (Gestionado en MainActivity)\n")
+
+            log.append("2. initPrinter(\"USB\"): ")
+            try {
+                iminPrint.initPrinter("USB", null)
+                printerReady = true
+                log.append("Ejecutado\n")
+            } catch (e: Exception) {
+                log.append("ERROR (${e.message})\n")
+            }
+
+            log.append("3. getPrinterStatus(): ")
+            var status = -99
+            try {
+                status = iminPrint.getPrinterStatus()
+                log.append("$status\n")
+            } catch (e: Exception) {
+                log.append("ERROR (${e.message})\n")
+            }
+
+            log.append("4. printTextWithAli(): ")
+            try {
+                iminPrint.setFontBold(true)
+                iminPrint.printTextWithAli("PRUEBA GRAVITY DENIM\n\n", 1, null)
+                iminPrint.setFontBold(false)
+                log.append("Ejecutado\n")
+            } catch (e: Exception) {
+                log.append("ERROR (${e.message})\n")
+            }
+
+            log.append("5. printAndFeedPaper(5): ")
+            try {
+                iminPrint.printAndFeedPaper(5)
+                log.append("Ejecutado\n")
+            } catch (e: Exception) {
+                log.append("ERROR (${e.message})\n")
+            }
+
+            log.append("==========================\n")
+            return log.toString()
+        } catch (e: Exception) {
+            val err = "FATAL ERROR: ${e.javaClass.simpleName}: ${e.message}"
+            log.append(err)
+            return log.toString()
         }
     }
 }

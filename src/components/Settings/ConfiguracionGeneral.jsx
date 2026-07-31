@@ -845,22 +845,12 @@ export default function ConfiguracionGeneral() {
                     sdkMsg = "window.IminPrinter ni window.AndroidBridge existen.";
                   }
 
-                  let statusResult = "No ejecutado";
-                  let printTestRes = "No ejecutado";
-
-                  if (hasBridge && typeof window.AndroidBridge.getPrinterStatus === 'function') {
+                  let nativeTestRes = "No ejecutado";
+                  if (hasBridge && typeof window.AndroidBridge.testNativePrintKotlinDirect === 'function') {
                     try {
-                      statusResult = window.AndroidBridge.getPrinterStatus();
-                    } catch (eStatus) {
-                      statusResult = "Error status: " + eStatus.message;
-                    }
-                  }
-
-                  if (hasBridge && typeof window.AndroidBridge.printTestTicket === 'function') {
-                    try {
-                      printTestRes = window.AndroidBridge.printTestTicket();
+                      nativeTestRes = window.AndroidBridge.testNativePrintKotlinDirect();
                     } catch (eTest) {
-                      printTestRes = "Error test print: " + eTest.message;
+                      nativeTestRes = "Error native test: " + eTest.message;
                     }
                   }
 
@@ -876,9 +866,8 @@ export default function ConfiguracionGeneral() {
                   const diagText = 
                     `=== DIAGNÓSTICO NATIVO Y ESCANEO DE PAQUETES IMIN ===\n\n` +
                     `1. ESCANEO REAL DE PAQUETES INSTALADOS EN EL DISPOSITIVO:\n${pkgScanResult}\n\n` +
-                    `2. ESTADO DEL SERVICIO IMIN:\n${statusResult}\n\n` +
-                    `3. INVOCACIÓN DIRECTA KOTLIN printTestTicket():\n${printTestRes}\n\n` +
-                    `4. MÉTODOS EXPUESTOS POR ANDROIDBRIDGE:\n${bridgeMethods.length > 0 ? bridgeMethods.join('\n') : 'Ninguno'}\n\n` +
+                    `2. RESULTADO DE PRUEBA KOTLIN DIRECTA (testNativePrintKotlinDirect):\n${nativeTestRes}\n\n` +
+                    `3. MÉTODOS EXPUESTOS POR ANDROIDBRIDGE:\n${bridgeMethods.length > 0 ? bridgeMethods.join('\n') : 'Ninguno'}\n\n` +
                     `User Agent: ${ua}`;
 
                   alert(diagText);

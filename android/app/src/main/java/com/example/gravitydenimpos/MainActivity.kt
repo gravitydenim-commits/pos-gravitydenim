@@ -62,6 +62,14 @@ class MainActivity : Activity(), DisplayManager.DisplayListener {
             )
         }
 
+        try {
+            Log.i("MainActivity", "[IMIN-SDK] Iniciando bindService en hilo principal (onCreate)")
+            com.imin.printer.PrinterHelper.getInstance().initPrinterService(this)
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error initPrinterService en onCreate: ${e.message}")
+        }
+
+
         // WebView Principal (Ocupa 100% de la pantalla)
         primaryWebView = WebView(this).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -302,6 +310,12 @@ class MainActivity : Activity(), DisplayManager.DisplayListener {
 
     override fun onDestroy() {
         super.onDestroy()
+        try {
+            Log.i("MainActivity", "[IMIN-SDK] Desvinculando servicio (onDestroy)")
+            com.imin.printer.PrinterHelper.getInstance().deInitPrinterService(this)
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error deInitPrinterService: ${e.message}")
+        }
         try {
             displayManager?.unregisterDisplayListener(this)
             customerPresentation?.dismiss()
