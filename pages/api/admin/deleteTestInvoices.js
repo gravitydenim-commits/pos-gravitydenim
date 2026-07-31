@@ -106,6 +106,7 @@ export default async function handler(req, res) {
     try {
       const storage = getAdminStorage();
       const bucket = storage.bucket();
+      console.log(`[BACKUP DEBUG] Target storage bucket name: "${bucket.name}"`);
       const backupPath = `backups/ventas/deleted_invoice_${claveAcceso}_${dateTag}.json`;
       const file = bucket.file(backupPath);
 
