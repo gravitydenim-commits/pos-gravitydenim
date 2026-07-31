@@ -48,18 +48,19 @@ export default function FacturasSRI() {
     return () => unsub();
   }, []);
 
-  // Filtrar base por pestaña (excluyendo registros de error por duplicado y reemplazados)
+  // Filtrar base por pestaña (excluyendo registros de error por duplicado, reemplazados y Notas de Venta internas)
   const baseList = React.useMemo(() => {
-    const validVentas = ventas.filter(v => {
+    const validFacturas = ventas.filter(v => {
       const est = (v.estado || v.status || '').toUpperCase();
-      return est !== 'ERROR_DUPLICADO' && est !== 'REEMPLAZADO';
+      const isNV = v.isNotaVenta || v.tipoComprobante === 'NOTA_DE_VENTA' || v.estadoSri === 'NOTA_DE_VENTA';
+      return est !== 'ERROR_DUPLICADO' && est !== 'REEMPLAZADO' && !isNV;
     });
     return activeTab === 'contingencia'
-      ? validVentas.filter(v => {
+      ? validFacturas.filter(v => {
           const est = (v.estadoSri || v.status || 'PENDIENTE_ENVIO').toUpperCase();
-          return est !== 'AUTORIZADO' && est !== 'AUTORIZADA' && est !== 'NOTA_DE_VENTA';
+          return est !== 'AUTORIZADO' && est !== 'AUTORIZADA';
         })
-      : validVentas;
+      : validFacturas;
   }, [ventas, activeTab]);
 
   // Aplicar filtros dinámicos
@@ -224,8 +225,12 @@ export default function FacturasSRI() {
 
   const contingencyCount = React.useMemo(() => {
     return ventas.filter(v => {
-      const est = (v.estadoSri || v.status || 'PENDIENTE_ENVIO').toUpperCase();
-      return est !== 'AUTORIZADO' && est !== 'AUTORIZADA' && est !== 'NOTA_DE_VENTA';
+      const isNV = v.isNotaVenta || v.tipoComprobante === 'NOTA_DE_VENTA' || v.estadoSri === 'NOTA_DE_VENTA';
+      if (isNV) return false;
+      const est = (v.estado || v.status || '').toUpperCase();
+      if (est === 'ERROR_DUPLICADO' || est === 'REEMPLAZADO') return false;
+      const estadoSri = (v.estadoSri || v.status || 'PENDIENTE_ENVIO').toUpperCase();
+      return estadoSri !== 'AUTORIZADO' && estadoSri !== 'AUTORIZADA';
     }).length;
   }, [ventas]);
 

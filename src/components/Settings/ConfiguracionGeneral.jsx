@@ -1205,7 +1205,7 @@ export default function ConfiguracionGeneral() {
           )}
           
           <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            <strong>WEB BUILD:</strong> 2026-07-31-PRINT-NATIVE-02
+            <strong>WEB BUILD:</strong> 2026-07-31-PRINT-NATIVE-03
           </div>
         </div>
 

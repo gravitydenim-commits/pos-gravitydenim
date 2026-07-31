@@ -1,15 +1,6 @@
 export const imprimirTicket = (issuerData, cartData, totalsData, customerData, claveAcceso, paymentMethod, transferRecipient, isNotaVenta, format = '80mm', isReprint = false, paymentDetails = null) => {
-  console.log(`🖨️ Conectando con ticketera térmica formato ${format}...`);
+  console.log(`🖨️ Conectando con ticketera térmica en pestaña actual (formato ${format})...`);
   const is58 = format === '58mm';
-  
-  // Para 58mm ajustamos la ventana a algo más angosto
-  const winWidth = is58 ? 300 : 400;
-  const printWindow = window.open('', '_blank', `width=${winWidth},height=600`);
-  
-  if (!printWindow) {
-    alert("Por favor, permite las ventanas emergentes (pop-ups) para imprimir el ticket.");
-    return;
-  }
 
     let base15 = 0;
     let base0 = 0;
@@ -237,18 +228,43 @@ export const imprimirTicket = (issuerData, cartData, totalsData, customerData, c
           
           <div style="height: 35px;"></div>
         </div>
-        <script>
-          window.onload = function() {
-            setTimeout(function() {
-              window.print();
-              window.close();
-            }, 600);
-          }
-        </script>
       </body>
       </html>
     `;
 
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
+    try {
+      const iframeId = 'silent-print-iframe';
+      let iframe = document.getElementById(iframeId);
+      if (iframe) {
+        document.body.removeChild(iframe);
+      }
+
+      iframe = document.createElement('iframe');
+      iframe.id = iframeId;
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0px';
+      iframe.style.height = '0px';
+      iframe.style.border = '0';
+      iframe.style.visibility = 'hidden';
+      document.body.appendChild(iframe);
+
+      const doc = iframe.contentWindow.document;
+      doc.open();
+      doc.write(htmlContent);
+      doc.close();
+
+      iframe.contentWindow.focus();
+      setTimeout(() => {
+        try {
+          iframe.contentWindow.print();
+        } catch (e) {
+          console.warn("⚠️ No se pudo invocar print en iframe:", e);
+        }
+      }, 300);
+
+    } catch (err) {
+      console.error("⚠️ Error en impresión por iframe integrado:", err);
+    }
   };

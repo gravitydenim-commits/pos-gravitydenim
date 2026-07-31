@@ -147,8 +147,6 @@ function App() {
         }, (err) => console.error(`ERROR EN [ventas] (uid=${currentUser.uid}):`, err));
       }
 
-
-
       unsubIssuers = onSnapshot(collection(db, 'issuers'), (snapshot) => {
         const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
         if (data.length > 0) {
@@ -606,3 +604,7 @@ function App() {
 }
 
 export default App;
+/ /  
+ C a c h e  
+ b u s t  
+ 

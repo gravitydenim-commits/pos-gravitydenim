@@ -61,6 +61,12 @@ export function getProductImageUrl(prod) {
 }
 
 export default function POSScreen({ issuers, productsDB, salesDB = [], recordSale, customersDB, recordCustomer }) {
+  const isIminMode = typeof window !== 'undefined' && (
+    localStorage.getItem('iminSwanEnabled') === 'true' || 
+    /imin|iMin|I20D01|D4-504|I24D03|DS2-25/i.test(navigator.userAgent) ||
+    Boolean(window.AndroidBridge)
+  );
+
   const [cart, setCart] = useState([]);
   const [vatIncluded, setVatIncluded] = useState(true);
   const [selectedIssuer, setSelectedIssuer] = useState(''); 
@@ -600,9 +606,9 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     const payload = {
       status,
       total,
-      subtotal: totalsData.subtotal,
-      ivaAmount: totalsData.ivaAmount,
-      totalDescuentos: totalsData.totalDescuentos,
+      subtotal,
+      ivaAmount,
+      totalDescuentos: 0,
       paymentMethod,
       transferRecipient,
       qrUrl: transferQrs[transferRecipient] || null,
@@ -631,7 +637,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         console.error("Error transmitiendo a AndroidBridge:", e);
       }
     }
-  }, [total, paymentMethod, showPreviewModal, transferRecipient, transferQrs, cart, totalsData]);
+  }, [total, subtotal, ivaAmount, paymentMethod, showPreviewModal, transferRecipient, transferQrs, cart]);
 
 
   // --- PROCESAR PAGO (GATILLO DE VISTA PREVIA) ---
@@ -779,7 +785,8 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
           vatIncluded: vatIncluded,
           isNotaVenta: true,
           transactionId: transactionId,
-          origen: 'VENTA_INTERNA'
+          origen: 'VENTA_INTERNA',
+          fechaTransaccion: new Date().toISOString()
         };
 
         t.set(ventaRef, nuevaVentaInterna);
@@ -792,57 +799,16 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
 
       console.log(`✅ Nota de Venta Interna procesada con éxito: ${resultNV.numeroComprobante}`);
 
-      // 2. Imprimir ticket interno si corresponde
+      // 2. Imprimir ticket interno si corresponde (Proceso totalmente independiente)
       if (withPrint) {
-        const format = localStorage.getItem('printerFormat') || '80mm';
-        const method = localStorage.getItem('printerMethod') || 'sistema';
-
-        let wasIminPrinted = false;
-        if (isIminMode) {
-          try {
-            const iminMod = await import('../../utils/iminPrinter');
-            await iminMod.printTicketImin(issuerData, cart, totalsData, customer, resultNV.numeroComprobante, paymentMethod, true, paymentDetails);
-            wasIminPrinted = true;
-          } catch(e) {
-            console.error("Error al imprimir con iMin en Nota de Venta:", e);
+        try {
+          const iminMod = await import('../../utils/iminPrinter');
+          const isPrinted = await iminMod.printTicketImin(issuerData, cart, totalsData, customer, resultNV.numeroComprobante, paymentMethod, true, paymentDetails);
+          if (!isPrinted) {
+            alert("⚠️ Impresión nativa iMin no completada. La Nota de Venta fue guardada con éxito.");
           }
-        }
-
-        if (!wasIminPrinted) {
-          if (format === '58mm' && method === 'bluetooth_58') {
-            import('../../lib/Printer58Service').then(async (module) => {
-              try {
-                await module.printer58Service.printTicket(
-                  issuerData, 
-                  customer, 
-                  cart, 
-                  totalsData.subtotal, 
-                  totalsData.ivaAmount, 
-                  totalsData.total, 
-                  { numeroComprobante: resultNV.numeroComprobante, isNotaVenta: true },
-                  paymentMethod
-                );
-              } catch (err) {
-                import('../../utils/printTicket').then(fallbackMod => {
-                  fallbackMod.imprimirTicket(issuerData, cart, totalsData, customer, resultNV.numeroComprobante, paymentMethod, paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, true, format);
-                });
-              }
-            });
-          } else {
-            import('../../utils/printTicket').then(module => {
-              module.imprimirTicket(
-                issuerData, 
-                cart, 
-                totalsData, 
-                customer, 
-                resultNV.numeroComprobante, 
-                paymentMethod, 
-                paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, 
-                true, 
-                format
-              );
-            });
-          }
+        } catch(e) {
+          alert("❌ Error llamando a servicio de impresión iMin:\n" + (e.message || String(e)));
         }
       }
 
@@ -1037,62 +1003,16 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         throw new Error(`Factura ${estadoFactura} por el SRI.\nMotivo: ${sriData.error || 'Rechazo'}${msgs}`);
       }
 
-      // (La lógica de guardado de cliente fue trasladada al paso 0, al inicio de confirmCheckout)
-      // La lógica de Stock y Guardado de Venta fue movida al Backend (emitir.js) 
-      // para evitar duplicaciones y ser parte del commit atómico del SRI.
-
-      // 3. Imprimir si corresponde
+      // 3. Imprimir si corresponde (Proceso totalmente independiente)
       if (withPrint) {
-        const format = localStorage.getItem('printerFormat') || '80mm';
-        const method = localStorage.getItem('printerMethod') || 'sistema';
-
-        let wasIminPrinted = false;
-        if (isIminMode) {
-          try {
-            const iminMod = await import('../../utils/iminPrinter');
-            await iminMod.printTicketImin(issuerData, cart, totalsData, customer, claveAcceso, paymentMethod, isNotaVenta, paymentDetails);
-            wasIminPrinted = true;
-          } catch(e) {
-            console.error("Error al imprimir con iMin en Factura SRI:", e);
+        try {
+          const iminMod = await import('../../utils/iminPrinter');
+          const isPrinted = await iminMod.printTicketImin(issuerData, cart, totalsData, customer, claveAcceso, paymentMethod, isNotaVenta, paymentDetails);
+          if (!isPrinted) {
+            alert("⚠️ Impresión nativa iMin no completada. La factura electrónica fue procesada correctamente.");
           }
-        }
-
-        if (!wasIminPrinted) {
-          if (format === '58mm' && method === 'bluetooth_58') {
-            import('../../lib/Printer58Service').then(async (module) => {
-              try {
-                await module.printer58Service.printTicket(
-                  issuerData, 
-                  customer, 
-                  cart, 
-                  subtotal, 
-                  ivaAmount, 
-                  total, 
-                  { numeroComprobante: sriData.numeroComprobante || '', claveAcceso, isNotaVenta },
-                  paymentMethod
-                );
-              } catch (err) {
-                console.error("Fallo impresión 58mm Web Bluetooth, usando sistema:", err);
-                import('../../utils/printTicket').then(fallbackMod => {
-                  fallbackMod.imprimirTicket(issuerData, cart, totalsData, customer, claveAcceso, paymentMethod, paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, isNotaVenta, format);
-                });
-              }
-            });
-          } else {
-            import('../../utils/printTicket').then(module => {
-              module.imprimirTicket(
-                issuerData, 
-                cart, 
-                totalsData, 
-                customer, 
-                claveAcceso, 
-                paymentMethod, 
-                paymentMethod === 'TRANSFERENCIA' ? transferRecipient : null, 
-                isNotaVenta, 
-                format
-              );
-            });
-          }
+        } catch (e) {
+          alert("❌ Error llamando a servicio de impresión iMin:\n" + (e.message || String(e)));
         }
       } else {
         console.log("🖨️ [RIDE] Impresión física omitida por el operador.");

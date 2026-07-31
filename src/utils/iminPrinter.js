@@ -107,26 +107,31 @@ export async function printTicketImin(issuerData, cartItems, totalsData, custome
   lines.push({ text: 'Gravity Denim - Calidad Excepcional', size: 16, align: 1 });
   lines.push({ text: '\n\n\n\n', size: 18, align: 1 }); // Spacing feed
 
-  // 1. Try Injected Android SDK Bridge (window.IminPrinter)
-  if (typeof window !== 'undefined' && window.IminPrinter) {
+  // 0. Try AndroidBridge.printTicket if available in container APK
+  if (typeof window !== 'undefined' && window.AndroidBridge) {
     try {
-      window.IminPrinter.initPrinter();
-      for (const line of lines) {
-        window.IminPrinter.setAlignment(line.align);
-        window.IminPrinter.setTextSize(line.size || 18);
-        // Apply styling if supported by wrapper
-        if (line.bold && window.IminPrinter.setTextStyle) {
-          window.IminPrinter.setTextStyle(1);
-        } else if (window.IminPrinter.setTextStyle) {
-          window.IminPrinter.setTextStyle(0);
-        }
-        window.IminPrinter.printText(line.text + '\n');
+      const payload = {
+        lines,
+        rawText: lines.map(l => l.text).join('\n') + '\n\n\n\n',
+        numeroComprobante: claveAcceso,
+        isNotaVenta
+      };
+      
+      let res;
+      if (typeof window.AndroidBridge.printTicket === 'function') {
+        res = window.AndroidBridge.printTicket(JSON.stringify(payload));
+      } else {
+        alert("⚠️ AndroidBridge existe pero NO expone printTicket(). Métodos disponibles:\n" + Object.keys(window.AndroidBridge).join(', '));
+        return false;
       }
-      window.IminPrinter.printAndFeed(100);
-      console.log("✅ iMin Swan 2: Impreso vía SDK Injected Bridge con éxito.");
+      
+      if (window.AndroidBridge.showToast) {
+        window.AndroidBridge.showToast("🖨️ Enviando impresión nativa...");
+      }
       return true;
-    } catch (sdkErr) {
-      console.error("Fallo al usar window.IminPrinter:", sdkErr);
+    } catch (bridgeErr) {
+      alert("❌ Error invocando window.AndroidBridge.printTicket:\n" + (bridgeErr.message || String(bridgeErr)));
+      return false;
     }
   }
 
@@ -146,8 +151,6 @@ export async function printTicketImin(issuerData, cartItems, totalsData, custome
     console.warn("Daemon local iMin 13911 no disponible.");
   }
 
-  // 3. Fallback or Alert (Avoid getting stuck in Chrome's native print preview dialog)
   console.warn("⚠️ No se detectó hardware de impresión iMin direct (SDK/Daemon). Evitando diálogo de sistema.");
-  alert("⚠️ Conexión con Impresora iMin No Detectada\n\nNo se pudo establecer comunicación directa con la impresora térmica del Swan 2 (SDK/Daemon).\n\nPara imprimir de manera directa y evitar que se quede en 'vista previa' de Google Chrome:\n1. Asegúrese de abrir el POS en la App/Navegador oficial de iMin.\n2. O verifique que el servicio 'iMin Printer Service' esté iniciado en el dispositivo.");
   return false;
 }
