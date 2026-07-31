@@ -771,6 +771,128 @@ export default function ConfiguracionGeneral() {
 
         </div>
 
+        {/* --- DIAGNÓSTICO TÉCNICO DE IMPRESORA IMIN --- */}
+        <div className="glass-panel" style={{ padding: '2rem', marginTop: '2rem', border: '1px solid rgba(59, 130, 246, 0.4)', background: 'rgba(15, 23, 42, 0.7)', position: 'relative', zIndex: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#60a5fa' }}>
+              🛠️ Diagnóstico Técnico de Impresora iMin
+            </h3>
+            <button 
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                alert("BOTÓN DIAGNÓSTICO PRESIONADO");
+                
+                try {
+                  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+                  const isChrome = /chrome/i.test(ua) && !/android/i.test(ua);
+                  const isIminUA = /imin|iMin|I20D01|D4-504|I24D03|DS2-25/i.test(ua);
+                  const hasBridge = typeof window !== 'undefined' && Boolean(window.AndroidBridge);
+                  const hasIminPrinter = typeof window !== 'undefined' && Boolean(window.IminPrinter);
+                  const isIminModeLocal = isIminUA || hasBridge || localStorage.getItem('iminSwanEnabled') === 'true';
+
+                  let daemonStatus = "Sin respuesta (13911)";
+                  let initResult = "No intentado";
+                  let sdkMsg = "";
+
+                  let bridgeMethods = [];
+                  if (hasBridge) {
+                    try {
+                      for (let key in window.AndroidBridge) {
+                        bridgeMethods.push(key + ' (' + typeof window.AndroidBridge[key] + ')');
+                      }
+                      if (Object.getOwnPropertyNames && window.AndroidBridge) {
+                        const ownNames = Object.getOwnPropertyNames(window.AndroidBridge);
+                        ownNames.forEach(n => {
+                          if (!bridgeMethods.some(m => m.startsWith(n))) {
+                            bridgeMethods.push(n + ' (' + typeof window.AndroidBridge[n] + ')');
+                          }
+                        });
+                      }
+                    } catch(eBridge) {
+                      bridgeMethods.push("Error reflejando: " + eBridge.message);
+                    }
+                  }
+
+                  if (hasIminPrinter) {
+                    try {
+                      window.IminPrinter.initPrinter();
+                      initResult = "OK (SDK Inyectado)";
+                      sdkMsg = "Impresora inicializada mediante window.IminPrinter";
+                    } catch (eSdk) {
+                      initResult = "Error SDK";
+                      sdkMsg = eSdk.message || String(eSdk);
+                    }
+                  } else if (hasBridge) {
+                    initResult = "OK (AndroidBridge)";
+                    sdkMsg = "Métodos detectados en AndroidBridge: " + (bridgeMethods.length > 0 ? bridgeMethods.join(', ') : 'Ninguno enumerado');
+                  } else {
+                    initResult = "No detectado";
+                    sdkMsg = "window.IminPrinter ni window.AndroidBridge existen.";
+                  }
+
+                  let statusResult = "No ejecutado";
+                  let printTestRes = "No ejecutado";
+
+                  if (hasBridge && typeof window.AndroidBridge.getPrinterStatus === 'function') {
+                    try {
+                      statusResult = window.AndroidBridge.getPrinterStatus();
+                    } catch (eStatus) {
+                      statusResult = "Error status: " + eStatus.message;
+                    }
+                  }
+
+                  if (hasBridge && typeof window.AndroidBridge.printTestTicket === 'function') {
+                    try {
+                      printTestRes = window.AndroidBridge.printTestTicket();
+                    } catch (eTest) {
+                      printTestRes = "Error test print: " + eTest.message;
+                    }
+                  }
+
+                  let pkgScanResult = "No ejecutado";
+                  if (hasBridge && typeof window.AndroidBridge.getInstalledIminPackages === 'function') {
+                    try {
+                      pkgScanResult = window.AndroidBridge.getInstalledIminPackages();
+                    } catch (ePkg) {
+                      pkgScanResult = "Error escaneando: " + ePkg.message;
+                    }
+                  }
+
+                  const diagText = 
+                    `=== DIAGNÓSTICO NATIVO Y ESCANEO DE PAQUETES IMIN ===\n\n` +
+                    `1. ESCANEO REAL DE PAQUETES INSTALADOS EN EL DISPOSITIVO:\n${pkgScanResult}\n\n` +
+                    `2. ESTADO DEL SERVICIO IMIN:\n${statusResult}\n\n` +
+                    `3. INVOCACIÓN DIRECTA KOTLIN printTestTicket():\n${printTestRes}\n\n` +
+                    `4. MÉTODOS EXPUESTOS POR ANDROIDBRIDGE:\n${bridgeMethods.length > 0 ? bridgeMethods.join('\n') : 'Ninguno'}\n\n` +
+                    `User Agent: ${ua}`;
+
+                  alert(diagText);
+                } catch (errorDiag) {
+                  console.error("Error diagnóstico iMin:", errorDiag);
+                  alert(`Error diagnóstico: ${errorDiag?.message || errorDiag}`);
+                }
+              }}
+              style={{ 
+                padding: '12px 20px', 
+                background: '#2563eb', 
+                color: 'white', 
+                border: '2px solid #60a5fa', 
+                borderRadius: '8px', 
+                cursor: 'pointer', 
+                fontWeight: 'bold',
+                fontSize: '1rem'
+              }}
+            >
+              🔍 Ejecutar Diagnóstico Técnico y Prueba Nativa
+            </button>
+          </div>
+          <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+            Comprueba la conexión con el servicio del sistema iMin e invoca la impresión directa de prueba ("PRUEBA GRAVITY DENIM") sin usar Firestore ni React.
+          </p>
+        </div>
+
         {/* --- PANTALLA SECUNDARIA --- */}
         <div className="glass-panel" style={{ padding: '2rem', marginTop: '2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
@@ -970,13 +1092,15 @@ export default function ConfiguracionGeneral() {
             <div>
               <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Método de Conexión</label>
               <select 
-                value={printMethod} 
+                value={typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.printTestTicket === 'function' && printFormat === '80mm' ? 'imin_native' : printMethod} 
                 onChange={(e) => handlePrintPreferenceChange('method', e.target.value)}
                 style={{ width: '100%', padding: '12px', background: 'var(--input-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', borderRadius: '8px' }}
-                disabled={printFormat === '80mm'}
+                disabled={printFormat === '80mm' && (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.printTestTicket === 'function')}
               >
                 {printFormat === '80mm' ? (
-                  <option value="sistema">Impresión de Sistema (Navegador)</option>
+                  (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.printTestTicket === 'function') 
+                    ? <option value="imin_native">Impresión Nativa iMin (SDK)</option>
+                    : <option value="sistema">Impresión de Sistema (Navegador)</option>
                 ) : (
                   <>
                     <option value="bluetooth_58">Web Bluetooth Directo (CRM-03)</option>
@@ -1018,28 +1142,58 @@ export default function ConfiguracionGeneral() {
           )}
 
           {!(printFormat === '58mm' && printMethod === 'bluetooth_58') && (
-            <button 
-              onClick={() => {
-                import('../../utils/printTicket').then(module => {
-                  module.imprimirTicket(
-                    { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001' }, 
-                    [{ name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
-                    { subtotal: 25.00, ivaAmount: 0, total: 25.00 }, 
-                    { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
-                    '1234567890', 
-                    'EFECTIVO', 
-                    null, 
-                    false, 
-                    printFormat
-                  );
-                });
-              }}
-              className="btn-primary"
-              style={{ width: '100%', padding: '14px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontSize: '1rem' }}
-            >
-              🖨️ Imprimir Ticket de Prueba ({printFormat} por Sistema)
-            </button>
+            (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.printTestTicket === 'function') ? (
+              <button 
+                onClick={() => {
+                  alert("BOTÓN NATIVO PRESIONADO");
+                  try {
+                    const initRes = window.AndroidBridge.initPrinter();
+                    const statusRes = window.AndroidBridge.getPrinterStatus();
+                    
+                    if (statusRes.includes("-1") || statusRes.includes("printerReady=false") || initRes.includes("ERROR") || statusRes.includes("ERROR")) {
+                      alert(`❌ Error: La impresora no está lista.\n\nInit: ${initRes}\nEstado: ${statusRes}`);
+                      return;
+                    }
+
+                    const printRes = window.AndroidBridge.printTestTicket();
+                    alert(`✅ SDK Responde:\n\n${printRes}`);
+                  } catch (e) {
+                    alert(`❌ Excepción al intentar imprimir:\n${e.message}`);
+                  }
+                }}
+                className="btn-primary"
+                style={{ width: '100%', padding: '14px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontSize: '1rem', background: '#059669', borderColor: '#047857' }}
+              >
+                🖨️ Imprimir Prueba Nativa iMin (V2)
+              </button>
+            ) : (
+              <button 
+                onClick={() => {
+                  import('../../utils/printTicket').then(module => {
+                    module.imprimirTicket(
+                      { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001' }, 
+                      [{ name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
+                      { subtotal: 25.00, ivaAmount: 0, total: 25.00 }, 
+                      { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
+                      '1234567890', 
+                      'EFECTIVO', 
+                      null, 
+                      false, 
+                      printFormat
+                    );
+                  });
+                }}
+                className="btn-primary"
+                style={{ width: '100%', padding: '14px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontSize: '1rem' }}
+              >
+                🖨️ Imprimir Ticket de Prueba ({printFormat} por Sistema)
+              </button>
+            )
           )}
+          
+          <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+            <strong>WEB BUILD:</strong> 2026-07-31-PRINT-NATIVE-02
+          </div>
         </div>
 
         {/* Propietarios de Mercadería */}
