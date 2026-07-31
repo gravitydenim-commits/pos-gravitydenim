@@ -25,7 +25,7 @@ const parseSaleDate = (sale) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
-export default function FacturasSRI() {
+export default function FacturasSRI({ isAdmin }) {
   const [ventas, setVentas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('contingencia'); // 'contingencia' o 'historial'
@@ -172,6 +172,42 @@ export default function FacturasSRI() {
       }
     } catch (error) {
       alert(`No fue posible reemitir la factura.\nDetalle: ${error.message}`);
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  const handleEliminar = async (venta) => {
+    const confirmMessage = `Esta factura nunca fue autorizada por el SRI.\n\nSe eliminarán:\n- Registro de Firestore\n- XML\n- PDF\n- Logs del SRI\n- Idempotency Keys\n\nAntes se creará un respaldo automático.\n\nEsta acción no se puede deshacer.\n\n¿Está seguro de eliminar el comprobante?`;
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    setProcesando(true);
+    try {
+      const claveAcceso = venta.claveAcceso || venta.id;
+      const { getAuth } = await import('firebase/auth');
+      const auth = getAuth();
+      const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : '';
+
+      const response = await fetch('/api/admin/deleteTestInvoices', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ claveAcceso })
+      });
+
+      const resData = await response.json();
+
+      if (response.ok && resData.success) {
+        alert(`✅ Comprobante eliminado exitosamente.\nDetalle: ${resData.message}`);
+      } else {
+        alert(`❌ Error al eliminar comprobante: ${resData.error || 'Fallo desconocido'}`);
+      }
+    } catch (error) {
+      alert(`No fue posible eliminar el comprobante.\nDetalle: ${error.message}`);
     } finally {
       setProcesando(false);
     }
@@ -384,6 +420,15 @@ export default function FacturasSRI() {
                             <RefreshCw size={14} className={procesando ? "animate-spin" : ""} /> 
                             Reemitir (Nuevo Secuencial)
                           </button>
+                          {isAdmin && ['DEVUELTO', 'DEVUELTA', 'ERROR', 'RECHAZADO', 'RECHAZADA', 'ERROR_INTERNO', 'ERROR_FIRMA', 'TIMEOUT'].includes(est) && !venta.numeroAutorizacion && !venta.fechaAutorizacion && (
+                            <button 
+                              onClick={() => handleEliminar(venta)}
+                              disabled={procesando}
+                              style={{ padding: '6px 12px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: procesando ? 'not-allowed' : 'pointer', fontSize: '0.8rem' }}
+                            >
+                              Eliminar prueba
+                            </button>
+                          )}
                         </div>
                        ) : (
                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
@@ -506,6 +551,15 @@ export default function FacturasSRI() {
                <button onClick={() => window.open(`/api/sri/xml?claveAcceso=${selectedVenta.claveAcceso || selectedVenta.id}`, '_blank')} style={{ padding: '8px 16px', background: 'rgba(139, 92, 246, 0.2)', color: '#a78bfa', border: '1px solid rgba(139, 92, 246, 0.4)', borderRadius: '4px', cursor: 'pointer' }}>
                  Descargar XML
                </button>
+               {isAdmin && ['DEVUELTO', 'DEVUELTA', 'ERROR', 'RECHAZADO', 'RECHAZADA', 'ERROR_INTERNO', 'ERROR_FIRMA', 'TIMEOUT'].includes((selectedVenta.estadoSri || selectedVenta.status || '').toUpperCase()) && !selectedVenta.numeroAutorizacion && !selectedVenta.fechaAutorizacion && (
+                  <button 
+                    onClick={() => { handleEliminar(selectedVenta); setSelectedVenta(null); }}
+                    disabled={procesando}
+                    style={{ padding: '8px 16px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: procesando ? 'not-allowed' : 'pointer' }}
+                  >
+                    Eliminar prueba
+                  </button>
+                )}
                <button onClick={() => setSelectedVenta(null)} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '4px', cursor: 'pointer' }}>
                  Cerrar
                </button>

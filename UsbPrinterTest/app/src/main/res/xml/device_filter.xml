@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <!-- iMin_80_Printer / MASUNG MS-SGE-W27 -->
+    <!-- VID=0x0519 (1305 dec), PID=0x2013 (8211 dec) -->
+    <usb-device vendor-id="1305" product-id="8211" />
+</resources>

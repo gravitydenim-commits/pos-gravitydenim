@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="#F5F5F5">
+
+    <TextView
+        android:text="USB Printer Test — MASUNG MS-SGE-W27"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        android:paddingBottom="8dp"/>
+
+    <TextView
+        android:text="VID=0x0519 (1305)  PID=0x2013 (8211)"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:textColor="#666666"
+        android:paddingBottom="16dp"/>
+
+    <Button
+        android:id="@+id/btnScan"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="1. Escanear dispositivos USB"
+        android:backgroundTint="#1565C0"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btnPrint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="2. Imprimir PRUEBA GRAVITY DENIM"
+        android:backgroundTint="#2E7D32"
+        android:layout_marginBottom="16dp"/>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <TextView
+            android:id="@+id/tvLog"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Presiona 'Escanear' para comenzar..."
+            android:textSize="13sp"
+            android:textColor="#212121"
+            android:fontFamily="monospace"
+            android:background="#FFFFFF"
+            android:padding="12dp"/>
+    </ScrollView>
+
+</LinearLayout>

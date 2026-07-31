@@ -288,55 +288,81 @@ class WebAppInterface(
 
     // ─────────────────────────────────────────
     // PRUEBA DIRECTA PARA DIAGNÓSTICO
+    // Firmware: MS-SGE-W27 / MASUNG (APP24-01-11 D1)
+    // getPrinterStatus() devuelve -1 en este firmware pero los
+    // comandos de impresión funcionan. Se elimina esa validación.
     // ─────────────────────────────────────────
 
     @JavascriptInterface
     fun testNativePrintKotlinDirect(): String {
         val log = StringBuilder()
-        log.append("=== TEST KOTLIN NATIVO ===\n")
+        log.append("=== TEST KOTLIN NATIVO (sin validación de status) ===\n")
         try {
-            log.append("1. bindService: (Gestionado en MainActivity)\n")
+            log.append("1. bindService: Gestionado en MainActivity.onCreate()\n")
 
+            // Inicializar con USB — impresora MS-SGE-W27 comunica por USB
             log.append("2. initPrinter(\"USB\"): ")
             try {
                 iminPrint.initPrinter("USB", null)
                 printerReady = true
-                log.append("Ejecutado\n")
+                Thread.sleep(300)
+                log.append("OK\n")
             } catch (e: Exception) {
-                log.append("ERROR (${e.message})\n")
+                log.append("ERROR: ${e.message}\n")
             }
 
-            log.append("3. getPrinterStatus(): ")
-            var status = -99
-            try {
-                status = iminPrint.getPrinterStatus()
-                log.append("$status\n")
-            } catch (e: Exception) {
-                log.append("ERROR (${e.message})\n")
-            }
+            // NO consultamos getPrinterStatus() — devuelve -1 en firmware MASUNG
+            // pero los comandos de impresión sí son procesados.
+            log.append("3. getPrinterStatus(): OMITIDO (firmware MS-SGE-W27 devuelve -1)\n")
 
-            log.append("4. printTextWithAli(): ")
+            log.append("4. setFontBold(true): ")
             try {
                 iminPrint.setFontBold(true)
-                iminPrint.printTextWithAli("PRUEBA GRAVITY DENIM\n\n", 1, null)
-                iminPrint.setFontBold(false)
-                log.append("Ejecutado\n")
+                log.append("OK\n")
             } catch (e: Exception) {
-                log.append("ERROR (${e.message})\n")
+                log.append("ERROR: ${e.message}\n")
             }
 
-            log.append("5. printAndFeedPaper(5): ")
+            log.append("5. printTextWithAli(\"HELLO WORLD\"): ")
             try {
-                iminPrint.printAndFeedPaper(5)
-                log.append("Ejecutado\n")
+                iminPrint.printTextWithAli("HELLO WORLD\n", 1, null)
+                log.append("OK\n")
             } catch (e: Exception) {
-                log.append("ERROR (${e.message})\n")
+                log.append("ERROR: ${e.message}\n")
+            }
+
+            log.append("6. setFontBold(false): ")
+            try {
+                iminPrint.setFontBold(false)
+                log.append("OK\n")
+            } catch (e: Exception) {
+                log.append("ERROR: ${e.message}\n")
+            }
+
+            log.append("7. printTextWithAli(\"GRAVITY DENIM\"): ")
+            try {
+                iminPrint.printTextWithAli("GRAVITY DENIM\n", 1, null)
+                log.append("OK\n")
+            } catch (e: Exception) {
+                log.append("ERROR: ${e.message}\n")
+            }
+
+            log.append("8. printAndFeedPaper(6): ")
+            try {
+                iminPrint.printAndFeedPaper(6)
+                log.append("OK\n")
+            } catch (e: Exception) {
+                log.append("ERROR: ${e.message}\n")
             }
 
             log.append("==========================\n")
-            return log.toString()
+            log.append("Si todas las líneas dicen OK, verifica si salió papel.\n")
+            val result = log.toString()
+            android.util.Log.i("IMIN_NATIVE", result)
+            return result
         } catch (e: Exception) {
             val err = "FATAL ERROR: ${e.javaClass.simpleName}: ${e.message}"
+            android.util.Log.e("IMIN_NATIVE", err, e)
             log.append(err)
             return log.toString()
         }
