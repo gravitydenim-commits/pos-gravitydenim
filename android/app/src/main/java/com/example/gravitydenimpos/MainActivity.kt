@@ -64,7 +64,14 @@ class MainActivity : Activity(), DisplayManager.DisplayListener {
 
         try {
             Log.i("MainActivity", "[IMIN-SDK] Iniciando bindService en hilo principal (onCreate)")
-            com.imin.printer.PrinterHelper.getInstance().initPrinterService(this)
+            com.imin.printer.PrinterHelper.getInstance().initPrinterService(this, object : com.imin.printer.InitPrinterCallback {
+                override fun onConnected() {
+                    Log.i("MainActivity", "[IMIN-SDK] SERVICIO DE IMPRESORA CONECTADO EXITOSAMENTE")
+                }
+                override fun onDisconnected() {
+                    Log.w("MainActivity", "[IMIN-SDK] SERVICIO DE IMPRESORA DESCONECTADO")
+                }
+            })
         } catch (e: Exception) {
             Log.e("MainActivity", "Error initPrinterService en onCreate: ${e.message}")
         }
