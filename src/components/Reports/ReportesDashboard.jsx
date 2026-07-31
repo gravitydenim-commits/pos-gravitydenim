@@ -225,6 +225,117 @@ export default function ReportesDashboard({ sales, issuers }) {
       return;
     }
 
+    const facturasSales = salesToday.filter(s => !s.isNotaVenta && s.estadoSri !== 'NOTA_DE_VENTA' && s.status !== 'NOTA_DE_VENTA');
+    const notasSales = salesToday.filter(s => s.isNotaVenta || s.estadoSri === 'NOTA_DE_VENTA' || s.status === 'NOTA_DE_VENTA');
+
+    if (typeof window !== 'undefined' && window.AndroidBridge) {
+      const lines = [
+        { text: "GRAVITY DENIM", size: 26, align: 1, bold: true },
+        { text: "REPORTE DE VENTAS DIARIAS", size: 18, align: 1, bold: true },
+        { text: `Fecha: ${now.toLocaleDateString('es-EC')} ${now.toLocaleTimeString('es-EC')}`, size: 16, align: 1 },
+        { text: "================================================", size: 16, align: 1 }
+      ];
+
+      let totalFacturas = 0;
+      let totalNotas = 0;
+      let totalEfectivo = 0;
+      let totalTransf = 0;
+
+      const padText = (left, right, width = 48) => {
+        const space = width - left.length - right.length;
+        return left + " ".repeat(Math.max(1, space)) + right;
+      };
+
+      // Facturas
+      if (facturasSales.length > 0) {
+        lines.push({ text: "=== FACTURAS ===", size: 18, align: 1, bold: true });
+        lines.push({ text: padText("CANT DETALLE", "VAL  PAGO/CAJ", 48), size: 16, align: 0, bold: true });
+        lines.push({ text: "------------------------------------------------", size: 16, align: 1 });
+
+        facturasSales.forEach(sale => {
+          const items = sale.productos || sale.items || [];
+          const payMethod = sale.paymentMethod || 'EFECTIVO';
+          const saleTot = sale.totals?.total || 0;
+          totalFacturas += saleTot;
+
+          const isEfectivo = payMethod === 'EFECTIVO';
+          if (isEfectivo) {
+            totalEfectivo += saleTot;
+          } else {
+            totalTransf += saleTot;
+          }
+
+          const payAbbr = getAbreviaturaMetodo(payMethod);
+          const nameAbbr = getAbreviaturaNombre(isEfectivo ? getCajeroName(sale) : (sale.transferRecipient || 'Otro'));
+          const infoCobro = `${payAbbr}/${nameAbbr}`;
+
+          items.forEach(item => {
+            const qty = String(item.qty || item.cantidad || 1);
+            const name = (item.name || item.nombre || 'Prenda').substring(0, 18);
+            const val = Number((item.qty || item.cantidad || 1) * (item.price || item.precio || 0));
+            const valStr = `$${val.toFixed(2)}`;
+
+            const leftSide = `${qty} ${name.padEnd(18, ' ')}`;
+            const rightSide = `${valStr.padStart(7, ' ')}  ${infoCobro}`;
+            lines.push({ text: padText(leftSide, rightSide, 48), size: 16, align: 0 });
+          });
+        });
+        lines.push({ text: "------------------------------------------------", size: 16, align: 1 });
+      }
+
+      // Notas de Venta
+      if (notasSales.length > 0) {
+        lines.push({ text: "=== NOTAS DE VENTA ===", size: 18, align: 1, bold: true });
+        lines.push({ text: padText("CANT DETALLE", "VAL  PAGO/CAJ", 48), size: 16, align: 0, bold: true });
+        lines.push({ text: "------------------------------------------------", size: 16, align: 1 });
+
+        notasSales.forEach(sale => {
+          const items = sale.productos || sale.items || [];
+          const payMethod = sale.paymentMethod || 'EFECTIVO';
+          const saleTot = sale.totals?.total || 0;
+          totalNotas += saleTot;
+
+          const isEfectivo = payMethod === 'EFECTIVO';
+          if (isEfectivo) {
+            totalEfectivo += saleTot;
+          } else {
+            totalTransf += saleTot;
+          }
+
+          const payAbbr = getAbreviaturaMetodo(payMethod);
+          const nameAbbr = getAbreviaturaNombre(isEfectivo ? getCajeroName(sale) : (sale.transferRecipient || 'Otro'));
+          const infoCobro = `${payAbbr}/${nameAbbr}`;
+
+          items.forEach(item => {
+            const qty = String(item.qty || item.cantidad || 1);
+            const name = (item.name || item.nombre || 'Prenda').substring(0, 18);
+            const val = Number((item.qty || item.cantidad || 1) * (item.price || item.precio || 0));
+            const valStr = `$${val.toFixed(2)}`;
+
+            const leftSide = `${qty} ${name.padEnd(18, ' ')}`;
+            const rightSide = `${valStr.padStart(7, ' ')}  ${infoCobro}`;
+            lines.push({ text: padText(leftSide, rightSide, 48), size: 16, align: 0 });
+          });
+        });
+        lines.push({ text: "------------------------------------------------", size: 16, align: 1 });
+      }
+
+      // Totales finales
+      lines.push({ text: padText("Tot. Facturado:", `$${totalFacturas.toFixed(2)}`, 48), size: 16, align: 0 });
+      lines.push({ text: padText("Tot. Notas Venta:", `$${totalNotas.toFixed(2)}`, 48), size: 16, align: 0 });
+      lines.push({ text: "------------------------------------------------", size: 16, align: 1 });
+      lines.push({ text: padText("Efectivo:", `$${totalEfectivo.toFixed(2)}`, 48), size: 16, align: 0 });
+      lines.push({ text: padText("Transferencias:", `$${totalTransf.toFixed(2)}`, 48), size: 16, align: 0 });
+      lines.push({ text: padText("GRAN TOTAL:", `$${(totalFacturas + totalNotas).toFixed(2)}`, 48), size: 18, align: 0, bold: true });
+
+      try {
+        window.AndroidBridge.printTicket(JSON.stringify({ lines }));
+      } catch (e) {
+        alert("Error al enviar reporte al puente USB: " + e.message);
+      }
+      return;
+    }
+
     // 2. Obtener formato del operador
     const format = localStorage.getItem('printerFormat') || '80mm';
     const method = localStorage.getItem('printerMethod') || 'sistema';
