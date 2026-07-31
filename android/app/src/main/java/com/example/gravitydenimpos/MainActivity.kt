@@ -238,26 +238,6 @@ class MainActivity : Activity(), DisplayManager.DisplayListener {
         // Registrar receptor de permiso USB
         registerReceiver(usbReceiver, IntentFilter("com.example.gravitydenimpos.USB_PERMISSION"))
 
-        // Botón temporal TEST USB DIRECTO MASUNG
-        val testMasungBtn = Button(this).apply {
-            text = "TEST USB DIRECTO MASUNG"
-            textSize = 11f
-            setPadding(16, 8, 16, 8)
-            setBackgroundColor(0xFFDC2626.toInt()) // Rojo
-            setTextColor(0xFFFFFFFF.toInt())
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                gravity = Gravity.BOTTOM or Gravity.END
-                setMargins(0, 0, 32, 100) // Posicionar sobre esquina inferior derecha
-            }
-            setOnClickListener {
-                runDirectMasungUsbPrintTest()
-            }
-        }
-        rootLayout?.addView(testMasungBtn)
-
         setContentView(rootLayout)
 
         // Restaurar estado del WebView si existe, o cargar la URL por primera vez
