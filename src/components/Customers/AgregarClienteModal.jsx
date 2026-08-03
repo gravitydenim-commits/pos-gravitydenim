@@ -99,7 +99,7 @@ export default function AgregarClienteModal({ initialData, onClose, onSave }) {
               onChange={handleChange}
               required
               style={inputStyle}
-              placeholder="Ej. Juan Pérez"
+              placeholder="Ej. Nombre del cliente"
             />
           </div>
 

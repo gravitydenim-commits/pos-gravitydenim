@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { ShoppingCart, Plus, Minus, Trash2, Tag, Shirt, UserCircle, Printer, CreditCard, User, Search, Loader2, ShoppingBag, Scissors, Package, Briefcase, Glasses, Watch, Gem } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, Tag, Shirt, UserCircle, Printer, CreditCard, User, Search, Loader2, ShoppingBag, Scissors, Package, Briefcase, Glasses, Watch, Gem, X } from 'lucide-react';
 import { db } from '../../firebase/config';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, setDoc, onSnapshot, runTransaction } from 'firebase/firestore';
 import { validarCedula, validarRUC } from '../../utils/validators';
@@ -115,9 +115,49 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
   }, []);
 
   const [isNotaVenta, setIsNotaVenta] = useState(false);
+  const [documentType, setDocumentType] = useState(''); // '' | 'FACTURA' | 'NOTA_DE_VENTA'
+  const [searchTerm, setSearchTerm] = useState('');
   const [isProcessing, setIsProcessing] = useState(false); // Previene doble clic
   const [transferQrs, setTransferQrs] = useState({});
   const [liveIssuerDoc, setLiveIssuerDoc] = useState(null);
+
+  const selectDocumentType = (type) => {
+    setDocumentType(type);
+    setIsNotaVenta(type === 'NOTA_DE_VENTA');
+  };
+
+  const getShortIssuerName = (issuer) => {
+    if (!issuer) return '';
+    const name = (issuer.razonSocial || issuer.name || '').toLowerCase();
+    const rucVal = issuer.ruc || '';
+    const rucPart = rucVal ? ` (${rucVal})` : '';
+    
+    if (name.includes('fabian') || name.includes('fabián')) return `Fabián${rucPart}`;
+    if (name.includes('edgar') || name.includes('geovanny')) return `Edgar${rucPart}`;
+    if (name.includes('ampar') || name.includes('deysi')) return `Amparito${rucPart}`;
+    
+    const firstWord = (issuer.name || 'Emisor').split(' ')[0];
+    return `${firstWord}${rucPart}`;
+  };
+
+  const handleCancelSale = () => {
+    if (window.confirm("¿Está seguro de que desea cancelar y vaciar la venta actual?")) {
+      setCart([]);
+      setDocumentType('');
+      setIsNotaVenta(false);
+      setCustomer({
+        tipoDocumento: 'CEDULA',
+        numeroIdentificacion: '',
+        nombre: '',
+        correo: '',
+        direccion: '',
+        telefono: ''
+      });
+      setPaymentMethod('EFECTIVO');
+      setTransferRecipient('');
+      setClientNoticeMessage('');
+    }
+  };
 
   // --- MATH / VAT LOGIC (Función única centralizada calculateTotals) ---
   const { subtotal, baseImponible, ivaAmount, total } = useMemo(() => {
@@ -306,7 +346,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     return () => unsub();
   }, []);
 
-  // Calcular los productos más vendidos
+  // Calcular los productos más vendidos y filtrar por término de búsqueda
   const sortedProducts = useMemo(() => {
     const productSales = {};
     salesDB.forEach(sale => {
@@ -316,12 +356,29 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       });
     });
 
-    return [...productsDB].sort((a, b) => {
+    let filtered = [...productsDB];
+    
+    if (searchTerm.trim() !== '') {
+      const term = searchTerm.toLowerCase().trim();
+      filtered = filtered.filter(prod => {
+        const nombre = (prod.nombre || prod.name || '').toLowerCase();
+        const categoria = (prod.categoria || '').toLowerCase();
+        const codigo = (prod.codigo || prod.code || '').toLowerCase();
+        const descripcion = (prod.descripcion || prod.description || '').toLowerCase();
+        
+        return nombre.includes(term) || 
+               categoria.includes(term) || 
+               codigo.includes(term) || 
+               descripcion.includes(term);
+      });
+    }
+
+    return filtered.sort((a, b) => {
       const salesA = productSales[a.id] || 0;
       const salesB = productSales[b.id] || 0;
       return salesB - salesA;
     });
-  }, [productsDB, salesDB]);
+  }, [productsDB, salesDB, searchTerm]);
 
   // --- DATOS DEL CLIENTE ---
   const [customer, setCustomer] = useState({
@@ -642,6 +699,11 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
 
   // --- PROCESAR PAGO (GATILLO DE VISTA PREVIA) ---
   const handleCheckout = (withPrint) => {
+    if (!documentType) {
+      alert("⚠️ Seleccione si desea emitir Factura o Nota de venta.");
+      return;
+    }
+
     if (!selectedIssuer) {
       alert("⚠️ DEBES SELECCIONAR UN EMISOR (HERMANO) ANTES DE COBRAR.");
       return;
@@ -830,6 +892,18 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
 
       // 4. Limpiar estado y carrito
       setCart([]);
+      setDocumentType('');
+      setIsNotaVenta(false);
+      setCustomer({
+        tipoDocumento: 'CEDULA',
+        numeroIdentificacion: '',
+        nombre: '',
+        correo: '',
+        direccion: '',
+        telefono: ''
+      });
+      setPaymentMethod('EFECTIVO');
+      setTransferRecipient('');
 
     } catch (errNV) {
       console.error("❌ Error emitiendo Nota de Venta Interna:", errNV);
@@ -847,6 +921,10 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       alert("⚠️ DEBES SELECCIONAR A QUIÉN SE REALIZÓ LA TRANSFERENCIA.");
       return;
     }
+
+    const docLabel = isNotaVenta ? "NOTA DE VENTA" : "FACTURA ELECTRÓNICA";
+    const userConfirmed = window.confirm(`¿Está seguro?\n\nEstá a punto de emitir una ${docLabel} por $${total.toFixed(2)}.`);
+    if (!userConfirmed) return;
 
     setIsProcessing(true);
     setShowPreviewModal(false);
@@ -1049,6 +1127,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         setVatIncluded(true);
         setPaymentMethod('EFECTIVO');
         setTransferRecipient('');
+        setDocumentType('');
         setIsNotaVenta(false);
         setIsSearchingClient(false);
       }, 500);
@@ -1087,24 +1166,68 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         <div className="header" style={{ alignItems: 'center' }}>
           <h2><Shirt className="inline" style={{verticalAlign: 'bottom'}}/> Catálogo Compartido</h2>
           
-          <div className="issuer-selector" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <UserCircle size={20} style={{color: 'var(--text-muted)'}} />
+          <div className="issuer-selector" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(0,0,0,0.2)', padding: '0.35rem 0.75rem', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
+            <UserCircle size={18} style={{color: 'var(--text-muted)'}} />
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Emisor:</span>
             <select 
               value={selectedIssuer} 
               onChange={(e) => setSelectedIssuer(e.target.value)}
               className={selectedIssuer ? 'selected' : 'unselected'}
-              style={{ background: 'var(--input-bg)', color: 'var(--text-main)', border: 'none', outline: 'none' }}
+              style={{ background: 'transparent', color: 'var(--text-main)', border: 'none', outline: 'none', fontSize: '0.85rem', fontWeight: '600', padding: 0, cursor: 'pointer' }}
             >
-              <option value="" disabled style={{ background: 'var(--bg-color)', color: 'var(--text-main)' }}>-- Seleccione Emisor (Hermano) --</option>
+              <option value="" disabled style={{ background: 'var(--bg-color)', color: 'var(--text-main)' }}>-- Emisor --</option>
               {issuers.map(issuer => {
-                const nombreTitular = issuer.razonSocial || issuer.name || `Emisor (${issuer.id})`;
                 return (
                   <option key={issuer.id} value={issuer.id} style={{ background: 'var(--bg-color)', color: 'var(--text-main)' }}>
-                    {nombreTitular} (RUC: {issuer.ruc})
+                    {getShortIssuerName(issuer)}
                   </option>
                 );
               })}
             </select>
+          </div>
+        </div>
+
+        {/* BUSCADOR DE PRODUCTOS */}
+        <div style={{ padding: '0 1.5rem 1rem 1.5rem' }}>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <Search size={18} style={{ position: 'absolute', left: '12px', color: 'var(--text-muted)' }} />
+            <input
+              type="text"
+              placeholder="Buscar producto por nombre, categoría o código..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px 40px 10px 38px',
+                borderRadius: '8px',
+                background: 'var(--input-bg)',
+                color: 'var(--text-main)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                fontSize: '0.9rem',
+                outline: 'none',
+                transition: 'border-color 0.2s'
+              }}
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  outline: 'none'
+                }}
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
         </div>
         <div className="products-grid">
@@ -1243,9 +1366,6 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
 
             return (
               <div key={prod.id} className="product-card" onClick={() => addToCart(prod)}>
-                <span className="product-category-badge" style={{ backgroundColor: badgeBg, color: badgeColor }}>
-                  {label}
-                </span>
                 <div className="product-image-container">
                   <img 
                     src={activeImage} 
@@ -1268,8 +1388,54 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
 
       {/* RIGHT: CART & TOTALS */}
       <div className="cart-section glass-panel">
-        <div className="header" style={{ paddingBottom: '0.5rem' }}>
-          <h2><ShoppingCart className="inline" style={{verticalAlign: 'bottom'}}/> Carrito</h2>
+        <div className="header" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <h2><ShoppingCart className="inline" style={{verticalAlign: 'bottom'}}/> Carrito</h2>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button 
+                onClick={() => selectDocumentType('FACTURA')}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontSize: '0.8rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: documentType === 'FACTURA' ? '#3b82f6' : 'rgba(255,255,255,0.05)',
+                  color: documentType === 'FACTURA' ? '#ffffff' : 'var(--text-muted)',
+                  border: documentType === 'FACTURA' ? '1.5px solid #60a5fa' : '1px solid rgba(255,255,255,0.1)',
+                  boxShadow: documentType === 'FACTURA' ? '0 0 10px rgba(59, 130, 246, 0.4)' : 'none',
+                  outline: 'none'
+                }}
+              >
+                📄 FACTURA
+              </button>
+              <button 
+                onClick={() => selectDocumentType('NOTA_DE_VENTA')}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontSize: '0.8rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: documentType === 'NOTA_DE_VENTA' ? '#f97316' : 'rgba(255,255,255,0.05)',
+                  color: documentType === 'NOTA_DE_VENTA' ? '#ffffff' : 'var(--text-muted)',
+                  border: documentType === 'NOTA_DE_VENTA' ? '1.5px solid #fdba74' : '1px solid rgba(255,255,255,0.1)',
+                  boxShadow: documentType === 'NOTA_DE_VENTA' ? '0 0 10px rgba(249, 115, 22, 0.4)' : 'none',
+                  outline: 'none'
+                }}
+              >
+                🧾 NOTA DE VENTA
+              </button>
+            </div>
+          </div>
         </div>
         
         <div className="cart-container">
@@ -1328,7 +1494,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
             {/* FORMULARIO DE CLIENTE SRI */}
             <div style={{ background: 'var(--card-bg)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
               <h4 style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--accent)' }}>
-                <User size={16} /> Datos del Cliente (SRI)
+                <User size={16} /> {isNotaVenta ? 'Datos del Cliente' : 'Datos del Cliente (SRI)'}
               </h4>
 
               {clientNoticeMessage && (
@@ -1547,53 +1713,30 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                   </div>
                 )}
 
-                {/* BOTONES ACCIÓN INFERIOR: NOTA DE VENTA (GRANDE) Y AÑADIR FORMA DE PAGO (PEQUEÑO) */}
+                {/* BOTÓN MODO PAGO MIXTO */}
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', marginBottom: '0.75rem' }}>
                   <button 
                     type="button"
-                    onClick={() => setIsNotaVenta(!isNotaVenta)}
+                    onClick={handleActivateMixedPayment}
                     style={{ 
-                      flex: 2,
+                      flex: 1,
                       padding: '10px 12px', 
                       borderRadius: '8px', 
-                      border: `2px solid ${isNotaVenta ? 'var(--warning)' : 'var(--panel-border)'}`,
-                      background: isNotaVenta ? 'rgba(255, 152, 0, 0.2)' : 'transparent',
-                      color: isNotaVenta ? 'var(--warning)' : 'var(--text-muted)',
-                      fontWeight: isNotaVenta ? 'bold' : '600',
+                      border: '1px solid var(--accent)',
+                      background: 'rgba(59, 130, 246, 0.12)',
+                      color: 'var(--accent)',
+                      fontWeight: 'bold',
                       fontSize: '0.85rem',
                       cursor: 'pointer',
                       display: 'flex',
                       justifyContent: 'center',
                       alignItems: 'center',
                       gap: '0.4rem',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    📝 {isNotaVenta ? 'Nota de Venta (ON)' : 'Nota de Venta'}
-                  </button>
-
-                  <button 
-                    type="button"
-                    onClick={handleActivateMixedPayment}
-                    style={{ 
-                      flex: 1,
-                      padding: '8px 6px', 
-                      borderRadius: '8px', 
-                      border: '1px solid var(--accent)',
-                      background: 'rgba(59, 130, 246, 0.12)',
-                      color: 'var(--accent)',
-                      fontWeight: 'bold',
-                      fontSize: '0.75rem',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      gap: '0.25rem',
                       transition: 'all 0.2s',
                       whiteSpace: 'nowrap'
                     }}
                   >
-                    ➕ Añadir pago
+                    ➕ Añadir Pago Mixto
                   </button>
                 </div>
               </>
@@ -1605,30 +1748,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{paymentsList.length} formas distribuidas</span>
                 </div>
 
-                {/* NOTA DE VENTA TOGGLE EN MODO MIXTO */}
-                <div style={{ marginBottom: '0.75rem' }}>
-                  <button 
-                    type="button"
-                    onClick={() => setIsNotaVenta(!isNotaVenta)}
-                    style={{ 
-                      width: '100%',
-                      padding: '8px', 
-                      borderRadius: '8px', 
-                      border: `2px solid ${isNotaVenta ? 'var(--warning)' : 'var(--panel-border)'}`,
-                      background: isNotaVenta ? 'rgba(255, 152, 0, 0.2)' : 'transparent',
-                      color: isNotaVenta ? 'var(--warning)' : 'var(--text-muted)',
-                      fontWeight: isNotaVenta ? 'bold' : '500',
-                      fontSize: '0.8rem',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      gap: '0.35rem'
-                    }}
-                  >
-                    📝 {isNotaVenta ? 'Nota de Venta Activada' : 'Emitir como Nota de Venta'}
-                  </button>
-                </div>
+                {/* El botón de Nota de Venta fue movido al encabezado del Carrito */}
 
                 {/* SECCIÓN DINÁMICA DE LÍNEAS DE PAGO */}
                 <div style={{ marginBottom: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
@@ -1932,6 +2052,33 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
               </button>
             </div>
 
+            {/* BOTÓN CANCELAR VENTA */}
+            {cart.length > 0 && (
+              <button
+                onClick={handleCancelSale}
+                style={{
+                  width: '100%',
+                  marginTop: '0.75rem',
+                  padding: '8px',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  color: '#f87171',
+                  borderRadius: '6px',
+                  fontSize: '0.8rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  transition: 'all 0.2s',
+                  outline: 'none'
+                }}
+              >
+                🗑️ Cancelar / Vaciar Venta
+              </button>
+            )}
+
           </div>
         </div>
       </div>
@@ -1960,7 +2107,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                   
                   <div style={{ margin: '10px 0', borderTop: '1px dashed #cbd5e1', borderBottom: '1px dashed #cbd5e1', padding: '6px 0' }}>
                     <div style={{ fontWeight: 'bold', fontSize: '13px', color: '#0f172a' }}>
-                      {isNotaVenta ? 'NOTA DE VENTA' : 'FACTURA ELECTRÓNICA'}
+                      Documento: {isNotaVenta ? 'NOTA DE VENTA' : 'FACTURA ELECTRÓNICA'}
                     </div>
                     {isNotaVenta && (
                       <div style={{ fontSize: '10px', color: '#b91c1c', fontWeight: 'bold', border: '1px dashed #ef4444', padding: '4px', marginTop: '4px', background: '#fef2f2' }}>
