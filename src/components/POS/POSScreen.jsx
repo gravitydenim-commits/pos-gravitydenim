@@ -25,6 +25,7 @@ export function getFallback3DImage(prod) {
   if (text.includes('overol')) return BASE + 'overol.png';
   if (text.includes('falda')) return BASE + 'falda.png';
   if (text.includes('vestido')) return BASE + 'vestido.png';
+  if (text.includes('conjunto')) return BASE + 'conjunto.png';
   if (text.includes('tactico') || text.includes('táctico') || text.includes('tactical')) return BASE + 'pantalon_tactico.png';
   if (text.includes('cargo')) return BASE + 'pantalon_cargo.png';
   if (text.includes('jogger')) return BASE + 'jogger.png';
