@@ -22,6 +22,7 @@
     { "id": "chaleco_3d",             "name": "Chaleco",               "category": "Chaleco", "path": "/product-illustrations/3d/chaleco_3d.png" },
     { "id": "falda_3d",               "name": "Falda",                 "category": "Falda",   "path": "/product-illustrations/3d/falda_3d.png" },
     { "id": "vestido_3d",             "name": "Vestido",               "category": "Vestido", "path": "/product-illustrations/3d/vestido_3d.png" },
-    { "id": "overol_3d",              "name": "Overol",                "category": "Overol",  "path": "/product-illustrations/3d/overol_3d.png" }
+    { "id": "overol_3d",              "name": "Overol",                "category": "Overol",  "path": "/product-illustrations/3d/overol_3d.png" },
+    { "id": "conjunto_3d",            "name": "Conjunto",              "category": "Conjunto","path": "/product-illustrations/3d/conjunto_3d.png" }
   ]
 }
