@@ -516,19 +516,24 @@ export default async function handler(req, res) {
     const comprobanteData = sanitizeFirestorePayload({
       cliente,
       productos,
+      items: productos,
       subtotalSinImpuestos,
       valorIva,
       importeTotal,
       formaPago,
-      paymentMethod: req.body.paymentMethod || (req.body.transferRecipient ? 'TRANSFERENCIA' : 'EFECTIVO'),
-      transferRecipient: req.body.transferRecipient || null,
+      paymentMethod: req.body.paymentMethod || (req.body.paymentRecipientId ? 'TRANSFERENCIA' : 'EFECTIVO'),
+      paymentRecipientId: req.body.paymentRecipientId || null,
+      paymentRecipientName: req.body.paymentRecipientName || null,
+      paymentRecipientType: req.body.paymentRecipientType || null,
+      transferRecipient: req.body.transferRecipient || req.body.paymentRecipientName || null,
+      transferRecipientId: req.body.transferRecipientId || req.body.paymentRecipientId || null,
       paymentDetails: req.body.paymentDetails || {
-        method: req.body.paymentMethod || (req.body.transferRecipient ? 'TRANSFERENCIA' : 'EFECTIVO'),
+        method: req.body.paymentMethod || (req.body.paymentRecipientId ? 'TRANSFERENCIA' : 'EFECTIVO'),
         cashAmount: (req.body.paymentMethod === 'EFECTIVO') ? (req.body.total || 0) : 0,
-        transfers: req.body.transferRecipient ? [
+        transfers: (req.body.paymentRecipientId || req.body.transferRecipient) ? [
           {
-            recipientId: req.body.transferRecipientId || 'unknown',
-            recipientName: req.body.transferRecipient,
+            recipientId: req.body.paymentRecipientId || req.body.transferRecipientId || 'unknown',
+            recipientName: req.body.paymentRecipientName || req.body.transferRecipient || 'Desconocido',
             amount: req.body.total || 0,
             bank: req.body.transferBank || '',
             reference: req.body.transferReference || ''

@@ -5,7 +5,7 @@ import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, setD
 import { validarCedula, validarRUC } from '../../utils/validators';
 import { TAX_CONFIG, calculateTotals } from '../../utils/taxes';
 
-// Función única para obtener la imagen 3D predeterminada según el tipo o nombre del producto
+// FunciÃ³n Ãºnica para obtener la imagen 3D predeterminada segÃºn el tipo o nombre del producto
 export function getFallback3DImage(prod) {
   const text = `${prod?.tipoPrenda || ''} ${prod?.tipo || ''} ${prod?.categoria || ''} ${prod?.nombre || prod?.name || ''}`.toLowerCase();
   const BASE = '/images/3d/';
@@ -25,20 +25,20 @@ export function getFallback3DImage(prod) {
   if (text.includes('overol')) return BASE + 'overol.png';
   if (text.includes('falda')) return BASE + 'falda.png';
   if (text.includes('vestido')) return BASE + 'vestido.png';
-  if (text.includes('tactico') || text.includes('táctico') || text.includes('tactical')) return BASE + 'pantalon_tactico.png';
+  if (text.includes('tactico') || text.includes('tÃ¡ctico') || text.includes('tactical')) return BASE + 'pantalon_tactico.png';
   if (text.includes('cargo')) return BASE + 'pantalon_cargo.png';
   if (text.includes('jogger')) return BASE + 'jogger.png';
   if (text.includes('short')) return BASE + 'short.png';
   if (text.includes('bermuda')) return BASE + 'bermuda.png';
   if (text.includes('semitubo') || text.includes('tubo')) return BASE + 'jean_semitubo.png';
   if (text.includes('baggy')) return BASE + 'jean_baggy.png';
-  if (text.includes('niño') || text.includes('nino') || text.includes('p. niño')) return BASE + 'jean_nino.png';
-  if (text.includes('jean') || text.includes('pantalon') || text.includes('pantalón') || text.includes('pant') || text.includes('ancho') || text.includes('levas')) return BASE + 'jean.png';
+  if (text.includes('niÃ±o') || text.includes('nino') || text.includes('p. niÃ±o')) return BASE + 'jean_nino.png';
+  if (text.includes('jean') || text.includes('pantalon') || text.includes('pantalÃ³n') || text.includes('pant') || text.includes('ancho') || text.includes('levas')) return BASE + 'jean.png';
 
   return BASE + 'default.png';
 }
 
-// Función única para resolver la URL de imagen del producto (imageUrl, image, photoURL, imagen, ilustracion3d o fallback 3D)
+// FunciÃ³n Ãºnica para resolver la URL de imagen del producto (imageUrl, image, photoURL, imagen, ilustracion3d o fallback 3D)
 export function getProductImageUrl(prod) {
   if (!prod) return '/images/3d/default.png';
 
@@ -72,14 +72,60 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
   const [selectedIssuer, setSelectedIssuer] = useState(''); 
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [checkoutWithPrint, setCheckoutWithPrint] = useState(false);
+
+  const getNormalizedCartItems = (cartItems) => {
+    const legalNames = {
+      edgar: "EDGAR GEOVANNY SANCHEZ RAMIREZ",
+      fabian: "DOMINGO FABIAN SANCHEZ RAMIREZ",
+      amparito: "Deysi Amparito SÃ¡nchez Ramirez"
+    };
+
+    return cartItems.map(item => {
+      const rawOwner = item.ownerName || item.ownerId || item.propietario || item.owner;
+      let ownerId = 'edgar';
+      let ownerShortName = 'Edgar';
+      let ownerLegalName = legalNames.edgar;
+
+      if (rawOwner) {
+        const s = String(rawOwner).toLowerCase().trim();
+        if (s.includes('fabian') || s.includes('fabiÃ¡n') || s.includes('domingo') || s.includes('junior') || s.includes('carlos')) {
+          ownerId = 'fabian';
+          ownerShortName = 'FabiÃ¡n';
+          ownerLegalName = legalNames.fabian;
+        } else if (s.includes('amparito') || s.includes('deysi') || s.includes('maria')) {
+          ownerId = 'amparito';
+          ownerShortName = 'Amparito';
+          ownerLegalName = legalNames.amparito;
+        }
+      } else {
+        const emisorId = selectedIssuer;
+        if (emisorId === 'hermano_carlos') {
+          ownerId = 'fabian';
+          ownerShortName = 'FabiÃ¡n';
+          ownerLegalName = legalNames.fabian;
+        } else if (emisorId === 'hermano_maria') {
+          ownerId = 'amparito';
+          ownerShortName = 'Amparito';
+          ownerLegalName = legalNames.amparito;
+        }
+      }
+
+      return {
+        ...item,
+        ownerId,
+        ownerShortName,
+        ownerLegalName
+      };
+    });
+  };
   const [paymentMethod, setPaymentMethod] = useState('EFECTIVO');
-  const [transferRecipient, setTransferRecipient] = useState('');
+  const [transferRecipient, setTransferRecipient] = useState('Edgar');
   const [users, setUsers] = useState([]);
   const [mixCashAmount, setMixCashAmount] = useState(0);
   const [mixTransferAmount, setMixTransferAmount] = useState(0);
   const [transferBank, setTransferBank] = useState('');
   const [transferReference, setTransferReference] = useState('');
-  const [transferRecipientId, setTransferRecipientId] = useState(''); // brother user id
+  const [transferRecipientId, setTransferRecipientId] = useState('edgar'); // brother user id
 
   useEffect(() => {
     const csEnabled = localStorage.getItem('csEnabled') === 'true';
@@ -97,16 +143,6 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         const snap = await getDocs(collection(db, 'users'));
         const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setUsers(list);
-        
-        // Auto select Edgar as default transfer recipient if found
-        const edgar = list.find(u => (u.name || '').toLowerCase().includes('edgar'));
-        if (edgar) {
-          setTransferRecipientId(edgar.id);
-          setTransferRecipient(edgar.name);
-        } else if (list.length > 0) {
-          setTransferRecipientId(list[0].id);
-          setTransferRecipient(list[0].name);
-        }
       } catch (err) {
         console.error("Error cargando usuarios:", err);
       }
@@ -132,7 +168,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     const rucVal = issuer.ruc || '';
     const rucPart = rucVal ? ` (${rucVal})` : '';
     
-    if (name.includes('fabian') || name.includes('fabián')) return `Fabián${rucPart}`;
+    if (name.includes('fabian') || name.includes('fabiÃ¡n')) return `FabiÃ¡n${rucPart}`;
     if (name.includes('edgar') || name.includes('geovanny')) return `Edgar${rucPart}`;
     if (name.includes('ampar') || name.includes('deysi')) return `Amparito${rucPart}`;
     
@@ -141,7 +177,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
   };
 
   const handleCancelSale = () => {
-    if (window.confirm("¿Está seguro de que desea cancelar y vaciar la venta actual?")) {
+    if (window.confirm("Â¿EstÃ¡ seguro de que desea cancelar y vaciar la venta actual?")) {
       setCart([]);
       setDocumentType('');
       setIsNotaVenta(false);
@@ -159,7 +195,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     }
   };
 
-  // --- MATH / VAT LOGIC (Función única centralizada calculateTotals) ---
+  // --- MATH / VAT LOGIC (FunciÃ³n Ãºnica centralizada calculateTotals) ---
   const { subtotal, baseImponible, ivaAmount, total } = useMemo(() => {
     return calculateTotals(cart, vatIncluded, isNotaVenta);
   }, [cart, vatIncluded, isNotaVenta]);
@@ -179,7 +215,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     }
   ]);
 
-  // Activar modo mixto (desde el botón "+ Añadir forma de pago")
+  // Activar modo mixto (desde el botÃ³n "+ AÃ±adir forma de pago")
   const handleActivateMixedPayment = () => {
     setIsMixedPayment(true);
     const half1 = Number((total / 2).toFixed(2));
@@ -198,15 +234,15 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         id: `pay-2-${Date.now()}`,
         method: 'TRANSFERENCIA',
         amount: half2,
-        recipientName: transferRecipient || 'Diana',
-        recipientId: transferRecipientId || 'Diana',
+        recipientName: transferRecipient || 'Edgar',
+        recipientId: transferRecipientId || 'Edgar',
         bank: transferBank || '',
         reference: transferReference || ''
       }
     ]);
   };
 
-  // Cancelar modo mixto y volver a forma única normal
+  // Cancelar modo mixto y volver a forma Ãºnica normal
   const handleCancelMixedPayment = () => {
     setIsMixedPayment(false);
     setPaymentsList([
@@ -222,7 +258,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     ]);
   };
 
-  // Sincronizar automáticamente el valor en modo normal o de 1 sola forma
+  // Sincronizar automÃ¡ticamente el valor en modo normal o de 1 sola forma
   useEffect(() => {
     if (!isMixedPayment) {
       setPaymentsList([
@@ -239,7 +275,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     }
   }, [total, paymentMethod, transferRecipient, transferRecipientId, transferBank, transferReference, isMixedPayment]);
 
-  // Agregar una nueva línea de pago en modo mixto
+  // Agregar una nueva lÃ­nea de pago en modo mixto
   const handleAddPaymentLine = () => {
     setPaymentsList(prev => {
       const currentPaid = prev.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
@@ -250,8 +286,8 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
           id: `pay-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           method: 'TRANSFERENCIA',
           amount: remaining,
-          recipientName: transferRecipient || 'Diana',
-          recipientId: transferRecipientId || 'Diana',
+          recipientName: transferRecipient || 'Edgar',
+          recipientId: transferRecipientId || 'Edgar',
           bank: '',
           reference: ''
         }
@@ -259,7 +295,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     });
   };
 
-  // Actualizar un campo de una línea de pago
+  // Actualizar un campo de una lÃ­nea de pago
   const handleUpdatePaymentLine = (id, field, value) => {
     setPaymentsList(prev => prev.map(p => {
       if (p.id !== id) return p;
@@ -271,14 +307,24 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         updated.reference = '';
       }
       if (field === 'recipientName') {
-        const found = users.find(u => (u.name || '').toLowerCase().includes(value.toLowerCase()));
-        updated.recipientId = found ? found.id : value;
+        let normalizedId = 'edgar';
+        let normalizedName = 'Edgar';
+        const val = String(value).toLowerCase();
+        if (val.includes('fabian') || val.includes('fabiÃ¡n') || val.includes('domingo') || val.includes('junior')) {
+          normalizedId = 'fabian';
+          normalizedName = 'FabiÃ¡n';
+        } else if (val.includes('amparito') || val.includes('deysi')) {
+          normalizedId = 'amparito';
+          normalizedName = 'Amparito';
+        }
+        updated.recipientName = normalizedName;
+        updated.recipientId = normalizedId;
       }
       return updated;
     }));
   };
 
-  // Eliminar una línea de pago
+  // Eliminar una lÃ­nea de pago
   const handleRemovePaymentLine = (id) => {
     setPaymentsList(prev => {
       if (prev.length <= 1) return prev;
@@ -286,7 +332,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     });
   };
 
-  // Cálculo de Pagos y Saldo Pendiente
+  // CÃ¡lculo de Pagos y Saldo Pendiente
   const totalPagado = useMemo(() => {
     if (!isMixedPayment) return total;
     return Number(paymentsList.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0).toFixed(2));
@@ -346,7 +392,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     return () => unsub();
   }, []);
 
-  // Calcular los productos más vendidos y filtrar por término de búsqueda
+  // Calcular los productos mÃ¡s vendidos y filtrar por tÃ©rmino de bÃºsqueda
   const sortedProducts = useMemo(() => {
     const productSales = {};
     salesDB.forEach(sale => {
@@ -410,7 +456,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       }
     };
 
-    // 1. Transmisión vía BroadcastChannel (ventas/pestañas secundarias en navegador)
+    // 1. TransmisiÃ³n vÃ­a BroadcastChannel (ventas/pestaÃ±as secundarias en navegador)
     try {
       const channel = new BroadcastChannel('gravity_pos_channel');
       channel.postMessage({
@@ -422,7 +468,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       console.error("Error transmitiendo datos de cliente a pantalla secundaria:", e);
     }
 
-    // 2. Transmisión nativa a iMin D4-504 vía AndroidBridge
+    // 2. TransmisiÃ³n nativa a iMin D4-504 vÃ­a AndroidBridge
     if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.notifyCustomerScreen === 'function') {
       try {
         window.AndroidBridge.notifyCustomerScreen(JSON.stringify(payload));
@@ -513,7 +559,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     }
   };
 
-  // --- BÚSQUEDA AUTOMÁTICA DE CLIENTES POR IDENTIFICACIÓN OFICIAL ---
+  // --- BÃSQUEDA AUTOMÃTICA DE CLIENTES POR IDENTIFICACIÃN OFICIAL ---
   const manejarBuscarCliente = async () => {
     const numId = (customer.numeroIdentificacion || '').trim();
     setClientNoticeMessage('');
@@ -522,10 +568,10 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     if (customer.tipoDocumento === 'CONSUMIDOR_FINAL' || numId === '9999999999999' || numId === '9999999999') return;
 
     setIsSearchingClient(true);
-    console.log(`🔍 Validando e iniciando búsqueda para identificación: ${numId}...`);
+    console.log(`ð Validando e iniciando bÃºsqueda para identificaciÃ³n: ${numId}...`);
 
     try {
-      // 1. Validar primero que la identificación ecuatoriana sea correcta
+      // 1. Validar primero que la identificaciÃ³n ecuatoriana sea correcta
       const esCedula = numId.length === 10;
       const esRuc = numId.length === 13;
 
@@ -534,19 +580,19 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       else if (esRuc) esValido = validarRUC(numId);
 
       if (!esValido) {
-        console.warn(`⚠️ Identificación ecuatoriana no válida: ${numId}`);
-        setClientNoticeMessage("⚠️ Número de cédula o RUC ecuatoriano no válido.");
+        console.warn(`â ï¸ IdentificaciÃ³n ecuatoriana no vÃ¡lida: ${numId}`);
+        setClientNoticeMessage("â ï¸ NÃºmero de cÃ©dula o RUC ecuatoriano no vÃ¡lido.");
         setIsSearchingClient(false);
         return;
       }
 
-      // 2. Búsqueda primero en la base de datos local 'clientes' de Firestore
+      // 2. BÃºsqueda primero en la base de datos local 'clientes' de Firestore
       const docRef = doc(db, 'clientes', numId);
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
         const clienteEncontrado = docSnap.data();
-        console.log("✅ Cliente cargado desde la base local de Firestore.");
+        console.log("â Cliente cargado desde la base local de Firestore.");
         const clienteCargado = {
           tipoDocumento: esRuc ? 'RUC' : 'CEDULA',
           numeroIdentificacion: numId,
@@ -557,18 +603,18 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         };
         setCustomer(clienteCargado);
         syncSecondaryCustomerScreen(clienteCargado);
-        setClientNoticeMessage("✅ Datos de cliente cargados desde la base local.");
+        setClientNoticeMessage("â Datos de cliente cargados desde la base local.");
         setIsSearchingClient(false);
         return;
       }
 
       // 3. Si no existe en base de datos local, consultar al servicio oficial del SRI por API
-      console.log("🌐 Consultando catastro público oficial del SRI...");
+      console.log("ð Consultando catastro pÃºblico oficial del SRI...");
       const res = await fetch(`/api/sri/consulta-ruc?ruc=${numId}`);
       const data = await res.json();
 
       if (data.success && data.razonSocial) {
-        console.log("✅ Contribuyente encontrado en SRI oficial:", data.razonSocial);
+        console.log("â Contribuyente encontrado en SRI oficial:", data.razonSocial);
         const nuevoClienteData = {
           tipoDocumento: esRuc ? 'RUC' : 'CEDULA',
           numeroIdentificacion: numId,
@@ -580,29 +626,29 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
 
         setCustomer(nuevoClienteData);
         syncSecondaryCustomerScreen(nuevoClienteData);
-        setClientNoticeMessage("✅ Datos públicos encontrados en el SRI y guardados en base de clientes.");
+        setClientNoticeMessage("â Datos pÃºblicos encontrados en el SRI y guardados en base de clientes.");
 
-        // Guardar automáticamente en Firestore 'clientes' para no consultar nuevamente al SRI en cada venta
+        // Guardar automÃ¡ticamente en Firestore 'clientes' para no consultar nuevamente al SRI en cada venta
         try {
           await setDoc(docRef, {
             ...nuevoClienteData,
             fechaRegistro: new Date().toISOString(),
             origen: 'SRI_OFICIAL'
           }, { merge: true });
-          console.log("💾 Cliente guardado automáticamente en la colección 'clientes'.");
+          console.log("ð¾ Cliente guardado automÃ¡ticamente en la colecciÃ³n 'clientes'.");
         } catch (errDb) {
           console.error("Error guardando cliente en Firestore:", errDb);
         }
 
       } else {
-        // Si es cédula sin RUC o el SRI no devuelve información pública
-        console.log("ℹ️ Mensaje SRI:", data.message || "No se encontraron datos públicos en el SRI.");
-        setClientNoticeMessage("No se encontraron datos públicos en el SRI. Ingrese el nombre manualmente");
+        // Si es cÃ©dula sin RUC o el SRI no devuelve informaciÃ³n pÃºblica
+        console.log("â¹ï¸ Mensaje SRI:", data.message || "No se encontraron datos pÃºblicos en el SRI.");
+        setClientNoticeMessage("No se encontraron datos pÃºblicos en el SRI. Ingrese el nombre manualmente");
       }
 
     } catch (error) {
-      console.error("❌ Error no bloqueante en búsqueda de cliente:", error);
-      setClientNoticeMessage("No se encontraron datos públicos en el SRI. Ingrese el nombre manualmente");
+      console.error("â Error no bloqueante en bÃºsqueda de cliente:", error);
+      setClientNoticeMessage("No se encontraron datos pÃºblicos en el SRI. Ingrese el nombre manualmente");
     } finally {
       setIsSearchingClient(false);
     }
@@ -651,7 +697,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     ));
   };
 
-  // --- SINCRONIZACIÓN PANTALLA SECUNDARIA ---
+  // --- SINCRONIZACIÃN PANTALLA SECUNDARIA ---
   useEffect(() => {
     let status = 'idle';
     if (showPreviewModal || paymentMethod === 'TRANSFERENCIA') {
@@ -700,22 +746,22 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
   // --- PROCESAR PAGO (GATILLO DE VISTA PREVIA) ---
   const handleCheckout = (withPrint) => {
     if (!documentType) {
-      alert("⚠️ Seleccione si desea emitir Factura o Nota de venta.");
+      alert("â ï¸ Seleccione si desea emitir Factura o Nota de venta.");
       return;
     }
 
     if (!selectedIssuer) {
-      alert("⚠️ DEBES SELECCIONAR UN EMISOR (HERMANO) ANTES DE COBRAR.");
+      alert("â ï¸ DEBES SELECCIONAR UN EMISOR (HERMANO) ANTES DE COBRAR.");
       return;
     }
     
     if (!customer.numeroIdentificacion || !customer.nombre) {
-      alert("⚠️ DEBES COMPLETAR LOS DATOS DEL CLIENTE.");
+      alert("â ï¸ DEBES COMPLETAR LOS DATOS DEL CLIENTE.");
       return;
     }
 
     if (cart.length === 0) {
-      alert("⚠️ EL CARRITO ESTÁ VACÍO.");
+      alert("â ï¸ EL CARRITO ESTÃ VACÃO.");
       return;
     }
 
@@ -724,26 +770,26 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       const tipo = customer.tipoDocumento;
       if (tipo === 'CEDULA') {
         if (ci.length !== 10 && ci !== '9999999999') {
-          alert("⚠️ EL NÚMERO DE CÉDULA DEBE TENER EXACTAMENTE 10 DÍGITOS.\n\nPara RUCs (13 dígitos) cambia el tipo de documento a RUC.");
+          alert("â ï¸ EL NÃMERO DE CÃDULA DEBE TENER EXACTAMENTE 10 DÃGITOS.\n\nPara RUCs (13 dÃ­gitos) cambia el tipo de documento a RUC.");
           return;
         }
         if (!validarCedula(ci)) {
-          alert("❌ LA CÉDULA INGRESADA ES INVÁLIDA.\n\nPor favor, verifica el número y vuelve a intentarlo.");
+          alert("â LA CÃDULA INGRESADA ES INVÃLIDA.\n\nPor favor, verifica el nÃºmero y vuelve a intentarlo.");
           return;
         }
       }
       if (tipo === 'RUC') {
         if (ci.length !== 13 && ci !== '9999999999999') {
-          alert("⚠️ EL RUC DEBE TENER EXACTAMENTE 13 DÍGITOS.");
+          alert("â ï¸ EL RUC DEBE TENER EXACTAMENTE 13 DÃGITOS.");
           return;
         }
         if (!validarRUC(ci)) {
-          alert("❌ EL RUC INGRESADO ES INVÁLIDO.\n\nPor favor, verifica el número y vuelve a intentarlo.");
+          alert("â EL RUC INGRESADO ES INVÃLIDO.\n\nPor favor, verifica el nÃºmero y vuelve a intentarlo.");
           return;
         }
       }
       if (tipo === 'CONSUMIDOR_FINAL' && ci !== '9999999999999' && ci !== '9999999999') {
-        alert("⚠️ PARA CONSUMIDOR FINAL EL NÚMERO DEBE SER 9999999999999.");
+        alert("â ï¸ PARA CONSUMIDOR FINAL EL NÃMERO DEBE SER 9999999999999.");
         return;
       }
     }
@@ -752,9 +798,9 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     setShowPreviewModal(true);
   };
 
-  // --- EMISIÓN EXCLUSIVA DE NOTA DE VENTA INTERNA (SIN SRI, SIN XML, SIN PFX) ---
+  // --- EMISIÃN EXCLUSIVA DE NOTA DE VENTA INTERNA (SIN SRI, SIN XML, SIN PFX) ---
   const emitirNotaVentaInterna = async (withPrint, issuerData, paymentDetails, totalsData, transactionId) => {
-    console.log("📝 [NOTA DE VENTA INTERNA] Procesando comprobante interno en Firestore sin intervención del SRI...");
+    console.log("ð [NOTA DE VENTA INTERNA] Procesando comprobante interno en Firestore sin intervenciÃ³n del SRI...");
 
     try {
       // 0. Guardado Inmediato de Cliente (si no es Consumidor Final)
@@ -773,7 +819,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       const ptoEmi = issuerData.ptoEmi || issuerData.puntoEmision || '001';
       const secKeyNV = `${estab}_${ptoEmi}_NV`;
 
-      // 1. Transacción Atómica en Firestore: Secuencial interno NV + Descuento Stock + Guardado Venta
+      // 1. TransacciÃ³n AtÃ³mica en Firestore: Secuencial interno NV + Descuento Stock + Guardado Venta
       const resultNV = await runTransaction(db, async (t) => {
         // =========================================================================
         // FASE 1: TODAS LAS LECTURAS (t.get) SE EJECUTAN PRIMERO
@@ -809,7 +855,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         const numComprobanteCompleto = `NV-${estab}-${ptoEmi}-${secStr}`;
 
         // =========================================================================
-        // FASE 2: TODAS LAS ESCRITURAS (t.update, t.set) SE EJECUTAN DESPUÉS
+        // FASE 2: TODAS LAS ESCRITURAS (t.update, t.set) SE EJECUTAN DESPUÃS
         // =========================================================================
 
         // 2.a Actualizar inventarios calculados previamente
@@ -820,9 +866,28 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         // 2.b Reservar secuencial de Nota de Venta
         t.update(issuerRef, { [`secuenciales.${secKeyNV}`]: nextSecNV });
 
-        // 2.c Crear la venta interna en la colección 'ventas'
+        // 2.c Crear la venta interna en la colecciÃ³n 'ventas'
         const ventaId = `nv-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
         const ventaRef = doc(db, 'ventas', ventaId);
+
+        const normalizedCart = getNormalizedCartItems(cart);
+
+        let recipientId = null;
+        let recipientName = null;
+        let recipientType = null;
+
+        if (paymentMethod === 'TRANSFERENCIA') {
+          recipientId = transferRecipientId || 'edgar';
+          recipientName = transferRecipient || 'Edgar';
+          recipientType = 'OWNER';
+        } else if (paymentMethod === 'MIXTO' && paymentDetails?.payments) {
+          const trPayment = paymentDetails.payments.find(p => p.method === 'TRANSFERENCIA');
+          if (trPayment) {
+            recipientId = trPayment.recipientId || 'edgar';
+            recipientName = trPayment.recipientName || 'Edgar';
+            recipientType = 'OWNER';
+          }
+        }
 
         const nuevaVentaInterna = {
           id: ventaId,
@@ -834,14 +899,19 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
           date: new Date().toISOString(),
           customer: customer,
           cliente: customer,
-          items: cart,
-          productos: cart,
+          items: normalizedCart,
+          productos: normalizedCart,
           totals: totalsData,
           subtotal: totalsData.subtotal,
           ivaAmount: totalsData.ivaAmount,
           total: totalsData.total,
           paymentMethod: paymentMethod,
           paymentDetails: paymentDetails,
+          paymentRecipientId: recipientId,
+          paymentRecipientName: recipientName,
+          paymentRecipientType: recipientType,
+          transferRecipient: recipientName,
+          transferRecipientId: recipientId,
           issuerId: issuerData.id,
           emisorId: issuerData.id,
           vatIncluded: vatIncluded,
@@ -859,7 +929,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         };
       });
 
-      console.log(`✅ Nota de Venta Interna procesada con éxito: ${resultNV.numeroComprobante}`);
+      console.log(`â Nota de Venta Interna procesada con Ã©xito: ${resultNV.numeroComprobante}`);
 
       // 2. Imprimir ticket interno si corresponde (Proceso totalmente independiente)
       if (withPrint) {
@@ -867,16 +937,16 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
           const iminMod = await import('../../utils/iminPrinter');
           const isPrinted = await iminMod.printTicketImin(issuerData, cart, totalsData, customer, resultNV.numeroComprobante, paymentMethod, true, paymentDetails);
           if (!isPrinted) {
-            alert("⚠️ Impresión nativa iMin no completada. La Nota de Venta fue guardada con éxito.");
+            alert("â ï¸ ImpresiÃ³n nativa iMin no completada. La Nota de Venta fue guardada con Ã©xito.");
           }
         } catch(e) {
-          alert("❌ Error llamando a servicio de impresión iMin:\n" + (e.message || String(e)));
+          alert("â Error llamando a servicio de impresiÃ³n iMin:\n" + (e.message || String(e)));
         }
       }
 
-      alert(`✅ Nota de Venta Interna emitida con éxito.\nComprobante No: ${resultNV.numeroComprobante}`);
+      alert(`â Nota de Venta Interna emitida con Ã©xito.\nComprobante No: ${resultNV.numeroComprobante}`);
 
-      // 3. Notificar éxito a pantalla secundaria
+      // 3. Notificar Ã©xito a pantalla secundaria
       const paidPayload = { status: 'paid', total: totalsData.total, paymentMethod };
       try {
         const channel = new BroadcastChannel('gravity_pos_channel');
@@ -906,8 +976,8 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       setTransferRecipient('');
 
     } catch (errNV) {
-      console.error("❌ Error emitiendo Nota de Venta Interna:", errNV);
-      alert(`⚠️ Error procesando la Nota de Venta: ${errNV.message}`);
+      console.error("â Error emitiendo Nota de Venta Interna:", errNV);
+      alert(`â ï¸ Error procesando la Nota de Venta: ${errNV.message}`);
     } finally {
       setIsProcessing(false);
     }
@@ -918,12 +988,12 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     if (isProcessing) return; // Bloqueo anti doble clic
 
     if (paymentMethod === 'TRANSFERENCIA' && !transferRecipientId) {
-      alert("⚠️ DEBES SELECCIONAR A QUIÉN SE REALIZÓ LA TRANSFERENCIA.");
+      alert("â ï¸ DEBES SELECCIONAR A QUIÃN SE REALIZÃ LA TRANSFERENCIA.");
       return;
     }
 
-    const docLabel = isNotaVenta ? "NOTA DE VENTA" : "FACTURA ELECTRÓNICA";
-    const userConfirmed = window.confirm(`¿Está seguro?\n\nEstá a punto de emitir una ${docLabel} por $${total.toFixed(2)}.`);
+    const docLabel = isNotaVenta ? "NOTA DE VENTA" : "FACTURA ELECTRÃNICA";
+    const userConfirmed = window.confirm(`Â¿EstÃ¡ seguro?\n\nEstÃ¡ a punto de emitir una ${docLabel} por $${total.toFixed(2)}.`);
     if (!userConfirmed) return;
 
     setIsProcessing(true);
@@ -936,10 +1006,10 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       return;
     }
 
-    // Generar Llave de Idempotencia única para esta transacción
+    // Generar Llave de Idempotencia Ãºnica para esta transacciÃ³n
     const transactionId = crypto.randomUUID ? crypto.randomUUID() : `tx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    // Construir paymentDetails estructurado según si es Normal o Pago Mixto
+    // Construir paymentDetails estructurado segÃºn si es Normal o Pago Mixto
     let paymentDetails;
     if (!isMixedPayment) {
       paymentDetails = {
@@ -996,30 +1066,49 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
 
     const totalsData = { subtotal, baseImponible, ivaAmount, total };
 
-    // 🔴 SI ES NOTA DE VENTA INTERNA: Proceso 100% local atómico sin llamar al SRI
+    // ð´ SI ES NOTA DE VENTA INTERNA: Proceso 100% local atÃ³mico sin llamar al SRI
     if (isNotaVenta) {
       await emitirNotaVentaInterna(withPrint, issuerData, paymentDetails, totalsData, transactionId);
       return;
     }
 
-    // 🟢 SI ES FACTURA ELECTRÓNICA SRI: Proceso electrónico completo en /api/sri/emitir
+    // ð¢ SI ES FACTURA ELECTRÃNICA SRI: Proceso electrÃ³nico completo en /api/sri/emitir
     try {
       // 0. Guardado Inmediato de Cliente (Antes del SRI y el stock)
       if (customer.tipoDocumento !== 'CONSUMIDOR_FINAL' && customer.numeroIdentificacion) {
-        console.log("👤 [Cliente] Guardando/Actualizando cliente en Firebase inmediatamente...");
+        console.log("ð¤ [Cliente] Guardando/Actualizando cliente en Firebase inmediatamente...");
         try {
           await setDoc(doc(db, "clientes", customer.numeroIdentificacion), {
             ...customer,
             fechaTransaccion: new Date().toISOString()
           }, { merge: true });
-          console.log("✅ Cliente guardado/actualizado con éxito en la colección 'clientes'.");
+          console.log("â Cliente guardado/actualizado con Ã©xito en la colecciÃ³n 'clientes'.");
         } catch (err) {
-          console.error("❌ Error guardando cliente:", err);
+          console.error("â Error guardando cliente:", err);
         }
       }
 
-      // 1. Enviar petición a nuestro backend interno (Centralizado para SRI, Notas de Venta y Stock)
-      console.log(`🚀 Enviando petición de Facturación Electrónica al backend SRI...`);
+      const normalizedCart = getNormalizedCartItems(cart);
+
+      let recipientId = null;
+      let recipientName = null;
+      let recipientType = null;
+
+      if (paymentMethod === 'TRANSFERENCIA') {
+        recipientId = transferRecipientId || 'edgar';
+        recipientName = transferRecipient || 'Edgar';
+        recipientType = 'OWNER';
+      } else if (paymentMethod === 'MIXTO' && paymentDetails?.payments) {
+        const trPayment = paymentDetails.payments.find(p => p.method === 'TRANSFERENCIA');
+        if (trPayment) {
+          recipientId = trPayment.recipientId || 'edgar';
+          recipientName = trPayment.recipientName || 'Edgar';
+          recipientType = 'OWNER';
+        }
+      }
+
+      // 1. Enviar peticiÃ³n a nuestro backend interno (Centralizado para SRI, Notas de Venta y Stock)
+      console.log(`ð Enviando peticiÃ³n de FacturaciÃ³n ElectrÃ³nica al backend SRI...`);
       const { getAuth } = await import('firebase/auth');
       const auth = getAuth();
       const idToken = await auth.currentUser.getIdToken();
@@ -1031,7 +1120,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
           'Authorization': `Bearer ${idToken}`
         },
         body: JSON.stringify({ 
-          productos: cart, 
+          productos: normalizedCart, 
           cliente: customer, 
           emisorId: issuerData.id,
           formaPago: paymentMethod === 'EFECTIVO' ? '01' : '20', // 01=Efectivo, 20=Otros con sistema financiero
@@ -1042,8 +1131,11 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
           vatIncluded,
           isNotaVenta: false,
           paymentMethod,
-          transferRecipient,
-          transferRecipientId,
+          paymentRecipientId: recipientId,
+          paymentRecipientName: recipientName,
+          paymentRecipientType: recipientType,
+          transferRecipient: recipientName,
+          transferRecipientId: recipientId,
           transferBank,
           transferReference,
           paymentDetails
@@ -1056,7 +1148,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       try {
         sriData = JSON.parse(textResponse);
       } catch (e) {
-        throw new Error(`Código de Error HTTP ${response.status}\n\nRespuesta del Servidor:\n${textResponse.substring(0, 500)}`);
+        throw new Error(`CÃ³digo de Error HTTP ${response.status}\n\nRespuesta del Servidor:\n${textResponse.substring(0, 500)}`);
       }
       
       const claveAcceso = sriData.claveAcceso || `FALLBACK-${Date.now()}`;
@@ -1072,8 +1164,8 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       }
 
       if (estadoFactura === 'PENDIENTE_ENVIO' || estadoFactura === 'CONTINGENCIA_LOCAL') {
-        const motivoReal = sriData.error || sriData.informacionAdicional || sriData.mensajeRespuesta || 'No se recibió respuesta del Web Service del SRI';
-        alert(`⚠️ Estado SRI: PENDIENTE_ENVIO (HTTP ${response.status})\n\nURL SRI: https://cel.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl\nAmbiente: PRODUCCIÓN (2)\n\nMotivo Real del Fallo:\n${motivoReal}\n\nClave de Acceso: ${claveAcceso}\n\nPuedes reintentar el envío desde la pestaña "Facturas SRI / Contingencia".`);
+        const motivoReal = sriData.error || sriData.informacionAdicional || sriData.mensajeRespuesta || 'No se recibiÃ³ respuesta del Web Service del SRI';
+        alert(`â ï¸ Estado SRI: PENDIENTE_ENVIO (HTTP ${response.status})\n\nURL SRI: https://cel.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl\nAmbiente: PRODUCCIÃN (2)\n\nMotivo Real del Fallo:\n${motivoReal}\n\nClave de Acceso: ${claveAcceso}\n\nPuedes reintentar el envÃ­o desde la pestaÃ±a "Facturas SRI / Contingencia".`);
       } else if (estadoFactura === 'DEVUELTA' || estadoFactura === 'NO_AUTORIZADO' || estadoFactura === 'RECHAZADA') {
         const msgs = Array.isArray(sriData.mensajes) && sriData.mensajes.length > 0 
           ? `\nDetalles: ` + sriData.mensajes.map(m => `[${m.identificador}] ${m.mensaje} - ${m.informacionAdicional}`).join(' | ')
@@ -1087,16 +1179,16 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
           const iminMod = await import('../../utils/iminPrinter');
           const isPrinted = await iminMod.printTicketImin(issuerData, cart, totalsData, customer, claveAcceso, paymentMethod, isNotaVenta, paymentDetails);
           if (!isPrinted) {
-            alert("⚠️ Impresión nativa iMin no completada. La factura electrónica fue procesada correctamente.");
+            alert("â ï¸ ImpresiÃ³n nativa iMin no completada. La factura electrÃ³nica fue procesada correctamente.");
           }
         } catch (e) {
-          alert("❌ Error llamando a servicio de impresión iMin:\n" + (e.message || String(e)));
+          alert("â Error llamando a servicio de impresiÃ³n iMin:\n" + (e.message || String(e)));
         }
       } else {
-        console.log("🖨️ [RIDE] Impresión física omitida por el operador.");
+        console.log("ð¨ï¸ [RIDE] ImpresiÃ³n fÃ­sica omitida por el operador.");
       }
 
-      alert(`Venta guardada exitosamente por ${issuerData.name}\n${withPrint ? 'Ticket enviado a la impresora.' : 'Sin impresión física.'}`);
+      alert(`Venta guardada exitosamente por ${issuerData.name}\n${withPrint ? 'Ticket enviado a la impresora.' : 'Sin impresiÃ³n fÃ­sica.'}`);
       
       // Ping a la pantalla secundaria
       const paidPayload = { status: 'paid', total, paymentMethod };
@@ -1112,7 +1204,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         } catch(e){}
       }
 
-      // 5. Limpiar carrito y resetear form con retraso para asegurar impresión térmica
+      // 5. Limpiar carrito y resetear form con retraso para asegurar impresiÃ³n tÃ©rmica
       setTimeout(() => {
         setCart([]);
         setPaymentMethod('EFECTIVO');
@@ -1132,13 +1224,13 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         setIsSearchingClient(false);
       }, 500);
     } catch (error) {
-      alert(`⚠️ Ocurrió un error en el pago: ${error.message}`);
+      alert(`â ï¸ OcurriÃ³ un error en el pago: ${error.message}`);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // Inline styling estético para los inputs
+  // Inline styling estÃ©tico para los inputs
   const inputStyle = {
     background: 'transparent',
     border: 'none',
@@ -1164,7 +1256,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       {/* LEFT: PRODUCTS GRID */}
       <div className="products-section glass-panel">
         <div className="header" style={{ alignItems: 'center' }}>
-          <h2><Shirt className="inline" style={{verticalAlign: 'bottom'}}/> Catálogo Compartido</h2>
+          <h2><Shirt className="inline" style={{verticalAlign: 'bottom'}}/> CatÃ¡logo Compartido</h2>
           
           <div className="issuer-selector" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(0,0,0,0.2)', padding: '0.35rem 0.75rem', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
             <UserCircle size={18} style={{color: 'var(--text-muted)'}} />
@@ -1193,7 +1285,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
             <Search size={18} style={{ position: 'absolute', left: '12px', color: 'var(--text-muted)' }} />
             <input
               type="text"
-              placeholder="Buscar producto por nombre, categoría o código..."
+              placeholder="Buscar producto por nombre, categorÃ­a o cÃ³digo..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{
@@ -1235,10 +1327,10 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
             const nombreLower = (prod.nombre || prod.name || '').trim().toLowerCase();
             const catLower = (prod.categoria || '').trim().toLowerCase();
             
-            // 1. Resolver tipo de prenda de forma dinámica (Priorizar campo tipoPrenda si existe en DB)
+            // 1. Resolver tipo de prenda de forma dinÃ¡mica (Priorizar campo tipoPrenda si existe en DB)
             let tipo = (prod.tipoPrenda || prod.tipo_prenda || '').trim();
             
-            // Fallback: Autodetectar tipo de prenda a partir del nombre o categoría para compatibilidad
+            // Fallback: Autodetectar tipo de prenda a partir del nombre o categorÃ­a para compatibilidad
             if (!tipo) {
               if (nombreLower.includes('baggy')) {
                 tipo = 'Jean Baggy';
@@ -1248,8 +1340,8 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                 tipo = 'Jean Slim';
               } else if (nombreLower.includes('recto')) {
                 tipo = 'Jean Recto';
-              } else if (nombreLower.includes('tactico') || nombreLower.includes('táctico') || nombreLower.includes('tactical')) {
-                tipo = 'Pantalón Táctico';
+              } else if (nombreLower.includes('tactico') || nombreLower.includes('tÃ¡ctico') || nombreLower.includes('tactical')) {
+                tipo = 'PantalÃ³n TÃ¡ctico';
               } else if (nombreLower.includes('polo')) {
                 tipo = 'Polo';
               } else if (nombreLower.includes('camiseta') && (nombreLower.includes('mujer') || nombreLower.includes('dama'))) {
@@ -1269,7 +1361,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
               } else if (nombreLower.includes('jogger')) {
                 tipo = 'Jogger';
               } else if (nombreLower.includes('cargo')) {
-                tipo = 'Pantalón Cargo';
+                tipo = 'PantalÃ³n Cargo';
               } else if (nombreLower.includes('short')) {
                 tipo = 'Short';
               } else if (nombreLower.includes('bermuda')) {
@@ -1288,9 +1380,9 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                 tipo = 'Falda';
               } else if (nombreLower.includes('vestido')) {
                 tipo = 'Vestido';
-              } else if (nombreLower.includes('niño') || nombreLower.includes('nino')) {
-                tipo = 'Jean Niño';
-              } else if (nombreLower.includes('jean') || nombreLower.includes('pantalon') || nombreLower.includes('pantalón')) {
+              } else if (nombreLower.includes('niÃ±o') || nombreLower.includes('nino')) {
+                tipo = 'Jean NiÃ±o';
+              } else if (nombreLower.includes('jean') || nombreLower.includes('pantalon') || nombreLower.includes('pantalÃ³n')) {
                 tipo = 'Jean Recto';
               } else {
                 if (catLower.includes('jean') || catLower.includes('pantal')) {
@@ -1323,9 +1415,9 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
             let badgeBg = 'rgba(16, 185, 129, 0.15)';
             let badgeColor = '#34d399';
 
-            if (tipoLower.includes('jean') || tipoLower.includes('pantalón') || tipoLower.includes('pantalon')) {
+            if (tipoLower.includes('jean') || tipoLower.includes('pantalÃ³n') || tipoLower.includes('pantalon')) {
               badgeBg = 'rgba(59, 130, 246, 0.15)'; badgeColor = '#60a5fa';
-            } else if (tipoLower.includes('tactico') || tipoLower.includes('táctico') || tipoLower.includes('tactical')) {
+            } else if (tipoLower.includes('tactico') || tipoLower.includes('tÃ¡ctico') || tipoLower.includes('tactical')) {
               label = 'TACTICAL'; badgeBg = 'rgba(16, 185, 129, 0.2)'; badgeColor = '#10b981';
             } else if (tipoLower.includes('cargo')) {
               label = 'CARGO'; badgeBg = 'rgba(59, 130, 246, 0.15)'; badgeColor = '#60a5fa';
@@ -1361,7 +1453,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
               label = 'VESTIDO'; badgeBg = 'rgba(236, 72, 153, 0.15)'; badgeColor = '#f472b6';
             }
 
-            // 3. Resolución de Imagen con getProductImageUrl y fallback onError
+            // 3. ResoluciÃ³n de Imagen con getProductImageUrl y fallback onError
             const activeImage = getProductImageUrl(prod);
 
             return (
@@ -1411,7 +1503,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                   outline: 'none'
                 }}
               >
-                📄 FACTURA
+                ð FACTURA
               </button>
               <button 
                 onClick={() => selectDocumentType('NOTA_DE_VENTA')}
@@ -1432,7 +1524,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                   outline: 'none'
                 }}
               >
-                🧾 NOTA DE VENTA
+                ð§¾ NOTA DE VENTA
               </button>
             </div>
           </div>
@@ -1442,7 +1534,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
           <div className="cart-items" style={{ flex: '1 1 40%' }}>
             {cart.length === 0 && (
               <div style={{textAlign: 'center', color: 'var(--text-muted)', marginTop: '2rem'}}>
-                El carrito está vacío
+                El carrito estÃ¡ vacÃ­o
               </div>
             )}
             {cart.map(item => (
@@ -1503,9 +1595,9 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                   marginBottom: '0.75rem',
                   padding: '6px 10px',
                   borderRadius: '6px',
-                  background: clientNoticeMessage.includes('No se encontraron') ? 'rgba(245, 158, 11, 0.12)' : (clientNoticeMessage.includes('⚠️') ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)'),
-                  color: clientNoticeMessage.includes('No se encontraron') ? '#f59e0b' : (clientNoticeMessage.includes('⚠️') ? '#f87171' : '#10b981'),
-                  border: `1px solid ${clientNoticeMessage.includes('No se encontraron') ? 'rgba(245, 158, 11, 0.3)' : (clientNoticeMessage.includes('⚠️') ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)')}`,
+                  background: clientNoticeMessage.includes('No se encontraron') ? 'rgba(245, 158, 11, 0.12)' : (clientNoticeMessage.includes('â ï¸') ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)'),
+                  color: clientNoticeMessage.includes('No se encontraron') ? '#f59e0b' : (clientNoticeMessage.includes('â ï¸') ? '#f87171' : '#10b981'),
+                  border: `1px solid ${clientNoticeMessage.includes('No se encontraron') ? 'rgba(245, 158, 11, 0.3)' : (clientNoticeMessage.includes('â ï¸') ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)')}`,
                   fontWeight: '500'
                 }}>
                   {clientNoticeMessage}
@@ -1518,7 +1610,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                     value={customer.tipoDocumento} 
                     onChange={handleDocumentTypeChange}
                   >
-                    <option className="bg-[#0f172a] text-white font-medium" value="CEDULA">Cédula</option>
+                    <option className="bg-[#0f172a] text-white font-medium" value="CEDULA">CÃ©dula</option>
                     <option className="bg-[#0f172a] text-white font-medium" value="RUC">RUC</option>
                     <option className="bg-[#0f172a] text-white font-medium" value="PASAPORTE">Pasaporte</option>
                     <option className="bg-[#0f172a] text-white font-medium" value="CONSUMIDOR_FINAL">Consumidor Final</option>
@@ -1529,7 +1621,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                   <input 
                     type="text" 
                     name="numeroIdentificacion" 
-                    placeholder="Nro. Identificación" 
+                    placeholder="Nro. IdentificaciÃ³n" 
                     value={customer.numeroIdentificacion} 
                     onChange={handleCustomerChange}
                     onBlur={manejarBuscarCliente}
@@ -1552,7 +1644,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                   <input 
                     type="text" 
                     name="nombre" 
-                    placeholder="Razón Social / Nombres" 
+                    placeholder="RazÃ³n Social / Nombres" 
                     value={customer.nombre} 
                     onChange={handleCustomerChange} 
                     readOnly={false}
@@ -1565,7 +1657,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                   <input 
                     type="email" 
                     name="correo" 
-                    placeholder="Correo Electrónico" 
+                    placeholder="Correo ElectrÃ³nico" 
                     value={customer.correo} 
                     onChange={handleCustomerChange} 
                     readOnly={false}
@@ -1580,7 +1672,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                   <input 
                     type="text" 
                     name="direccion" 
-                    placeholder="Dirección Completa" 
+                    placeholder="DirecciÃ³n Completa" 
                     value={customer.direccion} 
                     onChange={handleCustomerChange} 
                     readOnly={false}
@@ -1593,7 +1685,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                   <input 
                     type="tel" 
                     name="telefono" 
-                    placeholder="Teléfono (Opcional)" 
+                    placeholder="TelÃ©fono (Opcional)" 
                     value={customer.telefono} 
                     onChange={handleCustomerChange} 
                     readOnly={false}
@@ -1607,7 +1699,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
 
             {/* SWITCH IVA */}
             <div className="vat-switch-container">
-              <span>{vatIncluded ? 'IVA Incluido (15%)' : 'Más IVA (+15%)'}</span>
+              <span>{vatIncluded ? 'IVA Incluido (15%)' : 'MÃ¡s IVA (+15%)'}</span>
               <label className="switch">
                 <input 
                   type="checkbox" 
@@ -1618,9 +1710,9 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
               </label>
             </div>
 
-            {/* --- SECCIÓN DE MÉTODOS DE PAGO --- */}
+            {/* --- SECCIÃN DE MÃTODOS DE PAGO --- */}
             {!isMixedPayment ? (
-              /* MODO NORMAL (PAGO ÚNICO) */
+              /* MODO NORMAL (PAGO ÃNICO) */
               <>
                 <div style={{ padding: '0.5rem 0', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                   <button 
@@ -1637,7 +1729,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                       cursor: 'pointer'
                     }}
                   >
-                    💵 Efectivo
+                    ðµ Efectivo
                   </button>
                   <button 
                     type="button"
@@ -1653,16 +1745,16 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                       cursor: 'pointer'
                     }}
                   >
-                    🏦 Transferencia
+                    ð¦ Transferencia
                   </button>
                 </div>
 
                 {paymentMethod === 'TRANSFERENCIA' && (
                   <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--panel-border)', display: 'flex', flexDirection: 'column', gap: '8px', color: 'white' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Cuenta que recibió la transferencia *</label>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Cuenta que recibiÃ³ la transferencia *</label>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '3px' }}>
-                        {['Diana', 'Fabian', 'Edgar', 'Amparito'].map((name) => (
+                        {['Fabian', 'Edgar', 'Amparito'].map((name) => (
                           <button
                             type="button"
                             key={name}
@@ -1713,7 +1805,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                   </div>
                 )}
 
-                {/* BOTÓN MODO PAGO MIXTO */}
+                {/* BOTÃN MODO PAGO MIXTO */}
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', marginBottom: '0.75rem' }}>
                   <button 
                     type="button"
@@ -1736,7 +1828,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                       whiteSpace: 'nowrap'
                     }}
                   >
-                    ➕ Añadir Pago Mixto
+                    â AÃ±adir Pago Mixto
                   </button>
                 </div>
               </>
@@ -1744,13 +1836,13 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
               /* MODO PAGO MIXTO */
               <>
                 <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '8px', padding: '0.55rem 0.75rem', marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 'bold', color: '#60a5fa' }}>🔀 Modo Pago Mixto</span>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 'bold', color: '#60a5fa' }}>ð Modo Pago Mixto</span>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{paymentsList.length} formas distribuidas</span>
                 </div>
 
-                {/* El botón de Nota de Venta fue movido al encabezado del Carrito */}
+                {/* El botÃ³n de Nota de Venta fue movido al encabezado del Carrito */}
 
-                {/* SECCIÓN DINÁMICA DE LÍNEAS DE PAGO */}
+                {/* SECCIÃN DINÃMICA DE LÃNEAS DE PAGO */}
                 <div style={{ marginBottom: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                   {paymentsList.map((payment) => (
                     <div 
@@ -1766,7 +1858,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        {/* Selector de Método: EFECTIVO, TRANSFERENCIA, CHEQUE */}
+                        {/* Selector de MÃ©todo: EFECTIVO, TRANSFERENCIA, CHEQUE */}
                         <select
                           value={payment.method}
                           onChange={(e) => handleUpdatePaymentLine(payment.id, 'method', e.target.value)}
@@ -1781,9 +1873,9 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                             fontWeight: '600'
                           }}
                         >
-                          <option value="EFECTIVO">💵 Efectivo</option>
-                          <option value="TRANSFERENCIA">🏦 Transferencia</option>
-                          <option value="CHEQUE">📜 Cheque</option>
+                          <option value="EFECTIVO">ðµ Efectivo</option>
+                          <option value="TRANSFERENCIA">ð¦ Transferencia</option>
+                          <option value="CHEQUE">ð Cheque</option>
                         </select>
 
                         {/* Input de Valor */}
@@ -1811,7 +1903,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                           />
                         </div>
 
-                        {/* Botón Eliminar Fila */}
+                        {/* BotÃ³n Eliminar Fila */}
                         {paymentsList.length > 1 && (
                           <button
                             type="button"
@@ -1840,7 +1932,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                           <div>
                             <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Cuenta destino *</label>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '4px' }}>
-                              {['Diana', 'Fabian', 'Edgar', 'Amparito'].map((name) => (
+                              {['Fabian', 'Edgar', 'Amparito'].map((name) => (
                                 <button
                                   type="button"
                                   key={name}
@@ -1925,7 +2017,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                       gap: '0.35rem'
                     }}
                   >
-                    ➕ Otra forma
+                    â Otra forma
                   </button>
                   <button
                     type="button"
@@ -1946,7 +2038,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                       gap: '0.35rem'
                     }}
                   >
-                    ❌ Cancelar pago mixto
+                    â Cancelar pago mixto
                   </button>
                 </div>
 
@@ -1981,8 +2073,8 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                   {!isPaymentValid && cart.length > 0 && (
                     <div style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '6px', textAlign: 'center', fontWeight: '500' }}>
                       {saldoPendiente > 0 
-                        ? `⚠️ Falta distribuir $${saldoPendiente.toFixed(2)} en las formas de pago.` 
-                        : `⚠️ El monto pagado excede el total por $${Math.abs(saldoPendiente).toFixed(2)}.`}
+                        ? `â ï¸ Falta distribuir $${saldoPendiente.toFixed(2)} en las formas de pago.` 
+                        : `â ï¸ El monto pagado excede el total por $${Math.abs(saldoPendiente).toFixed(2)}.`}
                     </div>
                   )}
                 </div>
@@ -2052,7 +2144,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
               </button>
             </div>
 
-            {/* BOTÓN CANCELAR VENTA */}
+            {/* BOTÃN CANCELAR VENTA */}
             {cart.length > 0 && (
               <button
                 onClick={handleCancelSale}
@@ -2075,7 +2167,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                   outline: 'none'
                 }}
               >
-                🗑️ Cancelar / Vaciar Venta
+                ðï¸ Cancelar / Vaciar Venta
               </button>
             )}
 
@@ -2092,7 +2184,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
               
               {/* Header del Modal */}
               <div className="modal-header" style={{ padding: '1rem 1.5rem' }}>
-                <span style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>Vista Previa de Impresión</span>
+                <span style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>Vista Previa de ImpresiÃ³n</span>
                 <button onClick={() => setShowPreviewModal(false)} style={{ background: 'transparent', color: 'var(--text-muted)', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
               </div>
 
@@ -2102,12 +2194,12 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                 <div style={{ textAlign: 'center', borderBottom: '1px dashed #94a3b8', paddingBottom: '1rem', marginBottom: '1rem' }}>
                   <h2 style={{ fontSize: '1.2rem', margin: 0, textTransform: 'uppercase', color: '#0f172a' }}>{isNotaVenta ? 'GRAVITY DENIM' : issuerData?.name}</h2>
                   <p style={{ margin: '4px 0', fontSize: '11px', color: '#334155' }}>RUC: {issuerData?.ruc}</p>
-                  <p style={{ margin: '4px 0', fontSize: '11px', color: '#334155' }}>Matriz: {issuerData?.direccionMatriz || 'Dirección Matriz'}</p>
+                  <p style={{ margin: '4px 0', fontSize: '11px', color: '#334155' }}>Matriz: {issuerData?.direccionMatriz || 'DirecciÃ³n Matriz'}</p>
                   {!isNotaVenta && <p style={{ margin: '4px 0', fontSize: '11px', color: '#334155' }}>OBLIGADO CONTABILIDAD: {issuerData?.obligadoContabilidad ? 'SI' : 'NO'}</p>}
                   
                   <div style={{ margin: '10px 0', borderTop: '1px dashed #cbd5e1', borderBottom: '1px dashed #cbd5e1', padding: '6px 0' }}>
                     <div style={{ fontWeight: 'bold', fontSize: '13px', color: '#0f172a' }}>
-                      Documento: {isNotaVenta ? 'NOTA DE VENTA' : 'FACTURA ELECTRÓNICA'}
+                      Documento: {isNotaVenta ? 'NOTA DE VENTA' : 'FACTURA ELECTRÃNICA'}
                     </div>
                     {isNotaVenta && (
                       <div style={{ fontSize: '10px', color: '#b91c1c', fontWeight: 'bold', border: '1px dashed #ef4444', padding: '4px', marginTop: '4px', background: '#fef2f2' }}>
@@ -2118,14 +2210,14 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                       <div style={{ fontSize: '11px', color: '#0f172a', fontWeight: 'bold', marginTop: '4px' }}>
                         No. {proximoNumeroComprobanteSRI}<br/>
                         <span style={{ fontSize: '9px', color: '#10b981', background: '#ecfdf5', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', marginTop: '3px' }}>
-                          🔒 Secuencial reservado en tiempo real (Firestore)
+                          ð Secuencial reservado en tiempo real (Firestore)
                         </span>
                       </div>
                     ) : (
                       <div style={{ fontSize: '11px', color: '#0f172a', fontWeight: 'bold', marginTop: '4px' }}>
                         No. {proximoNumeroComprobanteNV}<br/>
                         <span style={{ fontSize: '9px', color: '#10b981', background: '#ecfdf5', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', marginTop: '3px' }}>
-                          🔒 Secuencial reservado en tiempo real (Firestore)
+                          ð Secuencial reservado en tiempo real (Firestore)
                         </span>
                       </div>
                     )}
@@ -2167,18 +2259,18 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                       <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}><span>IVA (15%):</span> <span>${ivaAmount.toFixed(2)}</span></div>
                     </>
                   )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '11px', fontWeight: 'bold' }}><span>MÉTODO DE PAGO:</span> <span>{paymentMethod}</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '11px', fontWeight: 'bold' }}><span>MÃTODO DE PAGO:</span> <span>{paymentMethod}</span></div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.2rem', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #0f172a' }}>
                     <span>TOTAL:</span> <span>${total.toFixed(2)}</span>
                   </div>
                 </div>
 
                 <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '10px', color: '#64748b' }}>
-                  <p>-- Vista previa antes de transmisión --</p>
+                  <p>-- Vista previa antes de transmisiÃ³n --</p>
                 </div>
               </div>
 
-              {/* Botones de Acción Formateados */}
+              {/* Botones de AcciÃ³n Formateados */}
               <div className="modal-footer" style={{ padding: '1rem 1.5rem', display: 'flex', gap: '1rem', background: 'var(--panel-bg)' }}>
                 <button 
                   onClick={() => setShowPreviewModal(false)}
@@ -2213,7 +2305,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
             <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
               {isNotaVenta 
                 ? 'Guardando comprobante de venta interna y actualizando inventario local...' 
-                : 'Firmando el comprobante electrónico y comunicando con el SRI.'}
+                : 'Firmando el comprobante electrÃ³nico y comunicando con el SRI.'}
               <br/>
               <span style={{ fontSize: '0.8rem', fontStyle: 'italic', marginTop: '0.5rem', display: 'block', color: 'var(--accent)' }}>
                 Por favor, espere unos segundos...
