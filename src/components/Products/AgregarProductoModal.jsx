@@ -29,7 +29,7 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
         const { getDoc, doc } = await import('firebase/firestore');
         const { db } = await import('../../firebase/config');
         const snap = await getDoc(doc(db, 'settings', 'owners'));
-        let list = ['Edgar', 'Amparito', 'FabiÃ¡n'];
+        let list = ['Edgar', 'Amparito', 'Fabián'];
         if (snap.exists() && Array.isArray(snap.data().list)) {
           list = snap.data().list;
         }
@@ -61,7 +61,7 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
     fetchManifest();
   }, []);
 
-  // Carga datos para ediciÃ³n
+  // Carga datos para edición
   useEffect(() => {
     if (initialData) {
       setFormData({
@@ -103,7 +103,7 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
     item.category.toLowerCase().includes(galleryFilter.toLowerCase())
   );
 
-  // Agrupar por categorÃ­a para la galerÃ­a
+  // Agrupar por categoría para la galería
   const byCategory = filteredIllustrations.reduce((acc, item) => {
     if (!acc[item.category]) acc[item.category] = [];
     acc[item.category].push(item);
@@ -127,7 +127,7 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
           <div className="modal-body">
 
             <div className="form-group">
-              <label>CÃ³digo de Barras / SKU</label>
+              <label>Código de Barras / SKU</label>
               <input
                 type="text"
                 name="codigoBarras"
@@ -178,7 +178,7 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div className="form-group">
-                <label>CategorÃ­a</label>
+                <label>Categoría</label>
                 <select name="categoria" value={formData.categoria || 'Jeans'} onChange={handleChange}>
                   <option value="Jeans">Jeans</option>
                   <option value="Camisas">Camisas</option>
@@ -207,7 +207,7 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
             </div>
 
             <div className="form-group">
-              <label>URL de FotografÃ­a Real (opcional)</label>
+              <label>URL de Fotografía Real (opcional)</label>
               <input
                 type="url"
                 name="urlImagen"
@@ -218,12 +218,12 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
               {formData.urlImagen && (
                 <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <img src={formData.urlImagen} alt="preview" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--panel-border)' }} onError={e => { e.target.style.display = 'none'; }} />
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Prioridad 1 â La foto real siempre se muestra primero</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Prioridad 1 — La foto real siempre se muestra primero</span>
                 </div>
               )}
             </div>
 
-            {/* ââ SELECTOR DE RENDER 3D ââ */}
+            {/* ── SELECTOR DE RENDER 3D ── */}
             <div
               className="form-group"
               style={{
@@ -243,7 +243,7 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
                     onClick={() => setFormData(prev => ({ ...prev, ilustracion3d: '' }))}
                     style={{ background: 'none', border: 'none', color: 'var(--danger)', fontSize: '0.75rem', cursor: 'pointer' }}
                   >
-                    â Quitar selecciÃ³n
+                    ✕ Quitar selección
                   </button>
                 )}
               </label>
@@ -270,13 +270,13 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
                       />
                       <div>
                         <div style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-main)' }}>{selectedItem.name}</div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--accent)', marginTop: '2px' }}>{selectedItem.category} Â· ID: {selectedItem.id}</div>
-                        <div style={{ fontSize: '0.65rem', color: 'var(--success)', marginTop: '2px' }}>â SelecciÃ³n manual â prioridad 2</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--accent)', marginTop: '2px' }}>{selectedItem.category} · ID: {selectedItem.id}</div>
+                        <div style={{ fontSize: '0.65rem', color: 'var(--success)', marginTop: '2px' }}>✓ Selección manual — prioridad 2</div>
                       </div>
                     </>
                   ) : (
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', width: '100%' }}>
-                      Sin render 3D seleccionado â se usarÃ¡ fallback automÃ¡tico por nombre
+                      Sin render 3D seleccionado — se usará fallback automático por nombre
                     </span>
                   )}
                 </div>
@@ -293,7 +293,7 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
               </div>
 
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-                <strong>Prioridad:</strong> 1. FotografÃ­a real Â· 2. Render 3D elegido manualmente Â· 3. Render automÃ¡tico por nombre Â· 4. Imagen genÃ©rica
+                <strong>Prioridad:</strong> 1. Fotografía real · 2. Render 3D elegido manualmente · 3. Render automático por nombre · 4. Imagen genérica
               </div>
             </div>
 
@@ -316,7 +316,7 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
         </form>
       </div>
 
-      {/* ââ GALERÃA DE RENDERS 3D (modal interno) ââ */}
+      {/* ── GALERÍA DE RENDERS 3D (modal interno) ── */}
       {showGallery && (
         <div
           style={{
@@ -344,18 +344,18 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
             }}
             onClick={e => e.stopPropagation()}
           >
-            {/* Header galerÃ­a */}
+            {/* Header galería */}
             <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--panel-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
               <div>
                 <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-main)', fontWeight: 'bold' }}>
-                  ð¨ Biblioteca de Renders 3D
+                  🎨 Biblioteca de Renders 3D
                 </h4>
                 <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                  {illustrations.length} prendas disponibles Â· Renders fotorrealistas de catÃ¡logo
+                  {illustrations.length} prendas disponibles · Renders fotorrealistas de catálogo
                 </p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                {/* BÃºsqueda */}
+                {/* Búsqueda */}
                 <div style={{ position: 'relative' }}>
                   <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                   <input
@@ -385,7 +385,7 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
               </div>
             </div>
 
-            {/* Grid de renders agrupado por categorÃ­a */}
+            {/* Grid de renders agrupado por categoría */}
             <div style={{ overflowY: 'auto', padding: '1rem 1.25rem', flex: 1 }}>
               {Object.entries(byCategory).map(([cat, items]) => (
                 <div key={cat} style={{ marginBottom: '1.25rem' }}>
@@ -435,7 +435,7 @@ export default function AgregarProductoModal({ onClose, onSave, initialData }) {
                               borderRadius: '50%', width: 18, height: 18,
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                               fontSize: '10px', fontWeight: 'bold'
-                            }}>â</div>
+                            }}>✓</div>
                           )}
                           <img
                             src={item.path}

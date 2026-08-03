@@ -5,7 +5,7 @@ import { collection, onSnapshot, doc, setDoc, getDoc, updateDoc } from 'firebase
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 
 export default function ConfiguracionGeneral() {
-  // --- PREFERENCIAS DE IMPRESIÃN ---
+  // --- PREFERENCIAS DE IMPRESIÓN ---
   const [printFormat, setPrintFormat] = useState('80mm');
   const [printMethod, setPrintMethod] = useState('sistema');
   const [showPassword, setShowPassword] = useState(false);
@@ -62,9 +62,9 @@ export default function ConfiguracionGeneral() {
     try {
       const { printer58Service } = await import('../../lib/Printer58Service');
       await printer58Service.printTest();
-      alert("â Comando de prueba enviado a la CRM-03.");
+      alert("✅ Comando de prueba enviado a la CRM-03.");
     } catch (e) {
-      alert(`â Error al imprimir prueba 58mm:\n${e.message}`);
+      alert(`❌ Error al imprimir prueba 58mm:\n${e.message}`);
     }
   };
 
@@ -75,7 +75,7 @@ export default function ConfiguracionGeneral() {
   const [csShowTotal, setCsShowTotal] = useState(true);
   const [csShowQR, setCsShowQR] = useState(true);
   const [iminSwanEnabled, setIminSwanEnabled] = useState(false);
-  const [deviceModel, setDeviceModel] = useState('Navegador GenÃ©rico');
+  const [deviceModel, setDeviceModel] = useState('Navegador Genérico');
 
   useEffect(() => {
     const savedEnabled = localStorage.getItem('csEnabled');
@@ -94,7 +94,7 @@ export default function ConfiguracionGeneral() {
 
     if (typeof navigator !== 'undefined' && navigator.userAgent) {
       const ua = navigator.userAgent;
-      let detected = 'Navegador GenÃ©rico';
+      let detected = 'Navegador Genérico';
       const match = ua.match(/Android\s+[^;]+;\s+([^;)]+)\)/);
       if (match && match[1]) {
         const rawModel = match[1].trim();
@@ -129,7 +129,7 @@ export default function ConfiguracionGeneral() {
     }
   };
 
-  // --- CÃDIGOS QR DE TRANSFERENCIAS ---
+  // --- CÓDIGOS QR DE TRANSFERENCIAS ---
   const [transferQrs, setTransferQrs] = useState({
     Edgar: null,
     Amparito: null,
@@ -152,8 +152,8 @@ export default function ConfiguracionGeneral() {
     return () => unsub();
   }, []);
 
-  // --- GESTIÃN DE PROPIETARIOS DE MERCADERÃA ---
-  const [ownersList, setOwnersList] = useState(['Edgar', 'Amparito', 'FabiÃ¡n']);
+  // --- GESTIÓN DE PROPIETARIOS DE MERCADERÍA ---
+  const [ownersList, setOwnersList] = useState(['Edgar', 'Amparito', 'Fabián']);
   const [newOwnerName, setNewOwnerName] = useState('');
 
   useEffect(() => {
@@ -161,7 +161,7 @@ export default function ConfiguracionGeneral() {
       if (docSnap.exists() && Array.isArray(docSnap.data().list)) {
         setOwnersList(docSnap.data().list);
       } else {
-        setDoc(doc(db, 'settings', 'owners'), { list: ['Edgar', 'Amparito', 'FabiÃ¡n'] }, { merge: true });
+        setDoc(doc(db, 'settings', 'owners'), { list: ['Edgar', 'Amparito', 'Fabián'] }, { merge: true });
       }
     });
     return () => unsub();
@@ -178,7 +178,7 @@ export default function ConfiguracionGeneral() {
     try {
       await setDoc(doc(db, 'settings', 'owners'), { list: updated }, { merge: true });
       setNewOwnerName('');
-      alert("Propietario agregado con Ã©xito.");
+      alert("Propietario agregado con éxito.");
     } catch (e) {
       console.error(e);
       alert("Error al agregar propietario.");
@@ -186,7 +186,7 @@ export default function ConfiguracionGeneral() {
   };
 
   const handleRemoveOwner = async (name) => {
-    if (!window.confirm(`Â¿EstÃ¡s seguro de eliminar a ${name} de los propietarios?`)) return;
+    if (!window.confirm(`¿Estás seguro de eliminar a ${name} de los propietarios?`)) return;
     const updated = ownersList.filter(o => o !== name);
     try {
       await setDoc(doc(db, 'settings', 'owners'), { list: updated }, { merge: true });
@@ -204,7 +204,7 @@ export default function ConfiguracionGeneral() {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert("Por favor selecciona una imagen vÃ¡lida.");
+      alert("Por favor selecciona una imagen válida.");
       return;
     }
 
@@ -218,7 +218,7 @@ export default function ConfiguracionGeneral() {
             [person]: base64data
           }, { merge: true });
           setUploadingQRFor(null);
-          alert(`QR de ${person} guardado con Ã©xito.`);
+          alert(`QR de ${person} guardado con éxito.`);
         } catch (dbErr) {
           console.error("Error guardando QR en Firestore:", dbErr);
           alert("Error guardando el QR en la base de datos.");
@@ -238,7 +238,7 @@ export default function ConfiguracionGeneral() {
   };
 
   const handleQRRemove = async (person) => {
-    if (!window.confirm(`Â¿EstÃ¡s seguro de eliminar el QR de ${person}?`)) return;
+    if (!window.confirm(`¿Estás seguro de eliminar el QR de ${person}?`)) return;
     
     try {
       await setDoc(doc(db, 'settings', 'transfer_qrs'), {
@@ -283,12 +283,12 @@ export default function ConfiguracionGeneral() {
     return () => unsub();
   }, []);
 
-  // --- SINCRONIZAR SELECCIÃN Y DATOS ---
+  // --- SINCRONIZAR SELECCIÓN Y DATOS ---
   useEffect(() => {
     if (emisoresDB.length > 0 && !loading) {
       let currentSelection = selectedIssuer;
       
-      // Auto-selecciÃ³n si estÃ¡ vacÃ­o o si el ID guardado no existe en Firestore
+      // Auto-selección si está vacío o si el ID guardado no existe en Firestore
       if (!currentSelection || !emisoresDB.some(i => i.id === currentSelection)) {
         currentSelection = emisoresDB[0].id;
         setSelectedIssuer(currentSelection);
@@ -374,12 +374,12 @@ export default function ConfiguracionGeneral() {
         fileName: file.name
       }));
     } else {
-      alert("Por favor, selecciona un archivo vÃ¡lido con extensiÃ³n .p12");
+      alert("Por favor, selecciona un archivo válido con extensión .p12");
       e.target.value = '';
     }
   };
 
-  // --- UPLOAD A LA BÃVEDA EN EL BACKEND ---
+  // --- UPLOAD A LA BÓVEDA EN EL BACKEND ---
   const uploadToVault = async (file, password) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -430,16 +430,16 @@ export default function ConfiguracionGeneral() {
     try {
       let p12DownloadUrl = "";
 
-      // 1. Subir archivo .p12 a la bÃ³veda (si se seleccionÃ³ uno nuevo)
+      // 1. Subir archivo .p12 a la bóveda (si se seleccionó uno nuevo)
       if (formData.file) {
-        console.log(`ð¤ [Seguridad] Guardando firma ${formData.fileName} en la BÃ³veda...`);
+        console.log(`📤 [Seguridad] Guardando firma ${formData.fileName} en la Bóveda...`);
         setUploadProgress(50);
         await uploadToVault(formData.file, formData.passwordP12);
         setUploadProgress(100);
-        console.log(`â [Seguridad] Firma cifrada en la bÃ³veda correctamente.`);
+        console.log(`✅ [Seguridad] Firma cifrada en la bóveda correctamente.`);
       }
 
-      // 2. Guardar/Actualizar en Firestore en la colecciÃ³n 'issuers'
+      // 2. Guardar/Actualizar en Firestore en la colección 'issuers'
       const existingIssuer = emisoresDB.find(i => i.id === selectedIssuer);
       const estab = (formData.estab || '001').padStart(3, '0');
       const ptoEmi = (formData.ptoEmi || '001').padStart(3, '0');
@@ -471,14 +471,14 @@ export default function ConfiguracionGeneral() {
         }
       };
 
-      console.log(`ð¾ [Firestore] Actualizando perfil fiscal 'issuers/${selectedIssuer}'...`);
+      console.log(`💾 [Firestore] Actualizando perfil fiscal 'issuers/${selectedIssuer}'...`);
       await setDoc(doc(db, 'issuers', selectedIssuer), issuerDocUpdate, { merge: true });
 
-      alert(`â ConfiguraciÃ³n fiscal de ${formData.nombre} guardada exitosamente.`);
+      alert(`✅ Configuración fiscal de ${formData.nombre} guardada exitosamente.`);
       
     } catch (error) {
-      console.error("â Error guardando configuraciÃ³n:", error);
-      alert("Error guardando la configuraciÃ³n.");
+      console.error("❌ Error guardando configuración:", error);
+      alert("Error guardando la configuración.");
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -488,8 +488,8 @@ export default function ConfiguracionGeneral() {
   return (
     <div className="report-container animate-fade-in" style={{ padding: '2rem' }}>
       <div className="header" style={{ marginBottom: '2rem' }}>
-        <h2><ShieldCheck className="inline" style={{verticalAlign: 'bottom'}}/> ConfiguraciÃ³n de Emisores SRI</h2>
-        <span style={{color: 'var(--text-muted)'}}>Firmas ElectrÃ³nicas (.p12) y Perfiles Multi-RUC</span>
+        <h2><ShieldCheck className="inline" style={{verticalAlign: 'bottom'}}/> Configuración de Emisores SRI</h2>
+        <span style={{color: 'var(--text-muted)'}}>Firmas Electrónicas (.p12) y Perfiles Multi-RUC</span>
       </div>
 
       <div style={{ maxWidth: '600px', margin: '0 auto' }}>
@@ -532,13 +532,13 @@ export default function ConfiguracionGeneral() {
                     name="ruc" 
                     value={formData.ruc} 
                     onChange={handleInputChange} 
-                    placeholder="13 dÃ­gitos"
+                    placeholder="13 dígitos"
                     required
                     style={{ width: '100%', padding: '12px', background: 'var(--card-bg)', border: '1px solid var(--panel-border)', borderRadius: '6px', color: 'var(--text-main)', fontSize: '1rem' }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>RazÃ³n Social / Nombre Comercial</label>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Razón Social / Nombre Comercial</label>
                   <input 
                     type="text" 
                     name="nombre" 
@@ -552,7 +552,7 @@ export default function ConfiguracionGeneral() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>DirecciÃ³n Matriz</label>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Dirección Matriz</label>
                   <input 
                     type="text" 
                     name="direccion" 
@@ -564,7 +564,7 @@ export default function ConfiguracionGeneral() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>DirecciÃ³n del Establecimiento</label>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Dirección del Establecimiento</label>
                   <input 
                     type="text" 
                     name="direccionEstablecimiento" 
@@ -577,7 +577,7 @@ export default function ConfiguracionGeneral() {
               </div>
 
               <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Correo ElectrÃ³nico Matriz</label>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Correo Electrónico Matriz</label>
                 <input 
                   type="email" 
                   name="correo" 
@@ -590,7 +590,7 @@ export default function ConfiguracionGeneral() {
               </div>
 
 
-              {/* SECCIÃN CONFIGURACIÃN SECUENCIAL Y BLOQUEO AUTOMÃTICO */}
+              {/* SECCIÓN CONFIGURACIÓN SECUENCIAL Y BLOQUEO AUTOMÁTICO */}
               <div style={{ 
                 background: 'var(--input-bg)', 
                 border: '1px solid var(--panel-border)', 
@@ -599,10 +599,10 @@ export default function ConfiguracionGeneral() {
                 marginBottom: '1.5rem' 
               }}>
                 <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span>ð Control de Secuenciales</span>
+                  <span>🔒 Control de Secuenciales</span>
                 </h4>
 
-                {/* Casilla Bloquear secuencial automÃ¡tico */}
+                {/* Casilla Bloquear secuencial automático */}
                 <div style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
@@ -623,12 +623,12 @@ export default function ConfiguracionGeneral() {
                   />
                   <div>
                     <label htmlFor="bloquearSecuencialAuto" style={{ color: 'var(--text-main)', fontWeight: 'bold', cursor: 'pointer', display: 'block' }}>
-                      Bloquear secuencial automÃ¡tico
+                      Bloquear secuencial automático
                     </label>
                     <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                       {formData.bloquearSecuencialAuto 
-                        ? 'El campo estÃ¡ en solo lectura. El sistema incrementarÃ¡ el secuencial automÃ¡ticamente en cada venta.' 
-                        : 'El campo es editable. Puede cambiar el nÃºmero secuencial manualmente.'}
+                        ? 'El campo está en solo lectura. El sistema incrementará el secuencial automáticamente en cada venta.' 
+                        : 'El campo es editable. Puede cambiar el número secuencial manualmente.'}
                     </span>
                   </div>
                 </div>
@@ -647,7 +647,7 @@ export default function ConfiguracionGeneral() {
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Pto. EmisiÃ³n</label>
+                    <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Pto. Emisión</label>
                     <input 
                       type="text" 
                       name="ptoEmi"
@@ -726,7 +726,7 @@ export default function ConfiguracionGeneral() {
 
               <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px dashed var(--accent)', padding: '1.5rem', borderRadius: '8px', marginBottom: '1rem', textAlign: 'center' }}>
                 <FileKey size={40} color="var(--accent)" style={{ marginBottom: '0.5rem' }} />
-                <h4 style={{ marginBottom: '0.5rem' }}>Archivo de Firma ElectrÃ³nica (.p12)</h4>
+                <h4 style={{ marginBottom: '0.5rem' }}>Archivo de Firma Electrónica (.p12)</h4>
                 {formData.fileName && <p style={{ color: 'var(--success)', marginBottom: '1rem', fontSize: '0.9rem' }}>Seleccionado: {formData.fileName}</p>}
                 
                 <input 
@@ -743,7 +743,7 @@ export default function ConfiguracionGeneral() {
               </div>
 
               <div style={{ marginBottom: '2rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem' }}>ContraseÃ±a de la Firma ElectrÃ³nica</label>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem' }}>Contraseña de la Firma Electrónica</label>
                 <div style={{ position: 'relative' }}>
                   <input 
                     type={showPassword ? "text" : "password"} 
@@ -763,7 +763,7 @@ export default function ConfiguracionGeneral() {
                   </button>
                 </div>
                 <small style={{ color: 'var(--danger)', display: 'block', marginTop: '0.5rem' }}>
-                  * Esta contraseÃ±a se utilizarÃ¡ para firmar los XML en el backend.
+                  * Esta contraseña se utilizará para firmar los XML en el backend.
                 </small>
               </div>
 
@@ -784,18 +784,18 @@ export default function ConfiguracionGeneral() {
 
         </div>
 
-        {/* --- DIAGNÃSTICO TÃCNICO DE IMPRESORA IMIN --- */}
+        {/* --- DIAGNÓSTICO TÉCNICO DE IMPRESORA IMIN --- */}
         <div className="glass-panel" style={{ padding: '2rem', marginTop: '2rem', border: '1px solid rgba(59, 130, 246, 0.4)', background: 'rgba(15, 23, 42, 0.7)', position: 'relative', zIndex: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
             <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#60a5fa' }}>
-              ð ï¸ DiagnÃ³stico TÃ©cnico de Impresora iMin
+              🛠️ Diagnóstico Técnico de Impresora iMin
             </h3>
             <button 
               type="button"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                alert("BOTÃN DIAGNÃSTICO PRESIONADO");
+                alert("BOTÓN DIAGNÓSTICO PRESIONADO");
                 
                 try {
                   const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
@@ -839,7 +839,7 @@ export default function ConfiguracionGeneral() {
                     }
                   } else if (hasBridge) {
                     initResult = "OK (AndroidBridge)";
-                    sdkMsg = "MÃ©todos detectados en AndroidBridge: " + (bridgeMethods.length > 0 ? bridgeMethods.join(', ') : 'Ninguno enumerado');
+                    sdkMsg = "Métodos detectados en AndroidBridge: " + (bridgeMethods.length > 0 ? bridgeMethods.join(', ') : 'Ninguno enumerado');
                   } else {
                     initResult = "No detectado";
                     sdkMsg = "window.IminPrinter ni window.AndroidBridge existen.";
@@ -864,16 +864,16 @@ export default function ConfiguracionGeneral() {
                   }
 
                   const diagText = 
-                    `=== DIAGNÃSTICO NATIVO Y ESCANEO DE PAQUETES IMIN ===\n\n` +
+                    `=== DIAGNÓSTICO NATIVO Y ESCANEO DE PAQUETES IMIN ===\n\n` +
                     `1. ESCANEO REAL DE PAQUETES INSTALADOS EN EL DISPOSITIVO:\n${pkgScanResult}\n\n` +
                     `2. RESULTADO DE PRUEBA KOTLIN DIRECTA (testNativePrintKotlinDirect):\n${nativeTestRes}\n\n` +
-                    `3. MÃTODOS EXPUESTOS POR ANDROIDBRIDGE:\n${bridgeMethods.length > 0 ? bridgeMethods.join('\n') : 'Ninguno'}\n\n` +
+                    `3. MÉTODOS EXPUESTOS POR ANDROIDBRIDGE:\n${bridgeMethods.length > 0 ? bridgeMethods.join('\n') : 'Ninguno'}\n\n` +
                     `User Agent: ${ua}`;
 
                   alert(diagText);
                 } catch (errorDiag) {
-                  console.error("Error diagnÃ³stico iMin:", errorDiag);
-                  alert(`Error diagnÃ³stico: ${errorDiag?.message || errorDiag}`);
+                  console.error("Error diagnóstico iMin:", errorDiag);
+                  alert(`Error diagnóstico: ${errorDiag?.message || errorDiag}`);
                 }
               }}
               style={{ 
@@ -887,11 +887,11 @@ export default function ConfiguracionGeneral() {
                 fontSize: '1rem'
               }}
             >
-              ð Ejecutar DiagnÃ³stico TÃ©cnico y Prueba Nativa
+              🔍 Ejecutar Diagnóstico Técnico y Prueba Nativa
             </button>
           </div>
           <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-            Comprueba la conexiÃ³n con el servicio del sistema iMin e invoca la impresiÃ³n directa de prueba ("PRUEBA GRAVITY DENIM") sin usar Firestore ni React.
+            Comprueba la conexión con el servicio del sistema iMin e invoca la impresión directa de prueba ("PRUEBA GRAVITY DENIM") sin usar Firestore ni React.
           </p>
         </div>
 
@@ -900,7 +900,7 @@ export default function ConfiguracionGeneral() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
             <div>
               <h3 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                ðº Pantalla Secundaria del Cliente
+                📺 Pantalla Secundaria del Cliente
               </h3>
               <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                 Dispositivo detectado: <strong style={{ color: 'var(--accent)' }}>{deviceModel}</strong>
@@ -923,7 +923,7 @@ export default function ConfiguracionGeneral() {
               onClick={() => window.open('/pantalla-cliente', '_blank', 'width=800,height=600')}
               style={{ padding: '10px 16px', background: 'transparent', border: '1px solid var(--panel-border)', color: 'var(--text-main)', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
             >
-              â¶ï¸ Abrir Ventana / Forzar Pantalla 2
+              ▶️ Abrir Ventana / Forzar Pantalla 2
             </button>
           </div>
 
@@ -975,12 +975,12 @@ export default function ConfiguracionGeneral() {
                   style={{ width: '16px', height: '16px', cursor: 'pointer', marginTop: '2px' }}
                 />
                 <label htmlFor="csShowQR" style={{ color: 'var(--text-main)', cursor: 'pointer' }}>
-                  <b>Mostrar CÃ³digo QR (Pago Transferencia)</b>
+                  <b>Mostrar Código QR (Pago Transferencia)</b>
                 </label>
               </div>
 
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
-                Durante el proceso de compra, el cliente no verÃ¡ los productos, precios ni informaciÃ³n interna. Esta pantalla solo se activarÃ¡ al momento de dar click en "Cobrar".
+                Durante el proceso de compra, el cliente no verá los productos, precios ni información interna. Esta pantalla solo se activará al momento de dar click en "Cobrar".
               </p>
             </div>
           </div>
@@ -991,10 +991,10 @@ export default function ConfiguracionGeneral() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <h3 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#60a5fa' }}>
-                ð¥ï¸ Modo POS iMin Swan 2 (DS2-25 / I24D03)
+                🖥️ Modo POS iMin Swan 2 (DS2-25 / I24D03)
               </h3>
               <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>
-                Optimiza la resoluciÃ³n, fuentes, catÃ¡logo de productos y activa la impresiÃ³n tÃ©rmica directa y pantalla secundaria nativa.
+                Optimiza la resolución, fuentes, catálogo de productos y activa la impresión térmica directa y pantalla secundaria nativa.
               </p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -1013,13 +1013,13 @@ export default function ConfiguracionGeneral() {
         </div>
 
 
-        {/* --- CÃDIGOS QR DE TRANSFERENCIAS --- */}
+        {/* --- CÓDIGOS QR DE TRANSFERENCIAS --- */}
         <div className="glass-panel" style={{ padding: '2rem', marginTop: '2rem' }}>
           <h3 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            ð± CÃ³digos QR para Transferencias
+            📱 Códigos QR para Transferencias
           </h3>
           <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-            Sube los cÃ³digos QR que se mostrarÃ¡n en la pantalla del cliente cuando seleccionen a cada destinatario.
+            Sube los códigos QR que se mostrarán en la pantalla del cliente cuando seleccionen a cada destinatario.
           </p>
           
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
@@ -1073,10 +1073,10 @@ export default function ConfiguracionGeneral() {
           </div>
         </div>
 
-        {/* --- PREFERENCIAS DE IMPRESIÃN --- */}
+        {/* --- PREFERENCIAS DE IMPRESIÓN --- */}
         <div className="glass-panel" style={{ padding: '2rem', marginTop: '2rem' }}>
           <h3 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            ð¨ï¸ Preferencias de ImpresiÃ³n
+            🖨️ Preferencias de Impresión
           </h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
@@ -1087,12 +1087,12 @@ export default function ConfiguracionGeneral() {
                 onChange={(e) => handlePrintPreferenceChange('format', e.target.value)}
                 style={{ width: '100%', padding: '12px', background: 'var(--input-bg)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', borderRadius: '8px' }}
               >
-                <option value="80mm">80 mm (EstÃ¡ndar de Escritorio)</option>
-                <option value="58mm">58 mm (PortÃ¡til CRM-03)</option>
+                <option value="80mm">80 mm (Estándar de Escritorio)</option>
+                <option value="58mm">58 mm (Portátil CRM-03)</option>
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>MÃ©todo de ConexiÃ³n</label>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Método de Conexión</label>
               <select 
                 value={hasNativePrinter && printFormat === '80mm' ? 'imin_native' : printMethod} 
                 onChange={(e) => handlePrintPreferenceChange('method', e.target.value)}
@@ -1101,12 +1101,12 @@ export default function ConfiguracionGeneral() {
               >
                 {printFormat === '80mm' ? (
                   hasNativePrinter 
-                    ? <option value="imin_native">ImpresiÃ³n Nativa iMin (SDK)</option>
-                    : <option value="sistema">ImpresiÃ³n de Sistema (Navegador)</option>
+                    ? <option value="imin_native">Impresión Nativa iMin (SDK)</option>
+                    : <option value="sistema">Impresión de Sistema (Navegador)</option>
                 ) : (
                   <>
                     <option value="bluetooth_58">Web Bluetooth Directo (CRM-03)</option>
-                    <option value="sistema">ImpresiÃ³n de Sistema (Navegador)</option>
+                    <option value="sistema">Impresión de Sistema (Navegador)</option>
                   </>
                 )}
               </select>
@@ -1115,14 +1115,14 @@ export default function ConfiguracionGeneral() {
 
           {printFormat === '58mm' && printMethod === 'bluetooth_58' && (
             <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid var(--accent)', padding: '1.2rem', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
-              <strong style={{ color: 'var(--accent)', display: 'block', marginBottom: '0.5rem' }}>â¹ï¸ Impresora PortÃ¡til 58mm (CRM-03 / Print001)</strong>
-              La impresora de 58 mm se conecta mediante la API Web Bluetooth. La primera vez se abrirÃ¡ el selector pequeÃ±o del navegador para vincular el dispositivo <strong>Print001</strong>.
+              <strong style={{ color: 'var(--accent)', display: 'block', marginBottom: '0.5rem' }}>ℹ️ Impresora Portátil 58mm (CRM-03 / Print001)</strong>
+              La impresora de 58 mm se conecta mediante la API Web Bluetooth. La primera vez se abrirá el selector pequeño del navegador para vincular el dispositivo <strong>Print001</strong>.
               <br/><br/>
-              <strong>Estado de VinculaciÃ³n:</strong>{' '}
+              <strong>Estado de Vinculación:</strong>{' '}
               {printer58Name ? (
                 <span style={{ color: 'var(--success)', fontWeight: 'bold' }}>Vinculada a: {printer58Name}</span>
               ) : (
-                <span style={{ color: 'var(--warning)' }}>No vinculada (se solicitarÃ¡ al imprimir o probar)</span>
+                <span style={{ color: 'var(--warning)' }}>No vinculada (se solicitará al imprimir o probar)</span>
               )}
               <div style={{ display: 'flex', gap: '10px', marginTop: '1rem' }}>
                 <button 
@@ -1130,14 +1130,14 @@ export default function ConfiguracionGeneral() {
                   className="btn-primary"
                   style={{ padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}
                 >
-                  ð Vincular Print001
+                  🔍 Vincular Print001
                 </button>
                 <button 
                   onClick={handleTestPrinter58}
                   className="btn-success"
                   style={{ padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}
                 >
-                  ð¨ï¸ Imprimir Ticket de Prueba (58mm)
+                  🖨️ Imprimir Ticket de Prueba (58mm)
                 </button>
               </div>
             </div>
@@ -1147,26 +1147,26 @@ export default function ConfiguracionGeneral() {
             hasNativePrinter ? (
               <button 
                 onClick={() => {
-                  alert("BOTÃN NATIVO PRESIONADO");
+                  alert("BOTÓN NATIVO PRESIONADO");
                   try {
                     const initRes = window.AndroidBridge.initPrinter();
                     const statusRes = window.AndroidBridge.getPrinterStatus();
                     
                     if (statusRes.includes("-1") || statusRes.includes("printerReady=false") || initRes.includes("ERROR") || statusRes.includes("ERROR")) {
-                      alert(`â Error: La impresora no estÃ¡ lista.\n\nInit: ${initRes}\nEstado: ${statusRes}`);
+                      alert(`❌ Error: La impresora no está lista.\n\nInit: ${initRes}\nEstado: ${statusRes}`);
                       return;
                     }
 
                     const printRes = window.AndroidBridge.printTestTicket();
-                    alert(`â SDK Responde:\n\n${printRes}`);
+                    alert(`✅ SDK Responde:\n\n${printRes}`);
                   } catch (e) {
-                    alert(`â ExcepciÃ³n al intentar imprimir:\n${e.message}`);
+                    alert(`❌ Excepción al intentar imprimir:\n${e.message}`);
                   }
                 }}
                 className="btn-primary"
                 style={{ width: '100%', padding: '14px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontSize: '1rem', background: '#059669', borderColor: '#047857' }}
               >
-                ð¨ï¸ Imprimir Prueba Nativa iMin (V2)
+                🖨️ Imprimir Prueba Nativa iMin (V2)
               </button>
             ) : (
               <button 
@@ -1174,7 +1174,7 @@ export default function ConfiguracionGeneral() {
                   import('../../utils/printTicket').then(module => {
                     module.imprimirTicket(
                       { name: 'GRAVITY DENIM PRUEBA', ruc: '0000000000001' }, 
-                      [{ name: 'PantalÃ³n Jean Prueba', qty: 1, price: 25.00 }], 
+                      [{ name: 'Pantalón Jean Prueba', qty: 1, price: 25.00 }], 
                       { subtotal: 25.00, ivaAmount: 0, total: 25.00 }, 
                       { nombre: 'CLIENTE PRUEBA', numeroIdentificacion: '9999999999' }, 
                       '1234567890', 
@@ -1188,7 +1188,7 @@ export default function ConfiguracionGeneral() {
                 className="btn-primary"
                 style={{ width: '100%', padding: '14px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontSize: '1rem' }}
               >
-                ð¨ï¸ Imprimir Ticket de Prueba ({printFormat} por Sistema)
+                🖨️ Imprimir Ticket de Prueba ({printFormat} por Sistema)
               </button>
             )
           )}
@@ -1198,19 +1198,19 @@ export default function ConfiguracionGeneral() {
           </div>
         </div>
 
-        {/* Propietarios de MercaderÃ­a */}
+        {/* Propietarios de Mercadería */}
         <div className="glass-panel" style={{ padding: '1.5rem', marginTop: '2rem', background: 'var(--panel-bg)', borderRadius: '12px', border: '1px solid var(--panel-border)' }}>
           <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            ð¥ Propietarios de MercaderÃ­a / Socios
+            👥 Propietarios de Mercadería / Socios
           </h3>
           <p style={{ color: 'var(--text-muted)', marginBottom: '1rem', fontSize: '0.9rem' }}>
-            Agrega o elimina los dueÃ±os de prendas en el inventario. Al agregar un dueÃ±o aquÃ­, aparecerÃ¡ como opciÃ³n en el POS, Inventario y Reportes.
+            Agrega o elimina los dueños de prendas en el inventario. Al agregar un dueño aquí, aparecerá como opción en el POS, Inventario y Reportes.
           </p>
 
           <div style={{ display: 'flex', gap: '10px', marginBottom: '1.5rem' }}>
             <input 
               type="text" 
-              placeholder="Nombre del nuevo dueÃ±o (Ej. Edgar)" 
+              placeholder="Nombre del nuevo dueño (Ej. Edgar)" 
               value={newOwnerName} 
               onChange={(e) => setNewOwnerName(e.target.value)} 
               style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white' }}
@@ -1220,7 +1220,7 @@ export default function ConfiguracionGeneral() {
               className="btn-primary" 
               style={{ padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
             >
-              â Agregar DueÃ±o
+              ➕ Agregar Dueño
             </button>
           </div>
 
@@ -1230,7 +1230,7 @@ export default function ConfiguracionGeneral() {
                 key={name} 
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}
               >
-                <span style={{ fontWeight: 'bold', color: 'white' }}>ð¤ {name}</span>
+                <span style={{ fontWeight: 'bold', color: 'white' }}>👤 {name}</span>
                 <button 
                   onClick={() => handleRemoveOwner(name)}
                   style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 'bold' }}
@@ -1250,7 +1250,7 @@ export default function ConfiguracionGeneral() {
             Mantenimiento y Respaldo (Zona de Peligro)
           </h3>
           <p style={{ color: '#fecaca', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-            Utiliza estas herramientas para respaldar tu informaciÃ³n antes de salir a producciÃ³n, o para limpiar la base de datos de todas las pruebas realizadas.
+            Utiliza estas herramientas para respaldar tu información antes de salir a producción, o para limpiar la base de datos de todas las pruebas realizadas.
           </p>
 
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
@@ -1279,11 +1279,11 @@ export default function ConfiguracionGeneral() {
               }}
               style={{ padding: '10px 20px', background: '#059669', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
             >
-              ð¥ Respaldar Toda la InformaciÃ³n
+              📥 Respaldar Toda la Información
             </button>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1rem', background: '#1e293b', borderRadius: '8px', border: '1px solid #334155' }}>
-              <h4 style={{ margin: '0 0 0.5rem 0', color: '#f87171' }}>ðï¸ Reiniciar Ventas</h4>
+              <h4 style={{ margin: '0 0 0.5rem 0', color: '#f87171' }}>🗑️ Reiniciar Ventas</h4>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <div>
@@ -1313,7 +1313,7 @@ export default function ConfiguracionGeneral() {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>AÃ±o a reiniciar:</label>
+                  <label style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Año a reiniciar:</label>
                   <select 
                     value={resetYear} 
                     onChange={(e) => {
@@ -1322,7 +1322,7 @@ export default function ConfiguracionGeneral() {
                     }}
                     style={{ width: '100%', padding: '6px', background: '#0f172a', color: 'white', border: '1px solid #475569', borderRadius: '6px' }}
                   >
-                    <option value="">Todos los aÃ±os</option>
+                    <option value="">Todos los años</option>
                     <option value="2025">2025</option>
                     <option value="2026">2026</option>
                     <option value="2027">2027</option>
@@ -1349,7 +1349,7 @@ export default function ConfiguracionGeneral() {
                   try {
                     const { getAuth } = await import('firebase/auth');
                     const auth = getAuth();
-                    if (!auth.currentUser) throw new Error('Debes iniciar sesiÃ³n.');
+                    if (!auth.currentUser) throw new Error('Debes iniciar sesión.');
 
                     const token = await auth.currentUser.getIdToken();
                     
@@ -1369,29 +1369,29 @@ export default function ConfiguracionGeneral() {
 
                     if (!simRes.ok) {
                       const errData = await simRes.json();
-                      throw new Error(errData.error || 'Fallo en la simulaciÃ³n.');
+                      throw new Error(errData.error || 'Fallo en la simulación.');
                     }
 
                     const { summary } = await simRes.json();
                     
                     const proceed = window.confirm(
-                      `ð SIMULACIÃN DE REINICIO DE VENTAS\n\n` +
-                      `Se eliminarÃ¡n permanentemente los siguientes documentos:\n` +
+                      `📊 SIMULACIÓN DE REINICIO DE VENTAS\n\n` +
+                      `Se eliminarán permanentemente los siguientes documentos:\n` +
                       `- Facturas emitidas: ${summary.facturas}\n` +
                       `- Notas de venta: ${summary.notasVenta}\n` +
                       `- Registros de pagos/ventas: ${summary.totalVentas}\n` +
                       `- SRI Logs vinculados: ${summary.sriLogs}\n` +
                       `- Idempotency Keys vinculadas: ${summary.idempotencyKeys}\n\n` +
-                      `Â¿Desea continuar con la confirmaciÃ³n de seguridad?`
+                      `¿Desea continuar con la confirmación de seguridad?`
                     );
 
                     if (!proceed) return;
 
-                    // 2. Prompt de confirmaciÃ³n de seguridad
+                    // 2. Prompt de confirmación de seguridad
                     const conf = prompt(
-                      'â ï¸ PELIGRO â ï¸\n' +
-                      'Esta acciÃ³n eliminarÃ¡ todas las facturas y notas de venta emitidas, pero conservarÃ¡ productos, inventario, clientes y configuraciones. Esta acciÃ³n no se puede deshacer.\n\n' +
-                      'Escribe la frase exacta en mayÃºsculas para confirmar:\n' +
+                      '⚠️ PELIGRO ⚠️\n' +
+                      'Esta acción eliminará todas las facturas y notas de venta emitidas, pero conservará productos, inventario, clientes y configuraciones. Esta acción no se puede deshacer.\n\n' +
+                      'Escribe la frase exacta en mayúsculas para confirmar:\n' +
                       'ELIMINAR DOCUMENTOS'
                     );
 
@@ -1415,10 +1415,10 @@ export default function ConfiguracionGeneral() {
                         throw new Error(errData.error || 'Error al ejecutar el reinicio.');
                       }
 
-                      alert('Base de datos de ventas reiniciada con Ã©xito.');
+                      alert('Base de datos de ventas reiniciada con éxito.');
                       window.location.reload();
                     } else if (conf !== null) {
-                      alert('Frase de confirmaciÃ³n incorrecta. AcciÃ³n cancelada.');
+                      alert('Frase de confirmación incorrecta. Acción cancelada.');
                     }
                   } catch (error) {
                     alert('Error: ' + error.message);
@@ -1426,7 +1426,7 @@ export default function ConfiguracionGeneral() {
                 }}
                 style={{ padding: '10px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', marginTop: '0.5rem' }}
               >
-                ðï¸ Reiniciar ventas
+                🗑️ Reiniciar ventas
               </button>
             </div>
           </div>

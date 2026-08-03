@@ -45,8 +45,8 @@ export default function ReportesDashboard({ sales, issuers }) {
   
   const [cierreFilterDocType, setCierreFilterDocType] = useState('Todos'); // 'Todos' | 'Facturas' | 'Notas de venta'
   const [cierreFilterPayment, setCierreFilterPayment] = useState('Todas'); // 'Todas' | 'Efectivo' | 'Transferencia' | 'Pago mixto'
-  const [cierreFilterEmitter, setCierreFilterEmitter] = useState('Todos'); // 'Todos' | 'Edgar' | 'FabiÃ¡n' | 'Amparito'
-  const [cierreFilterOwner, setCierreFilterOwner] = useState('Todos'); // 'Todos' | 'Edgar' | 'FabiÃ¡n' | 'Amparito'
+  const [cierreFilterEmitter, setCierreFilterEmitter] = useState('Todos'); // 'Todos' | 'Edgar' | 'Fabián' | 'Amparito'
+  const [cierreFilterOwner, setCierreFilterOwner] = useState('Todos'); // 'Todos' | 'Edgar' | 'Fabián' | 'Amparito'
   const [cierreFilterClientText, setCierreFilterClientText] = useState('');
   const [cierreFilterProductText, setCierreFilterProductText] = useState('');
   const [cierreGrouping, setCierreGrouping] = useState('Sin agrupar');
@@ -144,7 +144,7 @@ export default function ReportesDashboard({ sales, issuers }) {
           );
           return;
         } catch (iminErr) {
-          console.warn("â ï¸ No se pudo reimprimir vÃ­a iMin, recurriendo al sistema grÃ¡fico:", iminErr);
+          console.warn("⚠️ No se pudo reimprimir vía iMin, recurriendo al sistema gráfico:", iminErr);
         }
       }
 
@@ -170,7 +170,7 @@ export default function ReportesDashboard({ sales, issuers }) {
     const estado = venta.estadoSri || venta.status;
     const isNota = venta.isNotaVenta || (estado === 'NOTA_DE_VENTA');
     if (!isNota && estado !== 'AUTORIZADO' && estado !== 'AUTORIZADA') {
-      alert(`â ï¸ NO SE PUEDE REIMPRIMIR:\nEl comprobante no estÃ¡ autorizado por el SRI. Estado actual: ${estado || 'PENDIENTE'}`);
+      alert(`⚠️ NO SE PUEDE REIMPRIMIR:\nEl comprobante no está autorizado por el SRI. Estado actual: ${estado || 'PENDIENTE'}`);
       return;
     }
 
@@ -184,9 +184,9 @@ export default function ReportesDashboard({ sales, issuers }) {
     const docTypeStr = isNota ? 'NOTA DE VENTA' : 'FACTURA';
 
     const proceed = window.confirm(
-      `â ï¸ ANULACIÃN DE COMPROBANTE\n\n` +
-      `Â¿Seguro que deseas anular esta ${docTypeStr} (ID: ${sale.id})?\n` +
-      `Esta acciÃ³n no modificarÃ¡ el inventario pero cambiarÃ¡ su estado a ANULADA.`
+      `⚠️ ANULACIÓN DE COMPROBANTE\n\n` +
+      `¿Seguro que deseas anular esta ${docTypeStr} (ID: ${sale.id})?\n` +
+      `Esta acción no modificará el inventario pero cambiará su estado a ANULADA.`
     );
     if (!proceed) return;
 
@@ -198,7 +198,7 @@ export default function ReportesDashboard({ sales, issuers }) {
         estadoSri: 'ANULADA',
         status: 'ANULADA'
       });
-      alert(`${docTypeStr} marcada como ANULADA con Ã©xito.`);
+      alert(`${docTypeStr} marcada como ANULADA con éxito.`);
       window.location.reload();
     } catch (err) {
       alert('Error al anular: ' + err.message);
@@ -257,7 +257,7 @@ export default function ReportesDashboard({ sales, issuers }) {
     });
 
     if (salesToday.length === 0) {
-      alert("â ï¸ No hay ventas registradas el dÃ­a de hoy para imprimir.");
+      alert("⚠️ No hay ventas registradas el día de hoy para imprimir.");
       return;
     }
 
@@ -484,12 +484,12 @@ export default function ReportesDashboard({ sales, issuers }) {
         
         await printer58Service.connect();
         await printer58Service.sendBuffer(Buffer.from(raw, 'binary'));
-        alert("â Reporte diario enviado a la CRM-03.");
+        alert("✅ Reporte diario enviado a la CRM-03.");
       } catch (err) {
         alert("Error al imprimir en 58mm: " + err.message);
       }
     } else {
-      // ImpresiÃ³n de sistema (HTML) de 80mm o 58mm
+      // Impresión de sistema (HTML) de 80mm o 58mm
       const win = window.open('', '_blank');
       
       const facturasSales = salesToday.filter(s => !s.isNotaVenta && s.estadoSri !== 'NOTA_DE_VENTA' && s.status !== 'NOTA_DE_VENTA');
@@ -645,7 +645,7 @@ export default function ReportesDashboard({ sales, issuers }) {
     }
   };
 
-  // Procesar datos para el mes actual y el dÃ­a de hoy
+  // Procesar datos para el mes actual y el día de hoy
   const { 
     currentMonthTotal, 
     currentMonthIVA, 
@@ -779,21 +779,21 @@ export default function ReportesDashboard({ sales, issuers }) {
   const exportToCSV = () => {
     // 1. Definir las cabeceras requeridas por el ATS / Contador (incluye datos extra de cliente)
     const headers = [
-      "Fecha de EmisiÃ³n",
+      "Fecha de Emisión",
       "Tipo Comprobante",
       "RUC Emisor",
       "Emisor",
-      "IdentificaciÃ³n Cliente",
+      "Identificación Cliente",
       "Nombre Cliente",
       "Email Cliente",
-      "TelÃ©fono Cliente",
-      "DirecciÃ³n Cliente",
+      "Teléfono Cliente",
+      "Dirección Cliente",
       "Base Imponible 15%",
       "Base Imponible 0%",
       "Monto IVA 15%",
       "Valor Total",
       "Clave de Acceso",
-      "MÃ©todo de Pago",
+      "Método de Pago",
       "A Quien (Transf)"
     ];
 
@@ -858,7 +858,7 @@ export default function ReportesDashboard({ sales, issuers }) {
       ].join(","));
     });
 
-    // 3. Unir cabeceras y filas con salto de lÃ­nea
+    // 3. Unir cabeceras y filas con salto de línea
     const csvContent = headers.join(",") + "\n" + finalRows.join("\n");
 
     // 4. Crear un Blob y forzar la descarga en el navegador
@@ -873,13 +873,13 @@ export default function ReportesDashboard({ sales, issuers }) {
   };
 
   // =========================================================================
-  // --- INICIO DE LÃGICA DE CIERRE DIARIO ---
+  // --- INICIO DE LÓGICA DE CIERRE DIARIO ---
   // =========================================================================
 
   const getShortName = (name) => {
     if (!name) return 'Desconocido';
     const n = name.toLowerCase();
-    if (n.includes('fabian') || n.includes('fabiÃ¡n')) return 'FabiÃ¡n';
+    if (n.includes('fabian') || n.includes('fabián')) return 'Fabián';
     if (n.includes('edgar') || n.includes('geovanny')) return 'Edgar';
     if (n.includes('ampar') || n.includes('deysi')) return 'Amparito';
     return name.split(' ')[0];
@@ -1219,7 +1219,7 @@ export default function ReportesDashboard({ sales, issuers }) {
     lines.push({ text: "------------------------------------------------", size: 16, align: 1 });
     lines.push({ text: "TOTALES POR PROPIETARIO (PRODUCTOS)", size: 16, align: 1, bold: true });
     
-    const brothers = ['Edgar', 'FabiÃ¡n', 'Amparito'];
+    const brothers = ['Edgar', 'Fabián', 'Amparito'];
     if (filteredItemRows.some(r => r.owner === 'Pendiente')) {
       brothers.push('Pendiente');
     }
@@ -1238,14 +1238,14 @@ export default function ReportesDashboard({ sales, issuers }) {
     try {
       window.AndroidBridge.printTicket(JSON.stringify({ lines }));
     } catch (e) {
-      alert("Error en impresión térmica: " + e.message);
+      alert("Error en impresi�n t�rmica: " + e.message);
     }
   };
 
   const handlePrintCierreBrowser = (mode, paperFormat) => {
     const win = window.open('', '_blank');
     if (!win) {
-      alert("⚠️ El navegador bloqueó la ventana de impresión. Por favor, permita los pop-ups.");
+      alert("� El navegador bloque� la ventana de impresi�n. Por favor, permita los pop-ups.");
       return;
     }
     
@@ -1274,7 +1274,7 @@ export default function ReportesDashboard({ sales, issuers }) {
     const abbreviateOwner = (owner) => {
       if (!owner) return 'ED';
       const lower = owner.toLowerCase().trim();
-      if (lower.includes('fabian') || lower.includes('fabián')) return 'FB';
+      if (lower.includes('fabian') || lower.includes('fabi�n')) return 'FB';
       if (lower.includes('ampar') || lower.includes('deysi')) return 'AM';
       if (lower.includes('edgar') || lower.includes('geovanny')) return 'ED';
       return owner;
@@ -1444,7 +1444,7 @@ export default function ReportesDashboard({ sales, issuers }) {
         <tbody>
     `;
     
-    const brothers = ['Edgar', 'Fabián', 'Amparito'];
+    const brothers = ['Edgar', 'Fabi�n', 'Amparito'];
     if (filteredItemRows.some(r => r.owner === 'Pendiente')) {
       brothers.push('Pendiente');
     }
@@ -1511,7 +1511,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                 <tr>
                   <th>Hora</th>
                   <th>Documento</th>
-                  <th>N.º</th>
+                  <th>N.�</th>
                   <th>Cliente</th>
                   <th>Producto</th>
                   <th>Cant</th>
@@ -1583,7 +1583,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                   <tr>
                     <th>Hora</th>
                     <th>Documento</th>
-                    <th>N.º</th>
+                    <th>N.�</th>
                     <th>Cliente</th>
                     <th>Producto</th>
                     <th>Cant</th>
@@ -1754,7 +1754,7 @@ export default function ReportesDashboard({ sales, issuers }) {
   };
 
   // =========================================================================
-  // --- FIN DE LÃGICA DE CIERRE DIARIO ---
+  // --- FIN DE LÓGICA DE CIERRE DIARIO ---
   // =========================================================================
 
   return (
@@ -1767,7 +1767,7 @@ export default function ReportesDashboard({ sales, issuers }) {
           white-space: nowrap;
         }
       `}</style>
-      {/* PestaÃ±as de Cierre Diario vs Reporte General */}
+      {/* Pestañas de Cierre Diario vs Reporte General */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--panel-border)', marginBottom: '2rem', gap: '1rem' }}>
         <button
           onClick={() => setMainTab('general')}
@@ -1822,25 +1822,25 @@ export default function ReportesDashboard({ sales, issuers }) {
             className="btn-success" 
             style={{ padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
-            <Printer size={16} /> Imprimir Cierre del DÃ­a
+            <Printer size={16} /> Imprimir Cierre del Día
           </button>
           <button 
             onClick={() => setActiveTab('sri')}
             style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: activeTab === 'sri' ? 'var(--accent)' : 'transparent', border: '1px solid var(--accent)', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}
           >
-            ð Reporte General de Ventas
+            📊 Reporte General de Ventas
           </button>
           <button 
             onClick={() => setActiveTab('notas_venta')}
             style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: activeTab === 'notas_venta' ? '#f59e0b' : 'transparent', border: '1px solid #f59e0b', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}
           >
-            ð§¾ Historial de Notas de Venta
+            🧾 Historial de Notas de Venta
           </button>
           <button 
             onClick={() => setActiveTab('cierre_hermano')}
             style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: activeTab === 'cierre_hermano' ? '#6366f1' : 'transparent', border: '1px solid #6366f1', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}
           >
-            ð¥ Cierre por Hermano
+            👥 Cierre por Hermano
           </button>
         </div>
       </div>
@@ -1942,7 +1942,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                     return (
                       <tr>
                         <td colSpan="15" style={{ textAlign: 'center', color: '#f87171', padding: '3rem', fontWeight: 'bold', fontSize: '1.1rem' }}>
-                          No existen facturas electrÃ³nicas emitidas.
+                          No existen facturas electrónicas emitidas.
                         </td>
                       </tr>
                     );
@@ -2099,10 +2099,10 @@ export default function ReportesDashboard({ sales, issuers }) {
         <div className="glass-panel animate-fade-in" style={{ padding: '1.5rem', marginTop: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '2px solid #f59e0b', paddingBottom: '10px' }}>
             <h3 style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, fontSize: '1.3rem' }}>
-              ð§¾ Historial de Notas de Venta Internas
+              🧾 Historial de Notas de Venta Internas
             </h3>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              Documentos de control interno (Exentos de envÃ­o al SRI)
+              Documentos de control interno (Exentos de envío al SRI)
             </span>
           </div>
 
@@ -2117,7 +2117,7 @@ export default function ReportesDashboard({ sales, issuers }) {
               <input type="text" placeholder="Nombre de cliente..." value={filterClient} onChange={(e) => setFilterClient(e.target.value)} style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white' }} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: '150px' }}>
-              <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Buscar por NÃºmero NV:</label>
+              <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Buscar por Número NV:</label>
               <input type="text" placeholder="NV-001-..." value={filterInvoice} onChange={(e) => setFilterInvoice(e.target.value)} style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white' }} />
             </div>
             <div style={{ display: 'flex', alignItems: 'flex-end' }}>
@@ -2131,7 +2131,7 @@ export default function ReportesDashboard({ sales, issuers }) {
               <thead>
                 <tr>
                   <th>Fecha / Hora</th>
-                  <th>NÃºmero NV</th>
+                  <th>Número NV</th>
                   <th>Emisor / Vendedor</th>
                   <th>Cliente</th>
                   <th>Detalle de Productos</th>
@@ -2208,13 +2208,13 @@ export default function ReportesDashboard({ sales, issuers }) {
                               onClick={() => setSelectedVenta(sale)}
                               style={{ padding: '6px 10px', background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.4)', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}
                             >
-                              ð Detalle
+                              🔍 Detalle
                             </button>
                             <button 
                               onClick={() => handleReimprimirClick(sale)}
                               style={{ padding: '6px 10px', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.4)', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}
                             >
-                              ð¨ï¸ Reimprimir
+                              🖨️ Reimprimir
                             </button>
                           </div>
                         </td>
@@ -2241,7 +2241,7 @@ export default function ReportesDashboard({ sales, issuers }) {
              <div style={{ fontSize: '0.9rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '1.5rem' }}>
                <div>
                  <h4 style={{ margin: '0 0 5px 0', color: 'var(--accent)' }}>Emisor</h4>
-                 <div><b>Nombre/RazÃ³n Social:</b> {selectedVenta.issuerName || 'GRAVITY DENIM'}</div>
+                 <div><b>Nombre/Razón Social:</b> {selectedVenta.issuerName || 'GRAVITY DENIM'}</div>
                  <div><b>RUC:</b> {selectedVenta.issuerRuc || '1803805405001'}</div>
                </div>
                <div>
@@ -2258,7 +2258,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                  <thead>
                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-muted)' }}>
                      <th style={{ padding: '6px' }}>Cant</th>
-                     <th style={{ padding: '6px' }}>DescripciÃ³n</th>
+                     <th style={{ padding: '6px' }}>Descripción</th>
                      <th style={{ padding: '6px', textAlign: 'right' }}>P.Unit</th>
                      <th style={{ padding: '6px', textAlign: 'right' }}>Total</th>
                    </tr>
@@ -2290,8 +2290,8 @@ export default function ReportesDashboard({ sales, issuers }) {
 
              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '6px', fontSize: '0.8rem' }}>
                <div><b>Clave Acceso:</b> {selectedVenta.claveAcceso || selectedVenta.id}</div>
-               <div><b>NÃºmero AutorizaciÃ³n:</b> {selectedVenta.numeroAutorizacion || 'N/A'}</div>
-               <div><b>Fecha AutorizaciÃ³n:</b> {selectedVenta.fechaAutorizacion || 'N/A'}</div>
+               <div><b>Número Autorización:</b> {selectedVenta.numeroAutorizacion || 'N/A'}</div>
+               <div><b>Fecha Autorización:</b> {selectedVenta.fechaAutorizacion || 'N/A'}</div>
              </div>
 
              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
@@ -2318,7 +2318,7 @@ export default function ReportesDashboard({ sales, issuers }) {
           <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'white' }}>
-                ð Cierre del dÃ­a: <span style={{ color: 'var(--accent)', textDecoration: 'underline' }}>{formatECDate(cierreDate)}</span>
+                📅 Cierre del día: <span style={{ color: 'var(--accent)', textDecoration: 'underline' }}>{formatECDate(cierreDate)}</span>
               </span>
             </div>
             
@@ -2327,9 +2327,9 @@ export default function ReportesDashboard({ sales, issuers }) {
                 onClick={handlePrevDay} 
                 className="btn-primary" 
                 style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                title="DÃ­a Anterior"
+                title="Día Anterior"
               >
-                <ChevronLeft size={16} /> DÃ­a Anterior
+                <ChevronLeft size={16} /> Día Anterior
               </button>
               <button 
                 onClick={handleSetToday} 
@@ -2342,9 +2342,9 @@ export default function ReportesDashboard({ sales, issuers }) {
                 onClick={handleNextDay} 
                 className="btn-primary"
                 style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                title="DÃ­a Siguiente"
+                title="Día Siguiente"
               >
-                DÃ­a Siguiente <ChevronRight size={16} />
+                Día Siguiente <ChevronRight size={16} />
               </button>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.5rem' }}>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Fecha:</span>
@@ -2435,7 +2435,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                 <Users size={24} />
               </div>
               <div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: '0 0 0.2rem 0', textTransform: 'uppercase', fontWeight: 'bold' }}>Ventas Ãnicas</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: '0 0 0.2rem 0', textTransform: 'uppercase', fontWeight: 'bold' }}>Ventas Únicas</p>
                 <h3 style={{ fontSize: '1.3rem', margin: 0, fontWeight: 'bold', color: 'white' }}>{closureTotals.numVentas} transacciones</h3>
               </div>
             </div>
@@ -2451,7 +2451,7 @@ export default function ReportesDashboard({ sales, issuers }) {
             </div>
           </div>
 
-          {/* 3. SECCIÃN DE FILTROS */}
+          {/* 3. SECCIÓN DE FILTROS */}
           <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
             <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 'bold', color: 'white', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Activity size={18} color="var(--accent)" /> Filtros de Cierre Diario
@@ -2497,7 +2497,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                 >
                   <option value="Todos">Todos</option>
                   <option value="Edgar">Edgar</option>
-                  <option value="FabiÃ¡n">FabiÃ¡n</option>
+                  <option value="Fabián">Fabián</option>
                   <option value="Amparito">Amparito</option>
                 </select>
               </div>
@@ -2512,12 +2512,12 @@ export default function ReportesDashboard({ sales, issuers }) {
                 >
                   <option value="Todos">Todos</option>
                   <option value="Edgar">Edgar</option>
-                  <option value="FabiÃ¡n">FabiÃ¡n</option>
+                  <option value="Fabián">Fabián</option>
                   <option value="Amparito">Amparito</option>
                 </select>
               </div>
 
-              {/* BÃºsqueda Cliente */}
+              {/* Búsqueda Cliente */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Cliente (Nombre/CI/RUC):</label>
                 <input 
@@ -2529,9 +2529,9 @@ export default function ReportesDashboard({ sales, issuers }) {
                 />
               </div>
 
-              {/* BÃºsqueda Producto */}
+              {/* Búsqueda Producto */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Producto (Nombre/CÃ³digo/Cat):</label>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Producto (Nombre/Código/Cat):</label>
                 <input 
                   type="text" 
                   placeholder="Buscar producto..." 
@@ -2553,7 +2553,7 @@ export default function ReportesDashboard({ sales, issuers }) {
             </div>
           </div>
 
-          {/* 4. AGRUPACIÃN Y ACCIONES */}
+          {/* 4. AGRUPACIÓN Y ACCIONES */}
           <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Agrupar ventas por:</span>
@@ -2571,7 +2571,7 @@ export default function ReportesDashboard({ sales, issuers }) {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-              {/* Opciones de Impresión */}
+              {/* Opciones de Impresi�n */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.03)', padding: '4px 10px', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
                 <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Formato imp:</span>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: 'white', cursor: 'pointer' }}>
@@ -2589,7 +2589,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                 <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Papel:</span>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: 'white', cursor: 'pointer' }}>
                   <input type="radio" name="cierrePaperFormat" value="80mm" checked={cierrePaperFormat === '80mm'} onChange={() => setCierrePaperFormat('80mm')} />
-                  80 mm (Térmico)
+                  80 mm (T�rmico)
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: 'white', cursor: 'pointer' }}>
                   <input type="radio" name="cierrePaperFormat" value="normal" checked={cierrePaperFormat === 'normal'} onChange={() => setCierrePaperFormat('normal')} />
@@ -2631,9 +2631,9 @@ export default function ReportesDashboard({ sales, issuers }) {
                   <tr style={{ background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid var(--panel-border)', color: 'var(--text-muted)' }}>
                     <th>Hora</th>
                     <th>Documento</th>
-                    <th>N.Âº Documento</th>
+                    <th>N.º Documento</th>
                     <th>Cliente</th>
-                    <th>IdentificaciÃ³n</th>
+                    <th>Identificación</th>
                     <th>Producto</th>
                     <th>Cantidad</th>
                     <th style={{ textAlign: 'right' }}>V. Unitario</th>
@@ -2650,7 +2650,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                   {filteredItemRows.length === 0 ? (
                     <tr>
                       <td colSpan="15" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                        No hay ventas registradas para este dÃ­a con los filtros seleccionados.
+                        No hay ventas registradas para este día con los filtros seleccionados.
                       </td>
                     </tr>
                   ) : (
@@ -2681,7 +2681,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                         <td style={{ textAlign: 'right', fontWeight: 'bold' }}>${row.total.toFixed(2)}</td>
                         <td>
                           {row.isMixed ? (
-                            <span style={{ color: '#60a5fa' }}>ð MIXTO (Ef: ${row.allocatedCash.toFixed(2)} | Tr: ${row.allocatedTransfer.toFixed(2)})</span>
+                            <span style={{ color: '#60a5fa' }}>🔀 MIXTO (Ef: ${row.allocatedCash.toFixed(2)} | Tr: ${row.allocatedTransfer.toFixed(2)})</span>
                           ) : (
                             <span>{row.paymentMethod}</span>
                           )}
@@ -2716,14 +2716,14 @@ export default function ReportesDashboard({ sales, issuers }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', padding: '1rem' }}>
                 {groupedSections.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                    No hay ventas registradas para este dÃ­a.
+                    No hay ventas registradas para este día.
                   </div>
                 ) : (
                   groupedSections.map(group => (
                     <div key={group.key} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '1rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '2px solid rgba(255,255,255,0.08)', paddingBottom: '0.5rem' }}>
                         <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'white' }}>
-                          ð Grupo: <span style={{ color: 'var(--accent)' }}>{group.key.toUpperCase()}</span>
+                          📂 Grupo: <span style={{ color: 'var(--accent)' }}>{group.key.toUpperCase()}</span>
                         </span>
                         <div style={{ display: 'flex', gap: '1rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
                           <span>Total Vendido: <strong style={{ color: 'white' }}>${group.totalVendido.toFixed(2)}</strong></span>
@@ -2740,9 +2740,9 @@ export default function ReportesDashboard({ sales, issuers }) {
                             <tr style={{ borderBottom: '1px solid var(--panel-border)', color: 'var(--text-muted)' }}>
                               <th>Hora</th>
                               <th>Documento</th>
-                              <th>N.Âº Documento</th>
+                              <th>N.º Documento</th>
                               <th>Cliente</th>
-                              <th>IdentificaciÃ³n</th>
+                              <th>Identificación</th>
                               <th>Producto</th>
                               <th>Cantidad</th>
                               <th style={{ textAlign: 'right' }}>V. Unitario</th>
@@ -2783,7 +2783,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                                 <td style={{ textAlign: 'right', fontWeight: 'bold' }}>${row.total.toFixed(2)}</td>
                                 <td>
                                   {row.isMixed ? (
-                                    <span style={{ color: '#60a5fa' }}>ð MIXTO (Ef: ${row.allocatedCash.toFixed(2)} | Tr: ${row.allocatedTransfer.toFixed(2)})</span>
+                                    <span style={{ color: '#60a5fa' }}>🔀 MIXTO (Ef: ${row.allocatedCash.toFixed(2)} | Tr: ${row.allocatedTransfer.toFixed(2)})</span>
                                   ) : (
                                     <span>{row.paymentMethod}</span>
                                   )}
@@ -2849,7 +2849,7 @@ function CierreHermanoView({ sales }) {
     const list = [
       { id: 'Edgar', name: 'Edgar', dbKeys: ['edgar'] },
       { id: 'Amparito', name: 'Amparito', dbKeys: ['amparito'] },
-      { id: 'Fabian', name: 'Fabian (Domingo SÃ¡nchez)', dbKeys: ['domingo', 'fabian', 'junior', 'sanchez'] },
+      { id: 'Fabian', name: 'Fabian (Domingo Sánchez)', dbKeys: ['domingo', 'fabian', 'junior', 'sanchez'] },
       { id: 'Diana', name: 'Diana (Esposa de Fabian)', dbKeys: ['diana'] }
     ];
     return list.map(item => {
@@ -2877,7 +2877,7 @@ function CierreHermanoView({ sales }) {
     });
   }, [sales, dateFrom, dateTo]);
 
-  // CÃ¡lculos de compensaciÃ³n y desglose para el hermano seleccionado o general
+  // Cálculos de compensación y desglose para el hermano seleccionado o general
   const siblingData = useMemo(() => {
     if (!selectedSiblingId) return null;
     
@@ -2927,11 +2927,11 @@ function CierreHermanoView({ sales }) {
         ventasPropiasDetalle.push({
           numeroVenta: sale.numeroComprobante || sale.id.substring(0, 8),
           cliente: (sale.cliente || sale.customer)?.nombre || 'Consumidor Final',
-          productos: items.map(i => `${i.qty || 1}x ${i.name || i.nombre} (${i.ownerName || 'Sin DueÃ±o'})`).join(', '),
+          productos: items.map(i => `${i.qty || 1}x ${i.name || i.nombre} (${i.ownerName || 'Sin Dueño'})`).join(', '),
           montoTotal: proportionVal
         });
 
-        // Calcular compensaciÃ³n general entre hermanos
+        // Calcular compensación general entre hermanos
         transfersPart.forEach(t => {
           const recipientProfile = siblingProfiles.find(p => {
             if (t.recipientId && p.firebaseId === t.recipientId) return true;
@@ -3014,16 +3014,16 @@ function CierreHermanoView({ sales }) {
       });
       const siblingItemsVal = siblingItems.reduce((acc, item) => acc + ((item.price || item.precio || 0) * (item.qty || 1) - (item.descuento || 0)), 0);
       
-      // ProporciÃ³n (incluyendo IVA proporcional)
+      // Proporción (incluyendo IVA proporcional)
       const proportion = siblingItemsVal / totalItemsVal;
       const proportionVal = proportion * (sale.totals?.total || sale.total || 0);
 
-      // Si el hermano seleccionado es dueÃ±o de algo en esta venta
+      // Si el hermano seleccionado es dueño de algo en esta venta
       if (siblingItemsVal > 0) {
         ventasPropiasTotal += proportionVal;
         ventasPropiasCantidad += siblingItems.reduce((acc, i) => acc + (i.qty || 1), 0);
 
-        // Desglosar por mÃ©todo de pago
+        // Desglosar por método de pago
         const paymentDetails = sale.paymentDetails || {
           method: sale.paymentMethod || 'EFECTIVO',
           cashAmount: sale.paymentMethod === 'EFECTIVO' ? (sale.totals?.total || sale.total || 0) : 0,
@@ -3047,7 +3047,7 @@ function CierreHermanoView({ sales }) {
           // Si el destinatario de la transferencia es otro hermano
           const isOther = t.recipientId ? (t.recipientId !== selectedProfile.firebaseId) : (t.recipientName && !t.recipientName.toLowerCase().includes(selectedProfile.id.toLowerCase()));
           if (isOther) {
-            // Buscar cuÃ¡l de los otros hermanos recibiÃ³ la transferencia
+            // Buscar cuál de los otros hermanos recibió la transferencia
             const otherProfile = siblingProfiles.find(p => {
               if (t.recipientId && p.firebaseId === t.recipientId) return true;
               return t.recipientName && t.recipientName.toLowerCase().includes(p.id.toLowerCase());
@@ -3092,10 +3092,10 @@ function CierreHermanoView({ sales }) {
 
       const transfersPart = paymentDetails.transfers || [];
       transfersPart.forEach(t => {
-        // Si el hermano seleccionado recibiÃ³ esta transferencia
+        // Si el hermano seleccionado recibió esta transferencia
         const receivedByUs = t.recipientId ? (t.recipientId === selectedProfile.firebaseId) : (t.recipientName && t.recipientName.toLowerCase().includes(selectedProfile.id.toLowerCase()));
         if (receivedByUs) {
-          // Analizar a quiÃ©n pertenecen los productos de esta transferencia
+          // Analizar a quién pertenecen los productos de esta transferencia
           items.forEach(item => {
             const itemOwnerProfile = siblingProfiles.find(p => {
               if (item.ownerId && p.firebaseId === item.ownerId) return true;
@@ -3142,7 +3142,7 @@ function CierreHermanoView({ sales }) {
   return (
     <div className="glass-panel" style={{ padding: '2rem', marginTop: '1rem', color: 'white' }}>
       <h3 style={{ color: '#f59e0b', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        ð Cierre Diario por Hermano y Compensaciones
+        📊 Cierre Diario por Hermano y Compensaciones
       </h3>
 
       {/* Selectores de Filtro */}
@@ -3175,7 +3175,7 @@ function CierreHermanoView({ sales }) {
 
       {!selectedSiblingId ? (
         <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-          ð¡ Selecciona un hermano de la lista para ver su balance de cierre diario.
+          💡 Selecciona un hermano de la lista para ver su balance de cierre diario.
         </div>
       ) : siblingData ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -3189,19 +3189,19 @@ function CierreHermanoView({ sales }) {
             </div>
 
             <div className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)', borderLeft: '4px solid rgba(255,255,255,0.1)' }}>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 5px 0' }}>ProporciÃ³n Efectivo</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 5px 0' }}>Proporción Efectivo</p>
               <h3 style={{ fontSize: '1.8rem', margin: 0 }}>${siblingData.ventasPropiasEfectivo.toFixed(2)}</h3>
             </div>
 
             <div className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(59, 130, 246, 0.05)', borderLeft: '4px solid #3b82f6' }}>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 5px 0' }}>ProporciÃ³n Transferencias</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 5px 0' }}>Proporción Transferencias</p>
               <h3 style={{ fontSize: '1.8rem', margin: 0, color: '#3b82f6' }}>${siblingData.ventasPropiasTransferencias.toFixed(2)}</h3>
             </div>
           </div>
 
-          {/* SecciÃ³n 1: Detalle de Ventas Propias */}
+          {/* Sección 1: Detalle de Ventas Propias */}
           <div className="glass-panel" style={{ padding: '1.25rem' }}>
-            <h4 style={{ color: '#60a5fa', margin: '0 0 1rem 0' }}>ð¦ Detalle de prendas vendidas pertenecientes a {siblingData.siblingName}</h4>
+            <h4 style={{ color: '#60a5fa', margin: '0 0 1rem 0' }}>📦 Detalle de prendas vendidas pertenecientes a {siblingData.siblingName}</h4>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
@@ -3231,16 +3231,16 @@ function CierreHermanoView({ sales }) {
             </div>
           </div>
 
-          {/* SecciÃ³n 2: Transferencias recibidas en su cuenta (De otros hermanos) */}
+          {/* Sección 2: Transferencias recibidas en su cuenta (De otros hermanos) */}
           <div className="glass-panel" style={{ padding: '1.25rem' }}>
-            <h4 style={{ color: '#a78bfa', margin: '0 0 1rem 0' }}>ð¦ Transferencias recibidas en cuenta de {siblingData.siblingName} por productos de otros</h4>
+            <h4 style={{ color: '#a78bfa', margin: '0 0 1rem 0' }}>🏦 Transferencias recibidas en cuenta de {siblingData.siblingName} por productos de otros</h4>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-muted)' }}>
                     <th style={{ padding: '8px' }}>No. Venta</th>
                     <th style={{ padding: '8px' }}>Cliente</th>
-                    <th style={{ padding: '8px' }}>DueÃ±o del Producto</th>
+                    <th style={{ padding: '8px' }}>Dueño del Producto</th>
                     <th style={{ padding: '8px', textAlign: 'right' }}>Monto Recibido</th>
                   </tr>
                 </thead>
@@ -3263,16 +3263,16 @@ function CierreHermanoView({ sales }) {
             </div>
           </div>
 
-          {/* SecciÃ³n 3: Transferencias propias en cuentas de otros hermanos */}
+          {/* Sección 3: Transferencias propias en cuentas de otros hermanos */}
           <div className="glass-panel" style={{ padding: '1.25rem' }}>
-            <h4 style={{ color: '#f59e0b', margin: '0 0 1rem 0' }}>ð Transferencias de productos de {siblingData.siblingName} recibidas en cuentas de otros</h4>
+            <h4 style={{ color: '#f59e0b', margin: '0 0 1rem 0' }}>🔀 Transferencias de productos de {siblingData.siblingName} recibidas en cuentas de otros</h4>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-muted)' }}>
                     <th style={{ padding: '8px' }}>No. Venta</th>
                     <th style={{ padding: '8px' }}>Cliente</th>
-                    <th style={{ padding: '8px' }}>QuiÃ©n recibiÃ³ la transferencia</th>
+                    <th style={{ padding: '8px' }}>Quién recibió la transferencia</th>
                     <th style={{ padding: '8px', textAlign: 'right' }}>Monto a Recuperar</th>
                   </tr>
                 </thead>
@@ -3295,10 +3295,10 @@ function CierreHermanoView({ sales }) {
             </div>
           </div>
 
-          {/* SecciÃ³n 4: Tabla Resumen de Compensaciones */}
+          {/* Sección 4: Tabla Resumen de Compensaciones */}
           <div className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.1)' }}>
             <h4 style={{ color: 'var(--success)', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              âï¸ Matriz de Compensaciones para {siblingData.siblingName}
+              ⚖️ Matriz de Compensaciones para {siblingData.siblingName}
             </h4>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>

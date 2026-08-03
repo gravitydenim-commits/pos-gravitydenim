@@ -15,7 +15,7 @@ export default function InventarioScreen({ productsDB, onEdit, onDelete, onAdd }
         if (snap.exists() && Array.isArray(snap.data().list)) {
           setOwners(snap.data().list);
         } else {
-          setOwners(['Edgar', 'Amparito', 'FabiÃ¡n']);
+          setOwners(['Edgar', 'Amparito', 'Fabián']);
         }
       } catch (err) {
         console.error("Error loading owners:", err);
@@ -30,7 +30,7 @@ export default function InventarioScreen({ productsDB, onEdit, onDelete, onAdd }
       return;
     }
 
-    if (!window.confirm(`Â¿Seguro que deseas asignar a "${selectedBulkOwnerId}" como propietario de TODOS los productos en el catÃ¡logo?`)) {
+    if (!window.confirm(`¿Seguro que deseas asignar a "${selectedBulkOwnerId}" como propietario de TODOS los productos en el catálogo?`)) {
       return;
     }
 
@@ -45,10 +45,10 @@ export default function InventarioScreen({ productsDB, onEdit, onDelete, onAdd }
           ownerName: selectedBulkOwnerId
         });
       }
-      alert(`â Se asignÃ³ exitosamente a "${selectedBulkOwnerId}" como propietario de todos los productos.`);
+      alert(`✅ Se asignó exitosamente a "${selectedBulkOwnerId}" como propietario de todos los productos.`);
       window.location.reload();
     } catch (err) {
-      alert("Error en asignaciÃ³n masiva: " + err.message);
+      alert("Error en asignación masiva: " + err.message);
     } finally {
       setApplyingBulk(false);
     }
@@ -70,11 +70,11 @@ export default function InventarioScreen({ productsDB, onEdit, onDelete, onAdd }
           <h2 style={{ color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, fontSize: isIminMode ? '1.5rem' : '1.8rem' }}>
             <Package size={isIminMode ? 22 : 28} /> Inventario Central
           </h2>
-          <p style={{ color: 'var(--text-muted)', margin: '2px 0 0 0', fontSize: isIminMode ? '0.85rem' : '1rem' }}>Gestiona los productos, precios y stock del catÃ¡logo general.</p>
+          <p style={{ color: 'var(--text-muted)', margin: '2px 0 0 0', fontSize: isIminMode ? '0.85rem' : '1rem' }}>Gestiona los productos, precios y stock del catálogo general.</p>
         </div>
         
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: isIminMode ? '6px 12px' : '10px 15px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>AsignaciÃ³n Masiva:</span>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Asignación Masiva:</span>
           <select 
             value={selectedBulkOwnerId} 
             onChange={(e) => setSelectedBulkOwnerId(e.target.value)}
@@ -107,7 +107,7 @@ export default function InventarioScreen({ productsDB, onEdit, onDelete, onAdd }
               <th style={{ padding: cellPadding, color: 'var(--text-muted)', fontSize: isIminMode ? '0.85rem' : '1rem' }}>SKU / Ref</th>
               <th style={{ padding: cellPadding, color: 'var(--text-muted)', fontSize: isIminMode ? '0.85rem' : '1rem' }}>Producto</th>
               <th style={{ padding: cellPadding, color: 'var(--text-muted)', fontSize: isIminMode ? '0.85rem' : '1rem' }}>Propietario / Hermano</th>
-              <th style={{ padding: cellPadding, color: 'var(--text-muted)', fontSize: isIminMode ? '0.85rem' : '1rem' }}>CategorÃ­a</th>
+              <th style={{ padding: cellPadding, color: 'var(--text-muted)', fontSize: isIminMode ? '0.85rem' : '1rem' }}>Categoría</th>
               <th style={{ padding: cellPadding, color: 'var(--text-muted)', fontSize: isIminMode ? '0.85rem' : '1rem' }}>Precio Base</th>
               <th style={{ padding: cellPadding, color: 'var(--text-muted)', fontSize: isIminMode ? '0.85rem' : '1rem' }}>Stock</th>
               <th style={{ padding: cellPadding, color: 'var(--text-muted)', textAlign: 'right', fontSize: isIminMode ? '0.85rem' : '1rem' }}>Acciones</th>
@@ -185,7 +185,7 @@ export default function InventarioScreen({ productsDB, onEdit, onDelete, onAdd }
                         className="btn-danger" 
                         style={{ padding: isIminMode ? '4px' : '6px' }}
                         onClick={() => {
-                          if(window.confirm(`Â¿Seguro que deseas eliminar "${prod.nombre || prod.name}"?`)) {
+                          if(window.confirm(`¿Seguro que deseas eliminar "${prod.nombre || prod.name}"?`)) {
                             onDelete(prod.id);
                           }
                         }}
