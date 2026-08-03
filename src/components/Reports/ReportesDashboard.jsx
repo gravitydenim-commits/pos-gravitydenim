@@ -1238,14 +1238,14 @@ export default function ReportesDashboard({ sales, issuers }) {
     try {
       window.AndroidBridge.printTicket(JSON.stringify({ lines }));
     } catch (e) {
-      alert("Error en impresi�n t�rmica: " + e.message);
+      alert("Error en impresión térmica: " + e.message);
     }
   };
 
   const handlePrintCierreBrowser = (mode, paperFormat) => {
     const win = window.open('', '_blank');
     if (!win) {
-      alert("� El navegador bloque� la ventana de impresi�n. Por favor, permita los pop-ups.");
+      alert("⚠️ El navegador bloqueó la ventana de impresión. Por favor, permita los pop-ups.");
       return;
     }
     
@@ -1274,7 +1274,7 @@ export default function ReportesDashboard({ sales, issuers }) {
     const abbreviateOwner = (owner) => {
       if (!owner) return 'ED';
       const lower = owner.toLowerCase().trim();
-      if (lower.includes('fabian') || lower.includes('fabi�n')) return 'FB';
+      if (lower.includes('fabian') || lower.includes('fabián')) return 'FB';
       if (lower.includes('ampar') || lower.includes('deysi')) return 'AM';
       if (lower.includes('edgar') || lower.includes('geovanny')) return 'ED';
       return owner;
@@ -1444,7 +1444,7 @@ export default function ReportesDashboard({ sales, issuers }) {
         <tbody>
     `;
     
-    const brothers = ['Edgar', 'Fabi�n', 'Amparito'];
+    const brothers = ['Edgar', 'Fabián', 'Amparito'];
     if (filteredItemRows.some(r => r.owner === 'Pendiente')) {
       brothers.push('Pendiente');
     }
@@ -1511,7 +1511,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                 <tr>
                   <th>Hora</th>
                   <th>Documento</th>
-                  <th>N.�</th>
+                  <th>N.º</th>
                   <th>Cliente</th>
                   <th>Producto</th>
                   <th>Cant</th>
@@ -1583,7 +1583,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                   <tr>
                     <th>Hora</th>
                     <th>Documento</th>
-                    <th>N.�</th>
+                    <th>N.º</th>
                     <th>Cliente</th>
                     <th>Producto</th>
                     <th>Cant</th>
@@ -2571,7 +2571,7 @@ export default function ReportesDashboard({ sales, issuers }) {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-              {/* Opciones de Impresi�n */}
+              {/* Opciones de Impresión */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.03)', padding: '4px 10px', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
                 <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Formato imp:</span>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: 'white', cursor: 'pointer' }}>
@@ -2589,7 +2589,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                 <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Papel:</span>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: 'white', cursor: 'pointer' }}>
                   <input type="radio" name="cierrePaperFormat" value="80mm" checked={cierrePaperFormat === '80mm'} onChange={() => setCierrePaperFormat('80mm')} />
-                  80 mm (T�rmico)
+                  80 mm (Térmico)
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: 'white', cursor: 'pointer' }}>
                   <input type="radio" name="cierrePaperFormat" value="normal" checked={cierrePaperFormat === 'normal'} onChange={() => setCierrePaperFormat('normal')} />
