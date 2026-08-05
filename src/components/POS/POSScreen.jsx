@@ -19,13 +19,16 @@ export function getFallback3DImage(prod) {
   if (text.includes('camisa') && (text.includes('corta') || text.includes('mc'))) return BASE + 'camisa_mc.png';
   if (text.includes('camisa')) return BASE + 'camisa.png';
   if (text.includes('blusa')) return BASE + 'blusa.png';
-  if (text.includes('chaqueta') && text.includes('gabardina')) return BASE + 'chaqueta_gabardina.png';
+  if ((text.includes('chaqueta') || text.includes('chompa')) && text.includes('gabardina')) return BASE + 'chaqueta_gabardina.png';
+  if (text.includes('impermeable')) return BASE + 'chompa_impermeable.png';
   if (text.includes('chaqueta') || text.includes('ch.')) return BASE + 'chaqueta.png';
   if (text.includes('chaleco')) return BASE + 'chaleco.png';
   if (text.includes('overol')) return BASE + 'overol.png';
   if (text.includes('falda')) return BASE + 'falda.png';
   if (text.includes('vestido')) return BASE + 'vestido.png';
   if (text.includes('conjunto')) return BASE + 'conjunto.png';
+  if (text.includes('oversize')) return BASE + 'oversize.png';
+  if (text.includes('chompa')) return BASE + 'chompa_jean.png';
   if (text.includes('tactico') || text.includes('táctico') || text.includes('tactical')) return BASE + 'pantalon_tactico.png';
   if (text.includes('cargo')) return BASE + 'pantalon_cargo.png';
   if (text.includes('jogger')) return BASE + 'jogger.png';

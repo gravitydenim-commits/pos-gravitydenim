@@ -23,6 +23,10 @@
     { "id": "falda_3d",               "name": "Falda",                 "category": "Falda",   "path": "/product-illustrations/3d/falda_3d.png" },
     { "id": "vestido_3d",             "name": "Vestido",               "category": "Vestido", "path": "/product-illustrations/3d/vestido_3d.png" },
     { "id": "overol_3d",              "name": "Overol",                "category": "Overol",  "path": "/product-illustrations/3d/overol_3d.png" },
-    { "id": "conjunto_3d",            "name": "Conjunto",              "category": "Conjunto","path": "/product-illustrations/3d/conjunto_3d.png" }
+    { "id": "conjunto_3d",            "name": "Conjunto",              "category": "Conjunto","path": "/product-illustrations/3d/conjunto_3d.png" },
+    { "id": "chompa_jean_3d",         "name": "Chompa de Jean",        "category": "Chaqueta","path": "/product-illustrations/3d/chompa_jean_3d.png" },
+    { "id": "chompa_gabardina_3d",    "name": "Chompa de Gabardina",   "category": "Chaqueta","path": "/product-illustrations/3d/chompa_gabardina_3d.png" },
+    { "id": "chompa_impermeable_3d",  "name": "Chompa Impermeable",    "category": "Chaqueta","path": "/product-illustrations/3d/chompa_impermeable_3d.png" },
+    { "id": "oversize_3d",            "name": "Camiseta Oversize",     "category": "Camiseta","path": "/product-illustrations/3d/oversize_3d.png" }
   ]
 }
