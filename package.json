@@ -19,7 +19,8 @@
     "pdfmake": "^0.3.11",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "soap": "^1.9.3"
+    "soap": "^1.9.3",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@babel/core": "^8.0.1",
