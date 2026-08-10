@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, DollarSign, Percent, Package, Users, Activity, FileText, Download, FileType2, FileCode2, Printer, Calendar, ChevronLeft, ChevronRight, FileSpreadsheet, Building2, Filter, CheckCircle2, XCircle } from 'lucide-react';
+import { BarChart3, TrendingUp, DollarSign, Percent, Package, Users, Activity, FileText, Download, FileType2, FileCode2, Printer, Calendar, ChevronLeft, ChevronRight, FileSpreadsheet, Building2, Filter, CheckCircle2, XCircle, RotateCcw } from 'lucide-react';
 import { generarFacturaA4 } from '../../utils/generadorA4';
 
 const parseSaleDate = (sale) => {
