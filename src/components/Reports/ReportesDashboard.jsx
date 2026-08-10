@@ -86,8 +86,8 @@ export default function ReportesDashboard({ sales, issuers }) {
   const [usersList, setUsersList] = useState([]);
   const [openMenuId, setOpenMenuId] = useState(null);
 
-  // --- VARIABLES DE ESTADO PARA CIERRE DIARIO ---
-  const [mainTab, setMainTab] = useState('general'); // 'general' | 'cierre_diario'
+  // --- VARIABLES DE ESTADO PARA NAVEGACIÓN Y REPORTES ---
+  const [mainTab, setMainTab] = useState('contadora'); // 'contadora' | 'general'
   const [cierreDate, setCierreDate] = useState(() => {
     const d = new Date();
     // Timezone safe Ecuador (UTC-5)
@@ -1812,98 +1812,86 @@ export default function ReportesDashboard({ sales, issuers }) {
 
   // =========================================================================
   // =========================================================================
-  // --- LÓGICA DEL MÓDULO RESUMEN PARA CONTADORA (TRIBUTARIO POR EMISOR) ---
-  // =========================================================================
-  const [contadoraIssuerId, setContadoraIssuerId] = useState('');
-  const [contadoraMonth, setContadoraMonth] = useState(() => {
+  // --- LÓGICA DEL MÓDULO RESUMEN PARA CONTADORA (REPORTE TRIBUTARIO POR RANGO DE FECHAS) ---
+  // =========================================================================================
+  const getTodayStr = () => {
+    const d = new Date();
+    const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+    const ecDate = new Date(utc + (3600000 * -5));
+    return ecDate.toISOString().slice(0, 10);
+  };
+
+  const getFirstDayOfMonthStr = () => {
     const d = new Date();
     const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
     const ecDate = new Date(utc + (3600000 * -5));
     const year = ecDate.getFullYear();
     const month = String(ecDate.getMonth() + 1).padStart(2, '0');
-    return `${year}-${month}`;
-  });
-  const [contadoraUseCustomRange, setContadoraUseCustomRange] = useState(false);
-  const [contadoraStartDate, setContadoraStartDate] = useState('');
-  const [contadoraEndDate, setContadoraEndDate] = useState('');
+    return `${year}-${month}-01`;
+  };
+
+  const [contadoraIssuerId, setContadoraIssuerId] = useState('TODOS');
+  const [contadoraStartDate, setContadoraStartDate] = useState(getFirstDayOfMonthStr);
+  const [contadoraEndDate, setContadoraEndDate] = useState(getTodayStr);
+
+  // Fechas aplicadas mediante botón "Aplicar"
+  const [appliedStartDate, setAppliedStartDate] = useState(getFirstDayOfMonthStr);
+  const [appliedEndDate, setAppliedEndDate] = useState(getTodayStr);
+
   const [contadoraDocTypeFilter, setContadoraDocTypeFilter] = useState('Todos'); // 'Todos' | 'Factura' | 'Nota de venta'
   const [contadoraStatusFilter, setContadoraStatusFilter] = useState('Todos'); // 'Todos' | 'Valida' | 'Anulada'
+  const [contadoraPaymentFilter, setContadoraPaymentFilter] = useState('Todos'); // 'Todos' | 'EFECTIVO' | 'TRANSFERENCIA' | 'MIXTO'
   const [contadoraSearchText, setContadoraSearchText] = useState('');
+  const [contadoraProductSearchText, setContadoraProductSearchText] = useState('');
 
-  useEffect(() => {
-    if (issuers && issuers.length > 0 && !contadoraIssuerId) {
-      setContadoraIssuerId(issuers[0].id);
-    }
-  }, [issuers, contadoraIssuerId]);
+  const handleApplyRange = () => {
+    setAppliedStartDate(contadoraStartDate);
+    setAppliedEndDate(contadoraEndDate);
+  };
+
+  const handleResetRange = () => {
+    const defaultStart = getFirstDayOfMonthStr();
+    const defaultEnd = getTodayStr();
+    setContadoraStartDate(defaultStart);
+    setContadoraEndDate(defaultEnd);
+    setAppliedStartDate(defaultStart);
+    setAppliedEndDate(defaultEnd);
+    setContadoraDocTypeFilter('Todos');
+    setContadoraStatusFilter('Todos');
+    setContadoraPaymentFilter('Todos');
+    setContadoraSearchText('');
+    setContadoraProductSearchText('');
+  };
 
   const contadoraData = useMemo(() => {
-    if (!issuers || issuers.length === 0) {
-      return {
-        selectedIssuer: null,
-        periodStr: '',
-        filteredVouchers: [],
-        allVouchers: [],
-        totals: {
-          numFacturas: 0,
-          numNotasVenta: 0,
-          numAnulados: 0,
-          subtotal15: 0,
-          subtotal0: 0,
-          iva15: 0,
-          totalVentas: 0
-        }
-      };
-    }
+    const selectedIssuer = (issuers || []).find(i => i.id === contadoraIssuerId) || null;
 
-    const selectedIssuer = issuers.find(i => i.id === contadoraIssuerId) || issuers[0];
-    const issuerRuc = selectedIssuer?.ruc || '';
-
-    // 1. Aislamiento Estricto por Emisor / RUC
+    // 1. Filtrado por Emisor / RUC (TODOS o Emisor Específico)
     const issuerSales = (sales || []).filter(sale => {
+      if (contadoraIssuerId === 'TODOS') return true;
       const saleEmisorId = sale.emisorId || sale.issuerId;
-      if (saleEmisorId) {
-        return saleEmisorId === selectedIssuer.id;
-      }
-      if (sale.emisorRuc || sale.issuerRuc) {
-        return (sale.emisorRuc || sale.issuerRuc) === issuerRuc;
+      if (saleEmisorId) return saleEmisorId === contadoraIssuerId;
+      if (selectedIssuer && (sale.emisorRuc || sale.issuerRuc)) {
+        return (sale.emisorRuc || sale.issuerRuc) === selectedIssuer.ruc;
       }
       return false;
     });
 
-    // 2. Filtrado de Período por Fecha de Emisión Fiscal (fechaEmision / fecha)
-    let periodSales = [];
-    let periodStr = '';
+    // 2. Filtrado de Período por Rango de Fechas Inclusivo (T00:00:00 a T23:59:59.999)
+    const start = appliedStartDate ? new Date(`${appliedStartDate}T00:00:00.000`) : new Date('2000-01-01');
+    const end = appliedEndDate ? new Date(`${appliedEndDate}T23:59:59.999`) : new Date('2099-12-31');
 
-    if (contadoraUseCustomRange && contadoraStartDate && contadoraEndDate) {
-      const start = new Date(`${contadoraStartDate}T00:00:00`);
-      const end = new Date(`${contadoraEndDate}T23:59:59.999`);
+    const periodSales = issuerSales.filter(sale => {
+      const fiscalDate = getSaleFiscalDate(sale);
+      if (!fiscalDate) return false;
+      return fiscalDate >= start && fiscalDate <= end;
+    });
 
-      periodSales = issuerSales.filter(sale => {
-        const fiscalDate = getSaleFiscalDate(sale);
-        if (!fiscalDate) return false;
-        return fiscalDate >= start && fiscalDate <= end;
-      });
+    const sStr = start.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const eStr = end.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const periodStr = `${sStr} al ${eStr}`;
 
-      const sStr = start.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
-      const eStr = end.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
-      periodStr = `Rango: ${sStr} al ${eStr}`;
-    } else {
-      const [targetYear, targetMonth] = contadoraMonth.split('-').map(Number);
-
-      periodSales = issuerSales.filter(sale => {
-        const fiscalDate = getSaleFiscalDate(sale);
-        if (!fiscalDate) return false;
-        return fiscalDate.getFullYear() === targetYear && (fiscalDate.getMonth() + 1) === targetMonth;
-      });
-
-      const monthNames = [
-        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-      ];
-      periodStr = `${monthNames[targetMonth - 1] || ''} ${targetYear}`;
-    }
-
-    // 3. Procesamiento y Acumulación Tributaria usando Valores Guardados en Firestore
+    // 3. Procesamiento y Acumulación Tributaria
     let numFacturas = 0;
     let numNotasVenta = 0;
     let numAnulados = 0;
@@ -1913,6 +1901,10 @@ export default function ReportesDashboard({ sales, issuers }) {
     let iva15 = 0;
     let totalVentas = 0;
 
+    let totalEfectivo = 0;
+    let totalTransferencias = 0;
+    let totalPagosMixtos = 0;
+
     const vouchers = periodSales.map(sale => {
       const fiscalDate = getSaleFiscalDate(sale);
       const fechaStr = fiscalDate ? fiscalDate.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A';
@@ -1920,14 +1912,15 @@ export default function ReportesDashboard({ sales, issuers }) {
       const isNota = Boolean(sale.isNotaVenta || sale.estadoSri === 'NOTA_DE_VENTA' || sale.status === 'NOTA_DE_VENTA' || sale.tipoComprobante === 'NOTA_DE_VENTA');
       const docType = isNota ? 'Nota de venta' : 'Factura';
 
-      const isAnulado = Boolean(sale.estadoSri === 'ANULADO' || sale.status === 'ANULADO' || sale.anulado === true || sale.estadoVenta === 'ANULADO');
-      const estadoStr = isAnulado ? 'Anulada' : 'Válida';
+      // REGLA ESTRICTA DE ANULADOS: Se contabiliza EXCLUSIVAMENTE si el estado es ANULADO / ANULADA.
+      // Los documentos RECHAZADOS / ERROR / DEVUELTA NO se cuentan como ANULADO.
+      const sriState = (sale.estadoSri || sale.status || sale.estadoVenta || '').toString().toUpperCase();
+      const isAnulado = sriState === 'ANULADO' || sriState === 'ANULADA' || sale.anulado === true;
 
       const numeroComprobante = sale.numeroComprobante || sale.secuencial || 'S/N';
       const clienteNombre = (sale.cliente || sale.customer)?.nombre || 'CONSUMIDOR FINAL';
       const clienteRuc = (sale.cliente || sale.customer)?.numeroIdentificacion || '9999999999999';
 
-      // Valores fiscales guardados directamente en Firestore
       const saleSubtotal = Number(sale.totals?.subtotal !== undefined ? sale.totals.subtotal : (sale.subtotalSinImpuestos !== undefined ? sale.subtotalSinImpuestos : (sale.subtotal || 0)));
       const saleIva = Number(sale.totals?.ivaAmount !== undefined ? sale.totals.ivaAmount : (sale.totals?.iva !== undefined ? sale.totals.iva : (sale.valorIva || sale.montoIva || 0)));
       const saleTotal = Number(sale.totals?.total !== undefined ? sale.totals.total : (sale.totals?.grandTotal !== undefined ? sale.totals.grandTotal : (sale.importeTotal || sale.total || 0)));
@@ -1947,6 +1940,10 @@ export default function ReportesDashboard({ sales, issuers }) {
         vSubtotal0 = saleSubtotal;
       }
 
+      const pMethod = (sale.paymentMethod || sale.paymentDetails?.payments?.[0]?.method || 'EFECTIVO').toString().toUpperCase();
+      const isMixto = Boolean(sale.paymentDetails?.payments && sale.paymentDetails.payments.length > 1);
+      const displayPayment = isMixto ? 'MIXTO' : pMethod.includes('TRANSFER') ? 'TRANSFERENCIA' : 'EFECTIVO';
+
       if (isAnulado) {
         numAnulados++;
       } else {
@@ -1960,6 +1957,14 @@ export default function ReportesDashboard({ sales, issuers }) {
         subtotal0 += vSubtotal0;
         iva15 += saleIva;
         totalVentas += saleTotal;
+
+        if (isMixto) {
+          totalPagosMixtos += saleTotal;
+        } else if (pMethod.includes('TRANSFER')) {
+          totalTransferencias += saleTotal;
+        } else {
+          totalEfectivo += saleTotal;
+        }
       }
 
       return {
@@ -1976,21 +1981,23 @@ export default function ReportesDashboard({ sales, issuers }) {
         iva: saleIva,
         total: saleTotal,
         isAnulado,
-        estado: estadoStr,
+        estado: isAnulado ? 'Anulada' : 'Válida',
+        pMethod: displayPayment,
         rawSale: sale
       };
     });
 
-    // Ordenar cronológicamente por fecha fiscal
     vouchers.sort((a, b) => (a.fiscalDate?.getTime() || 0) - (b.fiscalDate?.getTime() || 0));
 
-    // Filtros secundarios en la UI (Tipo de Doc, Estado, Búsqueda de Texto)
+    // Filtros secundarios en la UI
     const filteredVouchers = vouchers.filter(v => {
       if (contadoraDocTypeFilter !== 'Todos' && v.docType !== contadoraDocTypeFilter) return false;
       if (contadoraStatusFilter !== 'Todos') {
         if (contadoraStatusFilter === 'Valida' && v.isAnulado) return false;
         if (contadoraStatusFilter === 'Anulada' && !v.isAnulado) return false;
       }
+      if (contadoraPaymentFilter !== 'Todos' && v.pMethod !== contadoraPaymentFilter) return false;
+
       if (contadoraSearchText.trim() !== '') {
         const query = contadoraSearchText.toLowerCase();
         const matchName = v.clienteNombre.toLowerCase().includes(query);
@@ -1998,6 +2005,18 @@ export default function ReportesDashboard({ sales, issuers }) {
         const matchDoc = v.numeroComprobante.toLowerCase().includes(query);
         if (!matchName && !matchId && !matchDoc) return false;
       }
+
+      if (contadoraProductSearchText.trim() !== '') {
+        const pQuery = contadoraProductSearchText.toLowerCase();
+        const prods = v.rawSale.productos || v.rawSale.items || [];
+        const hasProdMatch = prods.some(p => {
+          const pName = (p.name || p.nombre || '').toLowerCase();
+          const pSku = (p.sku || p.codigo || p.codigoBarras || '').toLowerCase();
+          return pName.includes(pQuery) || pSku.includes(pQuery);
+        });
+        if (!hasProdMatch) return false;
+      }
+
       return true;
     });
 
@@ -2007,16 +2026,19 @@ export default function ReportesDashboard({ sales, issuers }) {
       filteredVouchers,
       allVouchers: vouchers,
       totals: {
-        numFacturas,
-        numNotasVenta,
-        numAnulados,
+        totalVentas: Number(totalVentas.toFixed(2)),
         subtotal15: Number(subtotal15.toFixed(2)),
         subtotal0: Number(subtotal0.toFixed(2)),
         iva15: Number(iva15.toFixed(2)),
-        totalVentas: Number(totalVentas.toFixed(2))
+        numFacturas,
+        numNotasVenta,
+        numAnulados,
+        totalEfectivo: Number(totalEfectivo.toFixed(2)),
+        totalTransferencias: Number(totalTransferencias.toFixed(2)),
+        totalPagosMixtos: Number(totalPagosMixtos.toFixed(2))
       }
     };
-  }, [sales, issuers, contadoraIssuerId, contadoraMonth, contadoraUseCustomRange, contadoraStartDate, contadoraEndDate, contadoraDocTypeFilter, contadoraStatusFilter, contadoraSearchText]);
+  }, [sales, issuers, contadoraIssuerId, appliedStartDate, appliedEndDate, contadoraDocTypeFilter, contadoraStatusFilter, contadoraPaymentFilter, contadoraSearchText, contadoraProductSearchText]);
 
   // Exportación a Excel nativo (.xlsx) mediante librería SheetJS (xlsx)
   const exportContadoraXLSX = () => {
@@ -2238,46 +2260,8 @@ export default function ReportesDashboard({ sales, issuers }) {
           white-space: nowrap;
         }
       `}</style>
-      {/* Pestañas de Cierre Diario vs Reporte General vs Resumen para Contadora */}
+      {/* Pestañas de Navegación Principal: Resumen para Contadora vs Reporte General */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--panel-border)', marginBottom: '2rem', gap: '1rem' }}>
-        <button
-          onClick={() => setMainTab('general')}
-          style={{
-            padding: '1rem 2rem',
-            background: 'transparent',
-            border: 'none',
-            borderBottom: mainTab === 'general' ? '3px solid var(--accent)' : '3px solid transparent',
-            color: mainTab === 'general' ? 'white' : 'var(--text-muted)',
-            fontWeight: 'bold',
-            fontSize: '1.1rem',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
-        >
-          <BarChart3 size={20} /> Reporte general
-        </button>
-        <button
-          onClick={() => setMainTab('cierre_diario')}
-          style={{
-            padding: '1rem 2rem',
-            background: 'transparent',
-            border: 'none',
-            borderBottom: mainTab === 'cierre_diario' ? '3px solid var(--accent)' : '3px solid transparent',
-            color: mainTab === 'cierre_diario' ? 'white' : 'var(--text-muted)',
-            fontWeight: 'bold',
-            fontSize: '1.1rem',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
-        >
-          <Calendar size={20} /> Cierre diario
-        </button>
         <button
           onClick={() => setMainTab('contadora')}
           style={{
@@ -2295,7 +2279,26 @@ export default function ReportesDashboard({ sales, issuers }) {
             gap: '8px'
           }}
         >
-          <FileText size={20} /> Resumen para Contadora
+          <FileText size={20} /> Resumen para Contadora (Reporte Tributario)
+        </button>
+        <button
+          onClick={() => setMainTab('general')}
+          style={{
+            padding: '1rem 2rem',
+            background: 'transparent',
+            border: 'none',
+            borderBottom: mainTab === 'general' ? '3px solid var(--accent)' : '3px solid transparent',
+            color: mainTab === 'general' ? 'white' : 'var(--text-muted)',
+            fontWeight: 'bold',
+            fontSize: '1.1rem',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          <BarChart3 size={20} /> Reporte general y Cierre por Hermano
         </button>
       </div>
 
@@ -3833,10 +3836,10 @@ function CierreHermanoView({ sales }) {
         </div>
       ) : mainTab === 'contadora' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* Header Resumen Tributario Independiente */}
+          {/* Header Resumen Tributario por Rango de Fechas */}
           <div className="glass-panel" style={{
             padding: '1.5rem',
-            background: 'linear-gradient(135deg, rgba(6, 78, 59, 0.7) 0%, rgba(15, 23, 42, 0.95) 100%)',
+            background: 'linear-gradient(135deg, rgba(6, 78, 59, 0.75) 0%, rgba(15, 23, 42, 0.95) 100%)',
             border: '1px solid rgba(16, 185, 129, 0.4)',
             boxShadow: '0 8px 32px rgba(16, 185, 129, 0.15)'
           }}>
@@ -3844,18 +3847,18 @@ function CierreHermanoView({ sales }) {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                   <span style={{ background: '#10b981', color: '#042f2e', fontSize: '0.68rem', fontWeight: '900', letterSpacing: '0.08em', padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
-                    REPORTE TRIBUTARIO INDEPENDIENTE · SRI ECUADOR
+                    REPORTE TRIBUTARIO DE VENTAS · SRI ECUADOR
                   </span>
                 </div>
                 <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.6rem', color: 'white', fontWeight: 'bold' }}>
                   <FileText size={28} color="#34d399" /> Resumen para Contadora
                 </h2>
                 <p style={{ margin: '6px 0 0 0', color: '#94a3b8', fontSize: '0.9rem' }}>
-                  Modulo de consulta fiscal para declaración de impuestos. Exclusivo por Emisor / RUC sin mezclar información.
+                  Módulo de consulta tributaria por rango de fechas. Consolida información por emisor o global.
                 </p>
               </div>
 
-              {/* Botones de Acción Destacados en la Parte Superior */}
+              {/* Botones de Acción Destacados: Exportar PDF y Excel */}
               <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center' }}>
                 <button
                   onClick={exportContadoraPDF}
@@ -3901,30 +3904,258 @@ function CierreHermanoView({ sales }) {
             </div>
           </div>
 
-          {/* Barra de Filtros Superior: Emisor, Selección de Período y Filtros de Comprobante */}
+          {/* Panel de Controles de Rango de Fechas (Fecha Desde, Fecha Hasta, Aplicar, Limpiar) */}
+          <div className="glass-panel" style={{ padding: '1.25rem', background: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', alignItems: 'end' }}>
+              
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: '800', color: '#34d399', marginBottom: '6px', letterSpacing: '0.05em' }}>
+                  📅 Fecha Desde
+                </label>
+                <input
+                  type="date"
+                  value={contadoraStartDate}
+                  onChange={e => setContadoraStartDate(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem',
+                    borderRadius: '8px',
+                    background: 'rgba(0,0,0,0.5)',
+                    border: '1px solid var(--panel-border)',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    fontSize: '0.9rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: '800', color: '#34d399', marginBottom: '6px', letterSpacing: '0.05em' }}>
+                  📅 Fecha Hasta
+                </label>
+                <input
+                  type="date"
+                  value={contadoraEndDate}
+                  onChange={e => setContadoraEndDate(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem',
+                    borderRadius: '8px',
+                    background: 'rgba(0,0,0,0.5)',
+                    border: '1px solid var(--panel-border)',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    fontSize: '0.9rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={handleApplyRange}
+                  className="btn-success"
+                  style={{
+                    flex: 1,
+                    padding: '0.65rem',
+                    borderRadius: '8px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  <Filter size={16} /> Aplicar Rango
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetRange}
+                  style={{
+                    flex: 1,
+                    padding: '0.65rem',
+                    borderRadius: '8px',
+                    background: 'rgba(255,255,255,0.08)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  <RotateCcw size={16} /> Limpiar
+                </button>
+              </div>
+
+              <div>
+                <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                  Período Aplicado
+                </span>
+                <div style={{ padding: '0.6rem 0.85rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px', color: '#34d399', fontWeight: 'bold', fontSize: '0.88rem', textAlign: 'center' }}>
+                  {contadoraData.periodStr}
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* Grid con las 10 Tarjetas de Indicadores Requeridas */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            
+            {/* 1. Total Vendido */}
+            <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #10b981', background: 'linear-gradient(135deg, rgba(16,185,129,0.18) 0%, rgba(15,23,42,0.85) 100%)' }}>
+              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#34d399', fontWeight: '900', letterSpacing: '0.05em' }}>
+                Total Vendido
+              </span>
+              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.8rem', color: 'white', fontWeight: '900' }}>
+                ${contadoraData.totals.totalVentas.toFixed(2)}
+              </h3>
+              <span style={{ fontSize: '0.72rem', color: '#34d399', fontWeight: 'bold' }}>Monto bruto total del período</span>
+            </div>
+
+            {/* 2. Subtotal Gravado 15% */}
+            <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #34d399', background: 'rgba(15,23,42,0.6)' }}>
+              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.05em' }}>
+                Subtotal Gravado 15%
+              </span>
+              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: '#34d399', fontWeight: '800' }}>
+                ${contadoraData.totals.subtotal15.toFixed(2)}
+              </h3>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Base imponible tarifa 15%</span>
+            </div>
+
+            {/* 3. Subtotal Tarifa 0% */}
+            <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #fbbf24', background: 'rgba(15,23,42,0.6)' }}>
+              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.05em' }}>
+                Subtotal Tarifa 0%
+              </span>
+              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: '#fbbf24', fontWeight: '800' }}>
+                ${contadoraData.totals.subtotal0.toFixed(2)}
+              </h3>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Base tarifa 0%</span>
+            </div>
+
+            {/* 4. IVA 15% */}
+            <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #3b82f6', background: 'rgba(15,23,42,0.6)' }}>
+              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.05em' }}>
+                IVA 15%
+              </span>
+              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: '#60a5fa', fontWeight: '800' }}>
+                ${contadoraData.totals.iva15.toFixed(2)}
+              </h3>
+              <span style={{ fontSize: '0.72rem', color: '#60a5fa' }}>Monto total impuesto recaudado</span>
+            </div>
+
+            {/* 5. Cantidad de Facturas */}
+            <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #60a5fa', background: 'rgba(15,23,42,0.6)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800' }}>
+                  Cant. Facturas
+                </span>
+                <span style={{ background: 'rgba(59,130,246,0.15)', color: '#60a5fa', fontSize: '0.68rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>SRI</span>
+              </div>
+              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: 'white', fontWeight: '800' }}>
+                {contadoraData.totals.numFacturas}
+              </h3>
+              <span style={{ fontSize: '0.72rem', color: '#60a5fa' }}>Facturas electrónicas válidas</span>
+            </div>
+
+            {/* 6. Cantidad de Notas de Venta */}
+            <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #c084fc', background: 'rgba(15,23,42,0.6)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800' }}>
+                  Cant. Notas Venta
+                </span>
+                <span style={{ background: 'rgba(168,85,247,0.15)', color: '#c084fc', fontSize: '0.68rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>Interna</span>
+              </div>
+              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: 'white', fontWeight: '800' }}>
+                {contadoraData.totals.numNotasVenta}
+              </h3>
+              <span style={{ fontSize: '0.72rem', color: '#c084fc' }}>Notas de venta válidas</span>
+            </div>
+
+            {/* 7. Cantidad de Comprobantes Anulados (ESTRICTAMENTE ANULADOS) */}
+            <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #ef4444', background: 'rgba(15,23,42,0.6)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800' }}>
+                  Cant. Anulados
+                </span>
+                <span style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171', fontSize: '0.68rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>Exclusivo</span>
+              </div>
+              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: '#f87171', fontWeight: '800' }}>
+                {contadoraData.totals.numAnulados}
+              </h3>
+              <span style={{ fontSize: '0.72rem', color: '#f87171' }}>Solo estado ANULADO</span>
+            </div>
+
+            {/* 8. Total Efectivo */}
+            <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #22c55e', background: 'rgba(15,23,42,0.6)' }}>
+              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800' }}>
+                Total Efectivo
+              </span>
+              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: '#4ade80', fontWeight: '800' }}>
+                ${contadoraData.totals.totalEfectivo.toFixed(2)}
+              </h3>
+              <span style={{ fontSize: '0.72rem', color: '#4ade80' }}>Recaudación en efectivo</span>
+            </div>
+
+            {/* 9. Total Transferencias */}
+            <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #06b6d4', background: 'rgba(15,23,42,0.6)' }}>
+              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800' }}>
+                Total Transferencias
+              </span>
+              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: '#22d3ee', fontWeight: '800' }}>
+                ${contadoraData.totals.totalTransferencias.toFixed(2)}
+              </h3>
+              <span style={{ fontSize: '0.72rem', color: '#22d3ee' }}>Recaudación en transferencia</span>
+            </div>
+
+            {/* 10. Total Pagos Mixtos */}
+            <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #a855f7', background: 'rgba(15,23,42,0.6)' }}>
+              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800' }}>
+                Total Pagos Mixtos
+              </span>
+              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: '#c084fc', fontWeight: '800' }}>
+                ${contadoraData.totals.totalPagosMixtos.toFixed(2)}
+              </h3>
+              <span style={{ fontSize: '0.72rem', color: '#c084fc' }}>Ventas con método mixto</span>
+            </div>
+
+          </div>
+
+          {/* Barra de Filtros Complementarios (Emisor, Forma de Pago, Tipo Doc, Estado, Búsqueda de Cliente y Producto) */}
           <div className="glass-panel" style={{ padding: '1.25rem', background: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', alignItems: 'end' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', alignItems: 'end' }}>
               
               {/* Selector de Emisor / RUC */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: '800', color: '#34d399', marginBottom: '6px', letterSpacing: '0.05em' }}>
-                  🏢 Emisor (RUC Independiente)
+                <label style={{ display: 'block', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: '800', color: '#34d399', marginBottom: '6px' }}>
+                  🏢 Emisor (RUC)
                 </label>
                 <select
                   value={contadoraIssuerId}
                   onChange={e => setContadoraIssuerId(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '0.6rem',
+                    padding: '0.55rem',
                     borderRadius: '8px',
                     background: 'rgba(0,0,0,0.5)',
                     border: '1px solid #10b981',
                     color: 'white',
                     fontWeight: 'bold',
-                    fontSize: '0.9rem',
+                    fontSize: '0.85rem',
                     outline: 'none'
                   }}
                 >
+                  <option value="TODOS" style={{ background: '#0f172a' }}>🌐 TODOS LOS EMISORES</option>
                   {(issuers || []).map(issuer => (
                     <option key={issuer.id} value={issuer.id} style={{ background: '#0f172a' }}>
                       {issuer.shortName || issuer.name || issuer.razonSocial} - RUC: {issuer.ruc || 'S/N'}
@@ -3933,128 +4164,43 @@ function CierreHermanoView({ sales }) {
                 </select>
               </div>
 
-              {/* Selector de Modo de Período */}
+              {/* Filtro Forma de Pago */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: '800', color: '#94a3b8', marginBottom: '6px', letterSpacing: '0.05em' }}>
-                  📅 Modo de Período
+                <label style={{ display: 'block', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: '800', color: '#94a3b8', marginBottom: '6px' }}>
+                  💳 Forma de Pago
                 </label>
-                <div style={{ display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.4)', padding: '3px', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
-                  <button
-                    type="button"
-                    onClick={() => setContadoraUseCustomRange(false)}
-                    style={{
-                      flex: 1,
-                      padding: '6px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      background: !contadoraUseCustomRange ? '#10b981' : 'transparent',
-                      color: !contadoraUseCustomRange ? '#042f2e' : 'var(--text-muted)',
-                      fontWeight: 'bold',
-                      fontSize: '0.8rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Por Mes
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setContadoraUseCustomRange(true)}
-                    style={{
-                      flex: 1,
-                      padding: '6px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      background: contadoraUseCustomRange ? '#10b981' : 'transparent',
-                      color: contadoraUseCustomRange ? '#042f2e' : 'var(--text-muted)',
-                      fontWeight: 'bold',
-                      fontSize: '0.8rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Rango Personalizado
-                  </button>
-                </div>
+                <select
+                  value={contadoraPaymentFilter}
+                  onChange={e => setContadoraPaymentFilter(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.55rem',
+                    borderRadius: '8px',
+                    background: 'rgba(0,0,0,0.4)',
+                    border: '1px solid var(--panel-border)',
+                    color: 'white',
+                    fontSize: '0.85rem',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="Todos" style={{ background: '#0f172a' }}>Todas las formas</option>
+                  <option value="EFECTIVO" style={{ background: '#0f172a' }}>Efectivo</option>
+                  <option value="TRANSFERENCIA" style={{ background: '#0f172a' }}>Transferencia</option>
+                  <option value="MIXTO" style={{ background: '#0f172a' }}>Pago Mixto</option>
+                </select>
               </div>
-
-              {/* Controles de Fecha según Modo */}
-              {!contadoraUseCustomRange ? (
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: '800', color: '#94a3b8', marginBottom: '6px', letterSpacing: '0.05em' }}>
-                    📆 Mes de Declaración
-                  </label>
-                  <input
-                    type="month"
-                    value={contadoraMonth}
-                    onChange={e => setContadoraMonth(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.6rem',
-                      borderRadius: '8px',
-                      background: 'rgba(0,0,0,0.4)',
-                      border: '1px solid var(--panel-border)',
-                      color: 'white',
-                      fontWeight: 'bold',
-                      fontSize: '0.9rem',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 'bold', color: '#94a3b8', marginBottom: '4px' }}>
-                      Desde
-                    </label>
-                    <input
-                      type="date"
-                      value={contadoraStartDate}
-                      onChange={e => setContadoraStartDate(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.5rem',
-                        borderRadius: '6px',
-                        background: 'rgba(0,0,0,0.4)',
-                        border: '1px solid var(--panel-border)',
-                        color: 'white',
-                        fontSize: '0.85rem',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 'bold', color: '#94a3b8', marginBottom: '4px' }}>
-                      Hasta
-                    </label>
-                    <input
-                      type="date"
-                      value={contadoraEndDate}
-                      onChange={e => setContadoraEndDate(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.5rem',
-                        borderRadius: '6px',
-                        background: 'rgba(0,0,0,0.4)',
-                        border: '1px solid var(--panel-border)',
-                        color: 'white',
-                        fontSize: '0.85rem',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
 
               {/* Filtro Tipo de Comprobante */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: '800', color: '#94a3b8', marginBottom: '6px', letterSpacing: '0.05em' }}>
-                  📄 Tipo de Comprobante
+                <label style={{ display: 'block', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: '800', color: '#94a3b8', marginBottom: '6px' }}>
+                  📄 Tipo Comprobante
                 </label>
                 <select
                   value={contadoraDocTypeFilter}
                   onChange={e => setContadoraDocTypeFilter(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '0.6rem',
+                    padding: '0.55rem',
                     borderRadius: '8px',
                     background: 'rgba(0,0,0,0.4)',
                     border: '1px solid var(--panel-border)',
@@ -4071,15 +4217,15 @@ function CierreHermanoView({ sales }) {
 
               {/* Filtro Estado del Comprobante */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: '800', color: '#94a3b8', marginBottom: '6px', letterSpacing: '0.05em' }}>
-                  🔍 Estado del Comprobante
+                <label style={{ display: 'block', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: '800', color: '#94a3b8', marginBottom: '6px' }}>
+                  🔍 Estado Comprobante
                 </label>
                 <select
                   value={contadoraStatusFilter}
                   onChange={e => setContadoraStatusFilter(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '0.6rem',
+                    padding: '0.55rem',
                     borderRadius: '8px',
                     background: 'rgba(0,0,0,0.4)',
                     border: '1px solid var(--panel-border)',
@@ -4094,161 +4240,19 @@ function CierreHermanoView({ sales }) {
                 </select>
               </div>
 
-            </div>
-          </div>
-
-          {/* Tarjeta de Información del Emisor Seleccionado */}
-          {contadoraData.selectedIssuer && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div className="glass-panel" style={{
-                padding: '1.25rem 1.5rem',
-                background: 'linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(15,23,42,0.85) 100%)',
-                border: '1px solid rgba(16,185,129,0.4)',
-                borderRadius: '12px'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                  <div>
-                    <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#34d399', fontWeight: '800' }}>
-                      INFORMACIÓN DEL RAZÓN SOCIAL / EMISOR FISCAL
-                    </span>
-                    <h3 style={{ margin: '2px 0 0 0', fontSize: '1.35rem', color: 'white', fontWeight: 'bold' }}>
-                      {contadoraData.selectedIssuer.razonSocial || contadoraData.selectedIssuer.name}
-                    </h3>
-                    <div style={{ display: 'flex', gap: '1.25rem', marginTop: '6px', fontSize: '0.88rem', color: '#cbd5e1', flexWrap: 'wrap' }}>
-                      <span>RUC: <strong style={{ color: '#34d399', fontFamily: 'monospace' }}>{contadoraData.selectedIssuer.ruc || 'N/A'}</strong></span>
-                      <span>Establecimiento: <strong style={{ color: 'white' }}>{contadoraData.selectedIssuer.estab || '001'}</strong></span>
-                      <span>Punto Emisión: <strong style={{ color: 'white' }}>{contadoraData.selectedIssuer.ptoEmi || '001'}</strong></span>
-                    </div>
-                  </div>
-                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.75rem 1.25rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'right' }}>
-                    <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#94a3b8', fontWeight: '700' }}>
-                      PERÍODO REPORTADO
-                    </span>
-                    <h4 style={{ margin: '2px 0 0 0', fontSize: '1.2rem', color: '#60a5fa', fontWeight: 'bold' }}>
-                      {contadoraData.periodStr}
-                    </h4>
-                  </div>
-                </div>
-              </div>
-
-              {/* Grid KPI de Indicadores Tributarios Grandes */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-                
-                {/* Facturas Autorizadas */}
-                <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #60a5fa', background: 'rgba(15,23,42,0.6)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.05em' }}>
-                      Facturas Autorizadas
-                    </span>
-                    <span style={{ background: 'rgba(59,130,246,0.15)', color: '#60a5fa', fontSize: '0.7rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>SRI</span>
-                  </div>
-                  <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.8rem', color: 'white', fontWeight: '800' }}>
-                    {contadoraData.totals.numFacturas}
-                  </h3>
-                  <span style={{ fontSize: '0.75rem', color: '#60a5fa' }}>Comprobantes válidos</span>
-                </div>
-
-                {/* Notas de Venta */}
-                <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #c084fc', background: 'rgba(15,23,42,0.6)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.05em' }}>
-                      Notas de Venta
-                    </span>
-                    <span style={{ background: 'rgba(168,85,247,0.15)', color: '#c084fc', fontSize: '0.7rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>Interna</span>
-                  </div>
-                  <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.8rem', color: 'white', fontWeight: '800' }}>
-                    {contadoraData.totals.numNotasVenta}
-                  </h3>
-                  <span style={{ fontSize: '0.75rem', color: '#c084fc' }}>Válidas emitidas</span>
-                </div>
-
-                {/* Comprobantes Anulados */}
-                <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #ef4444', background: 'rgba(15,23,42,0.6)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.05em' }}>
-                      Comprobantes Anulados
-                    </span>
-                    <span style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171', fontSize: '0.7rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>0% Imp.</span>
-                  </div>
-                  <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.8rem', color: '#f87171', fontWeight: '800' }}>
-                    {contadoraData.totals.numAnulados}
-                  </h3>
-                  <span style={{ fontSize: '0.75rem', color: '#f87171' }}>Sin efecto tributario</span>
-                </div>
-
-                {/* Base Gravada 15% */}
-                <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #34d399', background: 'rgba(15,23,42,0.6)' }}>
-                  <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.05em' }}>
-                    Base Gravada (IVA 15%)
-                  </span>
-                  <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.8rem', color: '#34d399', fontWeight: '800' }}>
-                    ${contadoraData.totals.subtotal15.toFixed(2)}
-                  </h3>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Subtotal tarifa 15%</span>
-                </div>
-
-                {/* Base Tarifa 0% */}
-                <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #fbbf24', background: 'rgba(15,23,42,0.6)' }}>
-                  <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.05em' }}>
-                    Base Tarifa 0%
-                  </span>
-                  <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.8rem', color: '#fbbf24', fontWeight: '800' }}>
-                    ${contadoraData.totals.subtotal0.toFixed(2)}
-                  </h3>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Subtotal tarifa 0%</span>
-                </div>
-
-                {/* IVA 15% */}
-                <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #3b82f6', background: 'rgba(15,23,42,0.6)' }}>
-                  <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.05em' }}>
-                    IVA 15% Acumulado
-                  </span>
-                  <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.8rem', color: '#60a5fa', fontWeight: '800' }}>
-                    ${contadoraData.totals.iva15.toFixed(2)}
-                  </h3>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monto total impuesto</span>
-                </div>
-
-                {/* Total de Ventas Neta */}
-                <div className="glass-panel" style={{
-                  padding: '1.25rem',
-                  borderLeft: '5px solid #10b981',
-                  background: 'linear-gradient(135deg, rgba(16,185,129,0.18) 0%, rgba(15,23,42,0.8) 100%)',
-                  boxShadow: '0 4px 16px rgba(16,185,129,0.15)'
-                }}>
-                  <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: '#34d399', fontWeight: '900', letterSpacing: '0.05em' }}>
-                    Total de Ventas Neta
-                  </span>
-                  <h3 style={{ margin: '8px 0 2px 0', fontSize: '2rem', color: 'white', fontWeight: '900' }}>
-                    ${contadoraData.totals.totalVentas.toFixed(2)}
-                  </h3>
-                  <span style={{ fontSize: '0.75rem', color: '#34d399', fontWeight: 'bold' }}>Bases Imponibles + IVA</span>
-                </div>
-
-              </div>
-            </div>
-          )}
-
-          {/* Tabla Detallada de Comprobantes del Período */}
-          <div className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(15, 23, 42, 0.75)', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+              {/* Filtro por Cliente */}
               <div>
-                <h4 style={{ margin: 0, color: 'white', fontSize: '1.15rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  📋 Detalle de Comprobantes del Período
-                </h4>
-                <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                  Mostrando {contadoraData.filteredVouchers.length} de {contadoraData.allVouchers.length} comprobantes registrados
-                </span>
-              </div>
-              <div style={{ position: 'relative', minWidth: '260px' }}>
+                <label style={{ display: 'block', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: '800', color: '#94a3b8', marginBottom: '6px' }}>
+                  👤 Buscar Cliente / RUC
+                </label>
                 <input
                   type="text"
-                  placeholder="Buscar por cliente, RUC o No..."
+                  placeholder="Cliente o RUC..."
                   value={contadoraSearchText}
                   onChange={e => setContadoraSearchText(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '0.55rem 0.85rem',
+                    padding: '0.55rem 0.75rem',
                     borderRadius: '8px',
                     background: 'rgba(0,0,0,0.4)',
                     border: '1px solid var(--panel-border)',
@@ -4257,6 +4261,44 @@ function CierreHermanoView({ sales }) {
                     outline: 'none'
                   }}
                 />
+              </div>
+
+              {/* Filtro por Producto */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: '800', color: '#94a3b8', marginBottom: '6px' }}>
+                  📦 Buscar Producto / SKU
+                </label>
+                <input
+                  type="text"
+                  placeholder="Prenda o SKU..."
+                  value={contadoraProductSearchText}
+                  onChange={e => setContadoraProductSearchText(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.55rem 0.75rem',
+                    borderRadius: '8px',
+                    background: 'rgba(0,0,0,0.4)',
+                    border: '1px solid var(--panel-border)',
+                    color: 'white',
+                    fontSize: '0.85rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+            </div>
+          </div>
+
+          {/* Tabla Detallada de Comprobantes del Período */}
+          <div className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(15, 23, 42, 0.75)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h4 style={{ margin: 0, color: 'white', fontSize: '1.15rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  📋 Detalle de Comprobantes del Período Seleccionado
+                </h4>
+                <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                  Mostrando {contadoraData.filteredVouchers.length} de {contadoraData.allVouchers.length} comprobantes en el período
+                </span>
               </div>
             </div>
 
@@ -4271,15 +4313,17 @@ function CierreHermanoView({ sales }) {
                     <th style={{ padding: '12px 10px' }}>RUC / Cédula</th>
                     <th style={{ padding: '12px 10px', textAlign: 'right' }}>Base 15%</th>
                     <th style={{ padding: '12px 10px', textAlign: 'right' }}>Base 0%</th>
-                    <th style={{ padding: '12px 10px', textAlign: 'right' }}>Subtotal</th>
                     <th style={{ padding: '12px 10px', textAlign: 'right' }}>IVA 15%</th>
                     <th style={{ padding: '12px 10px', textAlign: 'right' }}>Total</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center' }}>Forma Pago</th>
                     <th style={{ padding: '12px 10px', textAlign: 'center' }}>Estado</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center' }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {contadoraData.filteredVouchers.map((v, i) => {
                     const isAnul = v.isAnulado;
+                    const saleKey = v.rawSale?.claveAcceso || v.rawSale?.claveAccesoOriginal || v.id;
                     return (
                       <tr
                         key={v.id || i}
@@ -4306,7 +4350,7 @@ function CierreHermanoView({ sales }) {
                         <td style={{ padding: '12px 10px', fontFamily: 'monospace', fontWeight: 'bold', color: 'white' }}>
                           {v.numeroComprobante}
                         </td>
-                        <td style={{ padding: '12px 10px', color: 'white', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <td style={{ padding: '12px 10px', color: 'white', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {v.clienteNombre}
                         </td>
                         <td style={{ padding: '12px 10px', color: '#94a3b8', fontFamily: 'monospace' }}>
@@ -4318,14 +4362,16 @@ function CierreHermanoView({ sales }) {
                         <td style={{ padding: '12px 10px', textAlign: 'right', color: isAnul ? '#ef4444' : 'var(--text-main)' }}>
                           ${isAnul ? '0.00' : v.vSubtotal0.toFixed(2)}
                         </td>
-                        <td style={{ padding: '12px 10px', textAlign: 'right', color: isAnul ? '#ef4444' : 'var(--text-main)' }}>
-                          ${isAnul ? '0.00' : v.subtotal.toFixed(2)}
-                        </td>
                         <td style={{ padding: '12px 10px', textAlign: 'right', color: isAnul ? '#ef4444' : '#60a5fa', fontWeight: 'bold' }}>
                           ${isAnul ? '0.00' : v.iva.toFixed(2)}
                         </td>
                         <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold', color: isAnul ? '#ef4444' : '#34d399', fontSize: '0.9rem' }}>
                           ${isAnul ? '0.00' : v.total.toFixed(2)}
+                        </td>
+                        <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                          <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '4px', background: 'rgba(255,255,255,0.06)', color: '#cbd5e1', fontWeight: 'bold' }}>
+                            {v.pMethod}
+                          </span>
                         </td>
                         <td style={{ padding: '12px 10px', textAlign: 'center' }}>
                           {isAnul ? (
@@ -4338,13 +4384,33 @@ function CierreHermanoView({ sales }) {
                             </span>
                           )}
                         </td>
+                        <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                            <button
+                              onClick={() => window.open(`/api/sri/pdf?claveAcceso=${saleKey}`, '_blank')}
+                              title="Ver RIDE PDF"
+                              style={{ padding: '4px 8px', borderRadius: '6px', background: '#2563eb', border: 'none', color: 'white', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}
+                            >
+                              PDF
+                            </button>
+                            {v.docType === 'Factura' && (
+                              <button
+                                onClick={() => window.open(`/api/sri/xml?claveAcceso=${saleKey}`, '_blank')}
+                                title="Descargar XML SRI"
+                                style={{ padding: '4px 8px', borderRadius: '6px', background: '#059669', border: 'none', color: 'white', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}
+                              >
+                                XML
+                              </button>
+                            )}
+                          </div>
+                        </td>
                       </tr>
                     );
                   })}
                   {contadoraData.filteredVouchers.length === 0 && (
                     <tr>
-                      <td colSpan="11" style={{ textAlign: 'center', padding: '3rem 1rem', color: '#94a3b8' }}>
-                        No se encontraron comprobantes registrados para el emisor y período seleccionado.
+                      <td colSpan="12" style={{ textAlign: 'center', padding: '3rem 1rem', color: '#94a3b8' }}>
+                        No se encontraron comprobantes registrados para las fechas y filtros seleccionados.
                       </td>
                     </tr>
                   )}
