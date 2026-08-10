@@ -1863,6 +1863,63 @@ export default function ReportesDashboard({ sales, issuers }) {
     setContadoraProductSearchText('');
   };
 
+  const handlePresetHoy = () => {
+    const today = getTodayStr();
+    setContadoraStartDate(today);
+    setContadoraEndDate(today);
+    setAppliedStartDate(today);
+    setAppliedEndDate(today);
+  };
+
+  const handlePresetEstaSemana = () => {
+    const d = new Date();
+    const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+    const ecDate = new Date(utc + (3600000 * -5));
+    const dayOfWeek = ecDate.getDay();
+    const diffToMonday = ecDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+    const monday = new Date(ecDate.setDate(diffToMonday));
+    const mondayStr = monday.toISOString().slice(0, 10);
+    const todayStr = getTodayStr();
+
+    setContadoraStartDate(mondayStr);
+    setContadoraEndDate(todayStr);
+    setAppliedStartDate(mondayStr);
+    setAppliedEndDate(todayStr);
+  };
+
+  const handlePresetEstaQuincena = () => {
+    const d = new Date();
+    const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+    const ecDate = new Date(utc + (3600000 * -5));
+    const year = ecDate.getFullYear();
+    const month = String(ecDate.getMonth() + 1).padStart(2, '0');
+    const day = ecDate.getDate();
+
+    let startStr, endStr;
+    if (day <= 15) {
+      startStr = `${year}-${month}-01`;
+      endStr = `${year}-${month}-15`;
+    } else {
+      startStr = `${year}-${month}-16`;
+      const lastDay = new Date(year, ecDate.getMonth() + 1, 0).getDate();
+      endStr = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+    }
+
+    setContadoraStartDate(startStr);
+    setContadoraEndDate(endStr);
+    setAppliedStartDate(startStr);
+    setAppliedEndDate(endStr);
+  };
+
+  const handlePresetEsteMes = () => {
+    const startStr = getFirstDayOfMonthStr();
+    const todayStr = getTodayStr();
+    setContadoraStartDate(startStr);
+    setContadoraEndDate(todayStr);
+    setAppliedStartDate(startStr);
+    setAppliedEndDate(todayStr);
+  };
+
   const contadoraData = useMemo(() => {
     const selectedIssuer = (issuers || []).find(i => i.id === contadoraIssuerId) || null;
 
@@ -2804,1036 +2861,6 @@ export default function ReportesDashboard({ sales, issuers }) {
         <CierreHermanoView sales={sales} />
       )}
       </>
-      ) : (
-        /* Render new Cierre Diario tab */
-        <div className="cierre-diario-tab animated fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          
-          {/* 1. SELECTOR DE FECHA */}
-          <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'white' }}>
-                📅 Cierre del día: <span style={{ color: 'var(--accent)', textDecoration: 'underline' }}>{formatECDate(cierreDate)}</span>
-              </span>
-            </div>
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <button 
-                onClick={handlePrevDay} 
-                className="btn-primary" 
-                style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                title="Día Anterior"
-              >
-                <ChevronLeft size={16} /> Día Anterior
-              </button>
-              <button 
-                onClick={handleSetToday} 
-                className="btn-success"
-                style={{ padding: '0.5rem 1.2rem', fontWeight: 'bold' }}
-              >
-                Hoy
-              </button>
-              <button 
-                onClick={handleNextDay} 
-                className="btn-primary"
-                style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                title="Día Siguiente"
-              >
-                Día Siguiente <ChevronRight size={16} />
-              </button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.5rem' }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Fecha:</span>
-                <input 
-                  type="date" 
-                  value={cierreDate} 
-                  onChange={e => setCierreDate(e.target.value)} 
-                  style={{
-                    background: 'rgba(0,0,0,0.3)',
-                    border: '1px solid var(--panel-border)',
-                    borderRadius: '6px',
-                    color: 'white',
-                    padding: '0.4rem 0.6rem',
-                    fontSize: '0.85rem',
-                    cursor: 'pointer'
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 2. TARJETAS KPI RESUMEN */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-            <div className="glass-panel" style={{ padding: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem', borderLeft: '4px solid var(--success)' }}>
-              <div style={{ padding: '12px', background: 'rgba(34, 197, 94, 0.15)', borderRadius: '50%', color: '#22c55e' }}>
-                <DollarSign size={24} />
-              </div>
-              <div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: '0 0 0.2rem 0', textTransform: 'uppercase', fontWeight: 'bold' }}>Total Vendido</p>
-                <h3 style={{ fontSize: '1.3rem', margin: 0, fontWeight: 'bold', color: 'white' }}>${closureTotals.totalVendido.toFixed(2)}</h3>
-              </div>
-            </div>
-            
-            <div className="glass-panel" style={{ padding: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem', borderLeft: '4px solid #3b82f6' }}>
-              <div style={{ padding: '12px', background: 'rgba(59, 130, 246, 0.15)', borderRadius: '50%', color: '#3b82f6' }}>
-                <DollarSign size={24} />
-              </div>
-              <div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: '0 0 0.2rem 0', textTransform: 'uppercase', fontWeight: 'bold' }}>Total Efectivo</p>
-                <h3 style={{ fontSize: '1.3rem', margin: 0, fontWeight: 'bold', color: 'white' }}>${closureTotals.totalEfectivo.toFixed(2)}</h3>
-              </div>
-            </div>
-            
-            <div className="glass-panel" style={{ padding: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem', borderLeft: '4px solid #a855f7' }}>
-              <div style={{ padding: '12px', background: 'rgba(168, 85, 247, 0.15)', borderRadius: '50%', color: '#a855f7' }}>
-                <TrendingUp size={24} />
-              </div>
-              <div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: '0 0 0.2rem 0', textTransform: 'uppercase', fontWeight: 'bold' }}>Total Transferencia</p>
-                <h3 style={{ fontSize: '1.3rem', margin: 0, fontWeight: 'bold', color: 'white' }}>${closureTotals.totalTransferencia.toFixed(2)}</h3>
-              </div>
-            </div>
-            
-            <div className="glass-panel" style={{ padding: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem', borderLeft: '4px solid #f59e0b' }}>
-              <div style={{ padding: '12px', background: 'rgba(245, 158, 11, 0.15)', borderRadius: '50%', color: '#f59e0b' }}>
-                <TrendingUp size={24} />
-              </div>
-              <div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: '0 0 0.2rem 0', textTransform: 'uppercase', fontWeight: 'bold' }}>Pagos Mixtos</p>
-                <h3 style={{ fontSize: '1.3rem', margin: 0, fontWeight: 'bold', color: 'white' }}>${closureTotals.totalPagosMixtos.toFixed(2)}</h3>
-              </div>
-            </div>
-            
-            <div className="glass-panel" style={{ padding: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem', borderLeft: '4px solid #ec4899' }}>
-              <div style={{ padding: '12px', background: 'rgba(236, 72, 153, 0.15)', borderRadius: '50%', color: '#ec4899' }}>
-                <FileText size={24} />
-              </div>
-              <div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: '0 0 0.2rem 0', textTransform: 'uppercase', fontWeight: 'bold' }}>Facturas / Notas</p>
-                <h3 style={{ fontSize: '1.3rem', margin: 0, fontWeight: 'bold', color: 'white' }}>
-                  F: ${closureTotals.totalFacturas.toFixed(2)} | N: ${closureTotals.totalNotasVenta.toFixed(2)}
-                </h3>
-              </div>
-            </div>
-            
-            <div className="glass-panel" style={{ padding: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem', borderLeft: '4px solid #14b8a6' }}>
-              <div style={{ padding: '12px', background: 'rgba(20, 184, 166, 0.15)', borderRadius: '50%', color: '#14b8a6' }}>
-                <Percent size={24} />
-              </div>
-              <div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: '0 0 0.2rem 0', textTransform: 'uppercase', fontWeight: 'bold' }}>IVA Generado (15%)</p>
-                <h3 style={{ fontSize: '1.3rem', margin: 0, fontWeight: 'bold', color: 'white' }}>${closureTotals.totalIva.toFixed(2)}</h3>
-              </div>
-            </div>
-            
-            <div className="glass-panel" style={{ padding: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem', borderLeft: '4px solid #6366f1' }}>
-              <div style={{ padding: '12px', background: 'rgba(99, 102, 241, 0.15)', borderRadius: '50%', color: '#6366f1' }}>
-                <Users size={24} />
-              </div>
-              <div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: '0 0 0.2rem 0', textTransform: 'uppercase', fontWeight: 'bold' }}>Ventas Únicas</p>
-                <h3 style={{ fontSize: '1.3rem', margin: 0, fontWeight: 'bold', color: 'white' }}>{closureTotals.numVentas} transacciones</h3>
-              </div>
-            </div>
-            
-            <div className="glass-panel" style={{ padding: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem', borderLeft: '4px solid #06b6d4' }}>
-              <div style={{ padding: '12px', background: 'rgba(6, 182, 212, 0.15)', borderRadius: '50%', color: '#06b6d4' }}>
-                <Package size={24} />
-              </div>
-              <div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: '0 0 0.2rem 0', textTransform: 'uppercase', fontWeight: 'bold' }}>Prendas Vendidas</p>
-                <h3 style={{ fontSize: '1.3rem', margin: 0, fontWeight: 'bold', color: 'white' }}>{closureTotals.totalPrendas} unidades</h3>
-              </div>
-            </div>
-          </div>
-
-          {/* 3. SECCIÓN DE FILTROS */}
-          <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 'bold', color: 'white', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Activity size={18} color="var(--accent)" /> Filtros de Cierre Diario
-            </h3>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-              {/* Tipo de Documento */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Tipo de Documento:</label>
-                <select 
-                  value={cierreFilterDocType} 
-                  onChange={e => setCierreFilterDocType(e.target.value)}
-                  style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--panel-border)', borderRadius: '6px', color: 'white', padding: '0.5rem', fontSize: '0.85rem' }}
-                >
-                  <option value="Todos">Todos</option>
-                  <option value="Facturas">Facturas</option>
-                  <option value="Notas de venta">Notas de venta</option>
-                </select>
-              </div>
-
-              {/* Forma de Pago */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Forma de Pago:</label>
-                <select 
-                  value={cierreFilterPayment} 
-                  onChange={e => setCierreFilterPayment(e.target.value)}
-                  style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--panel-border)', borderRadius: '6px', color: 'white', padding: '0.5rem', fontSize: '0.85rem' }}
-                >
-                  <option value="Todas">Todas</option>
-                  <option value="Efectivo">Efectivo</option>
-                  <option value="Transferencia">Transferencia</option>
-                  <option value="Pago mixto">Pago mixto</option>
-                </select>
-              </div>
-
-              {/* Emisor / Cajero */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Emisor / Cajero:</label>
-                <select 
-                  value={cierreFilterEmitter} 
-                  onChange={e => setCierreFilterEmitter(e.target.value)}
-                  style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--panel-border)', borderRadius: '6px', color: 'white', padding: '0.5rem', fontSize: '0.85rem' }}
-                >
-                  <option value="Todos">Todos</option>
-                  <option value="Edgar">Edgar</option>
-                  <option value="Fabián">Fabián</option>
-                  <option value="Amparito">Amparito</option>
-                </select>
-              </div>
-
-              {/* Propietario del Producto */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Propietario del Producto:</label>
-                <select 
-                  value={cierreFilterOwner} 
-                  onChange={e => setCierreFilterOwner(e.target.value)}
-                  style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--panel-border)', borderRadius: '6px', color: 'white', padding: '0.5rem', fontSize: '0.85rem' }}
-                >
-                  <option value="Todos">Todos</option>
-                  <option value="Edgar">Edgar</option>
-                  <option value="Fabián">Fabián</option>
-                  <option value="Amparito">Amparito</option>
-                </select>
-              </div>
-
-              {/* Búsqueda Cliente */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Cliente (Nombre/CI/RUC):</label>
-                <input 
-                  type="text" 
-                  placeholder="Buscar cliente..." 
-                  value={cierreFilterClientText} 
-                  onChange={e => setCierreFilterClientText(e.target.value)}
-                  style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--panel-border)', borderRadius: '6px', color: 'white', padding: '0.5rem', fontSize: '0.85rem' }}
-                />
-              </div>
-
-              {/* Búsqueda Producto */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Producto (Nombre/Código/Cat):</label>
-                <input 
-                  type="text" 
-                  placeholder="Buscar producto..." 
-                  value={cierreFilterProductText} 
-                  onChange={e => setCierreFilterProductText(e.target.value)}
-                  style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--panel-border)', borderRadius: '6px', color: 'white', padding: '0.5rem', fontSize: '0.85rem' }}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '0.5rem' }}>
-              <button 
-                onClick={handleClearCierreFilters} 
-                className="btn-danger" 
-                style={{ padding: '0.5rem 1.5rem', fontWeight: 'bold' }}
-              >
-                Limpiar Filtros
-              </button>
-            </div>
-          </div>
-
-          {/* 4. AGRUPACIÓN Y ACCIONES */}
-          <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Agrupar ventas por:</span>
-              <select 
-                value={cierreGrouping} 
-                onChange={e => setCierreGrouping(e.target.value)}
-                style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--panel-border)', borderRadius: '6px', color: 'white', padding: '0.5rem', fontSize: '0.85rem', fontWeight: 'bold' }}
-              >
-                <option value="Sin agrupar">Sin agrupar</option>
-                <option value="Hermano">Hermano (Propietario)</option>
-                <option value="Forma de pago">Forma de pago</option>
-                <option value="Producto">Producto</option>
-                <option value="Tipo de documento">Tipo de documento</option>
-              </select>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-              {/* Opciones de Impresión */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.03)', padding: '4px 10px', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Formato imp:</span>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: 'white', cursor: 'pointer' }}>
-                  <input type="radio" name="printOption" value="detalle" checked={printOption === 'detalle'} onChange={() => setPrintOption('detalle')} />
-                  Detalle
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: 'white', cursor: 'pointer' }}>
-                  <input type="radio" name="printOption" value="resumen" checked={printOption === 'resumen'} onChange={() => setPrintOption('resumen')} />
-                  Resumen
-                </label>
-              </div>
-
-              {/* Formato de Papel */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.03)', padding: '4px 10px', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Papel:</span>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: 'white', cursor: 'pointer' }}>
-                  <input type="radio" name="cierrePaperFormat" value="80mm" checked={cierrePaperFormat === '80mm'} onChange={() => setCierrePaperFormat('80mm')} />
-                  80 mm (Térmico)
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: 'white', cursor: 'pointer' }}>
-                  <input type="radio" name="cierrePaperFormat" value="normal" checked={cierrePaperFormat === 'normal'} onChange={() => setCierrePaperFormat('normal')} />
-                  Normal (A4)
-                </label>
-              </div>
-
-              <button 
-                onClick={() => handlePrintCierre(printOption)}
-                className="btn-success" 
-                style={{ padding: '0.6rem 1.2rem', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 'bold' }}
-              >
-                <Printer size={16} /> Imprimir Cierre
-              </button>
-
-              <button 
-                onClick={exportCierreCSV}
-                className="btn-primary" 
-                style={{ padding: '0.6rem 1.2rem', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', background: '#10b981', borderColor: '#10b981' }}
-              >
-                <Download size={16} /> Exportar Excel
-              </button>
-
-              <button 
-                onClick={() => handlePrintCierre(printOption)}
-                className="btn-primary" 
-                style={{ padding: '0.6rem 1.2rem', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 'bold' }}
-              >
-                <Download size={16} /> Exportar PDF
-              </button>
-            </div>
-          </div>
-
-          {/* 5. TABLA DE DATOS */}
-          <div className="glass-panel" style={{ padding: 0, border: '1px solid var(--panel-border)', overflowX: 'auto' }}>
-            {cierreGrouping === 'Sin agrupar' ? (
-              <table className="pos-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid var(--panel-border)', color: 'var(--text-muted)' }}>
-                    <th>Hora</th>
-                    <th>Documento</th>
-                    <th>N.º Documento</th>
-                    <th>Cliente</th>
-                    <th>Identificación</th>
-                    <th>Producto</th>
-                    <th>Cantidad</th>
-                    <th style={{ textAlign: 'right' }}>V. Unitario</th>
-                    <th style={{ textAlign: 'right' }}>Subtotal</th>
-                    <th style={{ textAlign: 'right' }}>IVA</th>
-                    <th style={{ textAlign: 'right' }}>Total</th>
-                    <th>Forma de Pago</th>
-                    <th>Propietario (Owner)</th>
-                    <th>Emisor (Caja)</th>
-                    <th>Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredItemRows.length === 0 ? (
-                    <tr>
-                      <td colSpan="15" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                        No hay ventas registradas para este día con los filtros seleccionados.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredItemRows.map(row => (
-                      <tr key={row.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: 'white' }}>
-                        <td>{row.time}</td>
-                        <td>
-                          <span style={{
-                            padding: '3px 8px',
-                            borderRadius: '12px',
-                            fontSize: '0.72rem',
-                            fontWeight: 'bold',
-                            background: row.docType === 'Factura' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                            color: row.docType === 'Factura' ? '#22c55e' : '#f59e0b',
-                            border: `1px solid ${row.docType === 'Factura' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`
-                          }}>
-                            {row.docType.toUpperCase()}
-                          </span>
-                        </td>
-                        <td>{row.docNo}</td>
-                        <td>{row.clientName}</td>
-                        <td>{row.clientId}</td>
-                        <td style={{ fontWeight: 'bold' }}>{row.productName}</td>
-                        <td>{row.qty}</td>
-                        <td style={{ textAlign: 'right' }}>${row.unitPrice.toFixed(2)}</td>
-                        <td style={{ textAlign: 'right' }}>${row.subtotal.toFixed(2)}</td>
-                        <td style={{ textAlign: 'right' }}>${row.iva.toFixed(2)}</td>
-                        <td style={{ textAlign: 'right', fontWeight: 'bold' }}>${row.total.toFixed(2)}</td>
-                        <td>
-                          {row.isMixed ? (
-                            <span style={{ color: '#60a5fa' }}>🔀 MIXTO (Ef: ${row.allocatedCash.toFixed(2)} | Tr: ${row.allocatedTransfer.toFixed(2)})</span>
-                          ) : (
-                            <span>{row.paymentMethod}</span>
-                          )}
-                        </td>
-                        <td style={{ fontWeight: 'bold', color: 'var(--accent)' }}>{row.owner}</td>
-                        <td>{row.emitterShort}</td>
-                        <td>
-                          <span style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            color: row.estado === 'ANULADA' ? '#ef4444' : '#22c55e',
-                            fontWeight: 'bold',
-                            fontSize: '0.8rem'
-                          }}>
-                            <span style={{
-                              width: '6px',
-                              height: '6px',
-                              borderRadius: '50%',
-                              background: row.estado === 'ANULADA' ? '#ef4444' : '#22c55e'
-                            }}></span>
-                            {row.estado}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            ) : (
-              /* TABLA AGRUPADA */
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', padding: '1rem' }}>
-                {groupedSections.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                    No hay ventas registradas para este día.
-                  </div>
-                ) : (
-                  groupedSections.map(group => (
-                    <div key={group.key} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '1rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '2px solid rgba(255,255,255,0.08)', paddingBottom: '0.5rem' }}>
-                        <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'white' }}>
-                          📂 Grupo: <span style={{ color: 'var(--accent)' }}>{group.key.toUpperCase()}</span>
-                        </span>
-                        <div style={{ display: 'flex', gap: '1rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                          <span>Total Vendido: <strong style={{ color: 'white' }}>${group.totalVendido.toFixed(2)}</strong></span>
-                          <span>Efectivo: <strong style={{ color: 'white' }}>${group.totalEfectivo.toFixed(2)}</strong></span>
-                          <span>Transferencia: <strong style={{ color: 'white' }}>${group.totalTransferencia.toFixed(2)}</strong></span>
-                          <span>Prendas: <strong style={{ color: 'white' }}>{group.totalPrendas} u.</strong></span>
-                          <span>Ventas: <strong style={{ color: 'white' }}>{group.numVentas}</strong></span>
-                        </div>
-                      </div>
-                      
-                      <div style={{ overflowX: 'auto' }}>
-                        <table className="pos-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                          <thead>
-                            <tr style={{ borderBottom: '1px solid var(--panel-border)', color: 'var(--text-muted)' }}>
-                              <th>Hora</th>
-                              <th>Documento</th>
-                              <th>N.º Documento</th>
-                              <th>Cliente</th>
-                              <th>Identificación</th>
-                              <th>Producto</th>
-                              <th>Cantidad</th>
-                              <th style={{ textAlign: 'right' }}>V. Unitario</th>
-                              <th style={{ textAlign: 'right' }}>Subtotal</th>
-                              <th style={{ textAlign: 'right' }}>IVA</th>
-                              <th style={{ textAlign: 'right' }}>Total</th>
-                              <th>Forma de Pago</th>
-                              <th>Propietario (Owner)</th>
-                              <th>Emisor (Caja)</th>
-                              <th>Estado</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {group.rows.map(row => (
-                              <tr key={row.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: 'white' }}>
-                                <td>{row.time}</td>
-                                <td>
-                                  <span style={{
-                                    padding: '3px 8px',
-                                    borderRadius: '12px',
-                                    fontSize: '0.72rem',
-                                    fontWeight: 'bold',
-                                    background: row.docType === 'Factura' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                                    color: row.docType === 'Factura' ? '#22c55e' : '#f59e0b',
-                                    border: `1px solid ${row.docType === 'Factura' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`
-                                  }}>
-                                    {row.docType.toUpperCase()}
-                                  </span>
-                                </td>
-                                <td>{row.docNo}</td>
-                                <td>{row.clientName}</td>
-                                <td>{row.clientId}</td>
-                                <td style={{ fontWeight: 'bold' }}>{row.productName}</td>
-                                <td>{row.qty}</td>
-                                <td style={{ textAlign: 'right' }}>${row.unitPrice.toFixed(2)}</td>
-                                <td style={{ textAlign: 'right' }}>${row.subtotal.toFixed(2)}</td>
-                                <td style={{ textAlign: 'right' }}>${row.iva.toFixed(2)}</td>
-                                <td style={{ textAlign: 'right', fontWeight: 'bold' }}>${row.total.toFixed(2)}</td>
-                                <td>
-                                  {row.isMixed ? (
-                                    <span style={{ color: '#60a5fa' }}>🔀 MIXTO (Ef: ${row.allocatedCash.toFixed(2)} | Tr: ${row.allocatedTransfer.toFixed(2)})</span>
-                                  ) : (
-                                    <span>{row.paymentMethod}</span>
-                                  )}
-                                </td>
-                                <td style={{ fontWeight: 'bold', color: 'var(--accent)' }}>{row.owner}</td>
-                                <td>{row.emitterShort}</td>
-                                <td>
-                                  <span style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '4px',
-                                    color: row.estado === 'ANULADA' ? '#ef4444' : '#22c55e',
-                                    fontWeight: 'bold',
-                                    fontSize: '0.8rem'
-                                  }}>
-                                    <span style={{
-                                      width: '6px',
-                                      height: '6px',
-                                      borderRadius: '50%',
-                                      background: row.estado === 'ANULADA' ? '#ef4444' : '#22c55e'
-                                    }}></span>
-                                    {row.estado}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function CierreHermanoView({ sales }) {
-  const [users, setUsers] = useState([]);
-  const [selectedSiblingId, setSelectedSiblingId] = useState('');
-  const [dateFrom, setDateFrom] = useState(() => new Date().toISOString().split('T')[0]);
-  const [dateTo, setDateTo] = useState(() => new Date().toISOString().split('T')[0]);
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const { getDocs, collection } = await import('firebase/firestore');
-        const { db } = await import('../../firebase/config');
-        const snap = await getDocs(collection(db, 'users'));
-        setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      } catch (err) {
-        console.error("Error loading users in CierreHermanoView:", err);
-      }
-    };
-    fetchUsers();
-  }, []);
-
-  const siblingProfiles = useMemo(() => {
-    const list = [
-      { id: 'Edgar', name: 'Edgar', dbKeys: ['edgar'] },
-      { id: 'Amparito', name: 'Amparito', dbKeys: ['amparito'] },
-      { id: 'Fabian', name: 'Fabian (Domingo Sánchez)', dbKeys: ['domingo', 'fabian', 'junior', 'sanchez'] },
-      { id: 'Diana', name: 'Diana (Esposa de Fabian)', dbKeys: ['diana'] }
-    ];
-    return list.map(item => {
-      const matchedUser = users.find(u => {
-        const uName = (u.name || '').toLowerCase();
-        return item.dbKeys.some(k => uName.includes(k));
-      });
-      return {
-        ...item,
-        firebaseId: matchedUser ? matchedUser.id : item.id,
-        firebaseName: matchedUser ? matchedUser.name : item.name
-      };
-    });
-  }, [users]);
-
-  // Filtrar ventas por fecha
-  const salesInDateRange = useMemo(() => {
-    return sales.filter(sale => {
-      const saleDate = parseSaleDate(sale);
-      if (!saleDate) return false;
-      const dateStr = saleDate.toISOString().split('T')[0];
-      if (dateFrom && dateStr < dateFrom) return false;
-      if (dateTo && dateStr > dateTo) return false;
-      return true;
-    });
-  }, [sales, dateFrom, dateTo]);
-
-  // Cálculos de compensación y desglose para el hermano seleccionado o general
-  const siblingData = useMemo(() => {
-    if (!selectedSiblingId) return null;
-    
-    if (selectedSiblingId === 'Todos') {
-      let ventasPropiasTotal = 0;
-      let ventasPropiasCantidad = 0;
-      let ventasPropiasEfectivo = 0;
-      let ventasPropiasTransferencias = 0;
-      const ventasPropiasDetalle = [];
-
-      const compensations = {};
-      siblingProfiles.forEach(p => {
-        compensations[p.firebaseId] = {
-          brotherName: p.name,
-          amountOwedToSibling: 0,
-          amountSiblingOwesToUs: 0
-        };
-      });
-
-      salesInDateRange.forEach(sale => {
-        const items = sale.productos || sale.items || [];
-        const totalItemsVal = items.reduce((acc, item) => acc + ((item.price || item.precio || 0) * (item.qty || 1) - (item.descuento || 0)), 0);
-        if (totalItemsVal <= 0) return;
-
-        const proportionVal = sale.totals?.total || sale.total || 0;
-        ventasPropiasTotal += proportionVal;
-        ventasPropiasCantidad += items.reduce((acc, i) => acc + (i.qty || 1), 0);
-
-        const paymentDetails = sale.paymentDetails || {
-          method: sale.paymentMethod || 'EFECTIVO',
-          cashAmount: sale.paymentMethod === 'EFECTIVO' ? (sale.totals?.total || sale.total || 0) : 0,
-          transfers: sale.paymentMethod === 'TRANSFERENCIA' ? [
-            {
-              recipientId: 'unknown',
-              recipientName: sale.transferRecipient || 'Desconocido',
-              amount: sale.totals?.total || sale.total || 0
-            }
-          ] : []
-        };
-
-        ventasPropiasEfectivo += paymentDetails.cashAmount || 0;
-        const transfersPart = paymentDetails.transfers || [];
-        transfersPart.forEach(t => {
-          ventasPropiasTransferencias += t.amount || 0;
-        });
-
-        ventasPropiasDetalle.push({
-          numeroVenta: sale.numeroComprobante || sale.id.substring(0, 8),
-          cliente: (sale.cliente || sale.customer)?.nombre || 'Consumidor Final',
-          productos: items.map(i => `${i.qty || 1}x ${i.name || i.nombre} (${i.ownerName || 'Sin Dueño'})`).join(', '),
-          montoTotal: proportionVal
-        });
-
-        // Calcular compensación general entre hermanos
-        transfersPart.forEach(t => {
-          const recipientProfile = siblingProfiles.find(p => {
-            if (t.recipientId && p.firebaseId === t.recipientId) return true;
-            return t.recipientName && t.recipientName.toLowerCase().includes(p.id.toLowerCase());
-          });
-          const recipientId = recipientProfile ? recipientProfile.firebaseId : (t.recipientId || 'unknown');
-
-          items.forEach(item => {
-            const itemOwnerProfile = siblingProfiles.find(p => {
-              if (item.ownerId && p.firebaseId === item.ownerId) return true;
-              return item.ownerName && item.ownerName.toLowerCase().includes(p.id.toLowerCase());
-            });
-            const ownerId = itemOwnerProfile ? itemOwnerProfile.firebaseId : (item.ownerId || 'unknown');
-            const itemVal = (item.price || item.precio || 0) * (item.qty || 1) - (item.descuento || 0);
-            const itemProp = itemVal / totalItemsVal;
-            const itemTransferAmount = itemProp * t.amount;
-
-            if (recipientId !== ownerId) {
-              if (compensations[recipientId]) {
-                compensations[recipientId].amountSiblingOwesToUs += itemTransferAmount;
-              }
-              if (compensations[ownerId]) {
-                compensations[ownerId].amountOwedToSibling += itemTransferAmount;
-              }
-            }
-          });
-        });
-      });
-
-      return {
-        siblingName: 'Todos los Hermanos (Ventas Completas)',
-        ventasPropiasTotal,
-        ventasPropiasCantidad,
-        ventasPropiasEfectivo,
-        ventasPropiasTransferencias,
-        ventasPropiasDetalle,
-        transferenciasRecibidas: [],
-        transferenciasPropiasEnOtrosHermanos: [],
-        compensations
-      };
-    }
-
-    const selectedProfile = siblingProfiles.find(p => p.id === selectedSiblingId);
-    if (!selectedProfile) return null;
-
-    // 1. Ventas de productos propios
-    let ventasPropiasTotal = 0;
-    let ventasPropiasCantidad = 0;
-    let ventasPropiasEfectivo = 0;
-    let ventasPropiasTransferencias = 0;
-    const ventasPropiasDetalle = [];
-
-    // 2. Transferencias recibidas en su cuenta
-    const transferenciasRecibidas = [];
-
-    // 3. Transferencias de su pertenencia recibidas por otros hermanos
-    const transferenciasPropiasEnOtrosHermanos = [];
-
-    // Matriz de saldos cruzados
-    const compensations = {};
-    siblingProfiles.forEach(p => {
-      if (p.id !== selectedSiblingId) {
-        compensations[p.firebaseId] = {
-          brotherName: p.name,
-          amountOwedToSibling: 0,
-          amountSiblingOwesToUs: 0
-        };
-      }
-    });
-
-    salesInDateRange.forEach(sale => {
-      const items = sale.productos || sale.items || [];
-      const totalItemsVal = items.reduce((acc, item) => acc + ((item.price || item.precio || 0) * (item.qty || 1) - (item.descuento || 0)), 0);
-      if (totalItemsVal <= 0) return;
-
-      // Calcular lo vendido por el hermano seleccionado en esta venta
-      const siblingItems = items.filter(item => {
-        return item.ownerId === selectedProfile.firebaseId || 
-               (item.ownerName && item.ownerName.toLowerCase().includes(selectedProfile.id.toLowerCase()));
-      });
-      const siblingItemsVal = siblingItems.reduce((acc, item) => acc + ((item.price || item.precio || 0) * (item.qty || 1) - (item.descuento || 0)), 0);
-      
-      // Proporción (incluyendo IVA proporcional)
-      const proportion = siblingItemsVal / totalItemsVal;
-      const proportionVal = proportion * (sale.totals?.total || sale.total || 0);
-
-      // Si el hermano seleccionado es dueño de algo en esta venta
-      if (siblingItemsVal > 0) {
-        ventasPropiasTotal += proportionVal;
-        ventasPropiasCantidad += siblingItems.reduce((acc, i) => acc + (i.qty || 1), 0);
-
-        // Desglosar por método de pago
-        const paymentDetails = sale.paymentDetails || {
-          method: sale.paymentMethod || 'EFECTIVO',
-          cashAmount: sale.paymentMethod === 'EFECTIVO' ? (sale.totals?.total || sale.total || 0) : 0,
-          transfers: sale.paymentMethod === 'TRANSFERENCIA' ? [
-            {
-              recipientId: 'unknown',
-              recipientName: sale.transferRecipient || 'Desconocido',
-              amount: sale.totals?.total || sale.total || 0
-            }
-          ] : []
-        };
-
-        const cashPart = proportion * (paymentDetails.cashAmount || 0);
-        ventasPropiasEfectivo += cashPart;
-
-        const transfersPart = paymentDetails.transfers || [];
-        transfersPart.forEach(t => {
-          const tPart = proportion * (t.amount || 0);
-          ventasPropiasTransferencias += tPart;
-
-          // Si el destinatario de la transferencia es otro hermano
-          const isOther = t.recipientId ? (t.recipientId !== selectedProfile.firebaseId) : (t.recipientName && !t.recipientName.toLowerCase().includes(selectedProfile.id.toLowerCase()));
-          if (isOther) {
-            // Buscar cuál de los otros hermanos recibió la transferencia
-            const otherProfile = siblingProfiles.find(p => {
-              if (t.recipientId && p.firebaseId === t.recipientId) return true;
-              return t.recipientName && t.recipientName.toLowerCase().includes(p.id.toLowerCase());
-            });
-            const otherId = otherProfile ? otherProfile.firebaseId : (t.recipientId || 'unknown');
-            const otherName = otherProfile ? otherProfile.name : (t.recipientName || 'Otro');
-
-            transferenciasPropiasEnOtrosHermanos.push({
-              recipientId: otherId,
-              recipientName: otherName,
-              amount: tPart,
-              numeroVenta: sale.numeroComprobante || sale.id.substring(0, 8),
-              cliente: (sale.cliente || sale.customer)?.nombre || 'Consumidor Final'
-            });
-
-            if (compensations[otherId]) {
-              compensations[otherId].amountOwedToSibling += tPart;
-            }
-          }
-        });
-
-        ventasPropiasDetalle.push({
-          numeroVenta: sale.numeroComprobante || sale.id.substring(0, 8),
-          cliente: (sale.cliente || sale.customer)?.nombre || 'Consumidor Final',
-          productos: siblingItems.map(i => `${i.qty || 1}x ${i.name || i.nombre}`).join(', '),
-          montoTotal: proportionVal
-        });
-      }
-
-      // Analizar transferencias recibidas por el hermano seleccionado
-      const paymentDetails = sale.paymentDetails || {
-        method: sale.paymentMethod || 'EFECTIVO',
-        cashAmount: sale.paymentMethod === 'EFECTIVO' ? (sale.totals?.total || sale.total || 0) : 0,
-        transfers: sale.paymentMethod === 'TRANSFERENCIA' ? [
-          {
-            recipientId: 'unknown',
-            recipientName: sale.transferRecipient || 'Desconocido',
-            amount: sale.totals?.total || sale.total || 0
-          }
-        ] : []
-      };
-
-      const transfersPart = paymentDetails.transfers || [];
-      transfersPart.forEach(t => {
-        // Si el hermano seleccionado recibió esta transferencia
-        const receivedByUs = t.recipientId ? (t.recipientId === selectedProfile.firebaseId) : (t.recipientName && t.recipientName.toLowerCase().includes(selectedProfile.id.toLowerCase()));
-        if (receivedByUs) {
-          // Analizar a quién pertenecen los productos de esta transferencia
-          items.forEach(item => {
-            const itemOwnerProfile = siblingProfiles.find(p => {
-              if (item.ownerId && p.firebaseId === item.ownerId) return true;
-              return item.ownerName && item.ownerName.toLowerCase().includes(p.id.toLowerCase());
-            });
-            const itemOwnerId = itemOwnerProfile ? itemOwnerProfile.firebaseId : (item.ownerId || 'unknown');
-            const itemOwnerName = itemOwnerProfile ? itemOwnerProfile.name : (item.ownerName || 'Otro Hermano');
-            const itemVal = (item.price || item.precio || 0) * (item.qty || 1) - (item.descuento || 0);
-            const itemProp = itemVal / totalItemsVal;
-            const itemTransferAmount = itemProp * t.amount;
-
-            // Si pertenece a otro hermano, le debemos entregar este dinero
-            if (itemOwnerId !== selectedProfile.firebaseId) {
-              transferenciasRecibidas.push({
-                ownerId: itemOwnerId,
-                ownerName: itemOwnerName,
-                numeroVenta: sale.numeroComprobante || sale.id.substring(0, 8),
-                cliente: (sale.cliente || sale.customer)?.nombre || 'Consumidor Final',
-                amount: itemTransferAmount
-              });
-
-              if (compensations[itemOwnerId]) {
-                compensations[itemOwnerId].amountSiblingOwesToUs += itemTransferAmount;
-              }
-            }
-          });
-        }
-      });
-    });
-
-    return {
-      siblingName: selectedProfile.name,
-      ventasPropiasTotal,
-      ventasPropiasCantidad,
-      ventasPropiasEfectivo,
-      ventasPropiasTransferencias,
-      ventasPropiasDetalle,
-      transferenciasRecibidas,
-      transferenciasPropiasEnOtrosHermanos,
-      compensations
-    };
-  }, [selectedSiblingId, salesInDateRange, siblingProfiles]);
-
-  return (
-    <div className="glass-panel" style={{ padding: '2rem', marginTop: '1rem', color: 'white' }}>
-      <h3 style={{ color: '#f59e0b', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        📊 Cierre Diario por Hermano y Compensaciones
-      </h3>
-
-      {/* Selectores de Filtro */}
-      <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginBottom: '2rem', background: 'rgba(0,0,0,0.2)', padding: '15px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '200px' }}>
-          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Seleccionar Hermano / Propietario:</label>
-          <select 
-            value={selectedSiblingId} 
-            onChange={(e) => setSelectedSiblingId(e.target.value)}
-            style={{ padding: '8px 12px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white', fontWeight: 'bold' }}
-          >
-            <option value="">Selecciona...</option>
-            <option value="Todos">Todos los Hermanos / General</option>
-            {siblingProfiles.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Desde:</label>
-          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ padding: '7px 10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white' }} />
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Hasta:</label>
-          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ padding: '7px 10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white' }} />
-        </div>
-      </div>
-
-      {!selectedSiblingId ? (
-        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-          💡 Selecciona un hermano de la lista para ver su balance de cierre diario.
-        </div>
-      ) : siblingData ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          
-          {/* Fila de KPIs de Ventas Propias */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
-            <div className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(34, 197, 94, 0.05)', borderLeft: '4px solid #22c55e' }}>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 5px 0' }}>Total Vendido Propio</p>
-              <h3 style={{ fontSize: '1.8rem', margin: 0, color: '#22c55e' }}>${siblingData.ventasPropiasTotal.toFixed(2)}</h3>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{siblingData.ventasPropiasCantidad} prendas vendidas</span>
-            </div>
-
-            <div className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)', borderLeft: '4px solid rgba(255,255,255,0.1)' }}>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 5px 0' }}>Proporción Efectivo</p>
-              <h3 style={{ fontSize: '1.8rem', margin: 0 }}>${siblingData.ventasPropiasEfectivo.toFixed(2)}</h3>
-            </div>
-
-            <div className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(59, 130, 246, 0.05)', borderLeft: '4px solid #3b82f6' }}>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 5px 0' }}>Proporción Transferencias</p>
-              <h3 style={{ fontSize: '1.8rem', margin: 0, color: '#3b82f6' }}>${siblingData.ventasPropiasTransferencias.toFixed(2)}</h3>
-            </div>
-          </div>
-
-          {/* Sección 1: Detalle de Ventas Propias */}
-          <div className="glass-panel" style={{ padding: '1.25rem' }}>
-            <h4 style={{ color: '#60a5fa', margin: '0 0 1rem 0' }}>📦 Detalle de prendas vendidas pertenecientes a {siblingData.siblingName}</h4>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                    <th style={{ padding: '8px' }}>No. Venta</th>
-                    <th style={{ padding: '8px' }}>Cliente</th>
-                    <th style={{ padding: '8px' }}>Detalle Prendas</th>
-                    <th style={{ padding: '8px', textAlign: 'right' }}>Monto Propio</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {siblingData.ventasPropiasDetalle.map((v, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <td style={{ padding: '8px' }}>{v.numeroVenta}</td>
-                      <td style={{ padding: '8px' }}>{v.cliente}</td>
-                      <td style={{ padding: '8px', color: 'var(--text-main)' }}>{v.productos}</td>
-                      <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', color: 'var(--success)' }}>${v.montoTotal.toFixed(2)}</td>
-                    </tr>
-                  ))}
-                  {siblingData.ventasPropiasDetalle.length === 0 && (
-                    <tr>
-                      <td colSpan="4" style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)' }}>No se vendieron prendas de este hermano en el rango de fechas.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Sección 2: Transferencias recibidas en su cuenta (De otros hermanos) */}
-          <div className="glass-panel" style={{ padding: '1.25rem' }}>
-            <h4 style={{ color: '#a78bfa', margin: '0 0 1rem 0' }}>🏦 Transferencias recibidas en cuenta de {siblingData.siblingName} por productos de otros</h4>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                    <th style={{ padding: '8px' }}>No. Venta</th>
-                    <th style={{ padding: '8px' }}>Cliente</th>
-                    <th style={{ padding: '8px' }}>Dueño del Producto</th>
-                    <th style={{ padding: '8px', textAlign: 'right' }}>Monto Recibido</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {siblingData.transferenciasRecibidas.map((v, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <td style={{ padding: '8px' }}>{v.numeroVenta}</td>
-                      <td style={{ padding: '8px' }}>{v.cliente}</td>
-                      <td style={{ padding: '8px', fontWeight: 'bold' }}>{v.ownerName}</td>
-                      <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', color: '#a78bfa' }}>${v.amount.toFixed(2)}</td>
-                    </tr>
-                  ))}
-                  {siblingData.transferenciasRecibidas.length === 0 && (
-                    <tr>
-                      <td colSpan="4" style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)' }}>No se recibieron transferencias ajenas en su cuenta.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Sección 3: Transferencias propias en cuentas de otros hermanos */}
-          <div className="glass-panel" style={{ padding: '1.25rem' }}>
-            <h4 style={{ color: '#f59e0b', margin: '0 0 1rem 0' }}>🔀 Transferencias de productos de {siblingData.siblingName} recibidas en cuentas de otros</h4>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                    <th style={{ padding: '8px' }}>No. Venta</th>
-                    <th style={{ padding: '8px' }}>Cliente</th>
-                    <th style={{ padding: '8px' }}>Quién recibió la transferencia</th>
-                    <th style={{ padding: '8px', textAlign: 'right' }}>Monto a Recuperar</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {siblingData.transferenciasPropiasEnOtrosHermanos.map((v, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <td style={{ padding: '8px' }}>{v.numeroVenta}</td>
-                      <td style={{ padding: '8px' }}>{v.cliente}</td>
-                      <td style={{ padding: '8px', fontWeight: 'bold' }}>{v.recipientName}</td>
-                      <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', color: '#f59e0b' }}>${v.amount.toFixed(2)}</td>
-                    </tr>
-                  ))}
-                  {siblingData.transferenciasPropiasEnOtrosHermanos.length === 0 && (
-                    <tr>
-                      <td colSpan="4" style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)' }}>Ninguna transferencia propia fue recibida por otros hermanos.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Sección 4: Tabla Resumen de Compensaciones */}
-          <div className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <h4 style={{ color: 'var(--success)', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              ⚖️ Matriz de Compensaciones para {siblingData.siblingName}
-            </h4>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                    <th style={{ padding: '10px 8px' }}>Hermano</th>
-                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Debe entregar a {siblingData.siblingName}</th>
-                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>{siblingData.siblingName} debe entregarle</th>
-                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Saldo Neto</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(siblingData.compensations).map(([bId, comp]) => {
-                    const net = comp.amountOwedToSibling - comp.amountSiblingOwesToUs;
-                    let netColor = 'white';
-                    let netText = `$${Math.abs(net).toFixed(2)}`;
-                    if (net > 0) {
-                      netColor = '#22c55e';
-                      netText = `A favor: +${netText}`;
-                    } else if (net < 0) {
-                      netColor = '#ef4444';
-                      netText = `En contra: -${netText}`;
-                    } else {
-                      netText = `$0.00`;
-                    }
-
-                    return (
-                      <tr key={bId} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <td style={{ padding: '10px 8px', fontWeight: 'bold' }}>{comp.brotherName}</td>
-                        <td style={{ padding: '10px 8px', textAlign: 'right', color: '#22c55e' }}>${comp.amountOwedToSibling.toFixed(2)}</td>
-                        <td style={{ padding: '10px 8px', textAlign: 'right', color: '#ef4444' }}>${comp.amountSiblingOwesToUs.toFixed(2)}</td>
-                        <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 'bold', color: netColor }}>{netText}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-        </div>
       ) : mainTab === 'contadora' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {/* Header Resumen Tributario por Rango de Fechas */}
@@ -4004,6 +3031,49 @@ function CierreHermanoView({ sales }) {
                 </div>
               </div>
 
+            </div>
+
+            {/* Accesos Rápidos de Período */}
+            <div style={{ marginTop: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.6rem', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '4px' }}>
+                Acceso rápido:
+              </span>
+              {[
+                { label: '📆 Hoy', fn: handlePresetHoy },
+                { label: '📅 Esta semana', fn: handlePresetEstaSemana },
+                { label: '🗓️ Esta quincena', fn: handlePresetEstaQuincena },
+                { label: '📋 Este mes', fn: handlePresetEsteMes },
+              ].map(({ label, fn }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={fn}
+                  style={{
+                    padding: '0.4rem 0.9rem',
+                    borderRadius: '20px',
+                    background: 'rgba(16, 185, 129, 0.12)',
+                    border: '1px solid rgba(16, 185, 129, 0.35)',
+                    color: '#34d399',
+                    fontWeight: '700',
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.18s ease',
+                    letterSpacing: '0.02em'
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = 'rgba(16,185,129,0.28)';
+                    e.currentTarget.style.borderColor = '#10b981';
+                    e.currentTarget.style.color = '#fff';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = 'rgba(16,185,129,0.12)';
+                    e.currentTarget.style.borderColor = 'rgba(16,185,129,0.35)';
+                    e.currentTarget.style.color = '#34d399';
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
 
