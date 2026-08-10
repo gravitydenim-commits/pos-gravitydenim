@@ -1811,6 +1811,7 @@ export default function ReportesDashboard({ sales, issuers }) {
   // =========================================================================
 
   // =========================================================================
+  // =========================================================================
   // --- LÓGICA DEL MÓDULO RESUMEN PARA CONTADORA (TRIBUTARIO POR EMISOR) ---
   // =========================================================================
   const [contadoraIssuerId, setContadoraIssuerId] = useState('');
@@ -1822,6 +1823,9 @@ export default function ReportesDashboard({ sales, issuers }) {
     const month = String(ecDate.getMonth() + 1).padStart(2, '0');
     return `${year}-${month}`;
   });
+  const [contadoraUseCustomRange, setContadoraUseCustomRange] = useState(false);
+  const [contadoraStartDate, setContadoraStartDate] = useState('');
+  const [contadoraEndDate, setContadoraEndDate] = useState('');
   const [contadoraDocTypeFilter, setContadoraDocTypeFilter] = useState('Todos'); // 'Todos' | 'Factura' | 'Nota de venta'
   const [contadoraStatusFilter, setContadoraStatusFilter] = useState('Todos'); // 'Todos' | 'Valida' | 'Anulada'
   const [contadoraSearchText, setContadoraSearchText] = useState('');
@@ -1867,13 +1871,37 @@ export default function ReportesDashboard({ sales, issuers }) {
     });
 
     // 2. Filtrado de Período por Fecha de Emisión Fiscal (fechaEmision / fecha)
-    const [targetYear, targetMonth] = contadoraMonth.split('-').map(Number);
+    let periodSales = [];
+    let periodStr = '';
 
-    const periodSales = issuerSales.filter(sale => {
-      const fiscalDate = getSaleFiscalDate(sale);
-      if (!fiscalDate) return false;
-      return fiscalDate.getFullYear() === targetYear && (fiscalDate.getMonth() + 1) === targetMonth;
-    });
+    if (contadoraUseCustomRange && contadoraStartDate && contadoraEndDate) {
+      const start = new Date(`${contadoraStartDate}T00:00:00`);
+      const end = new Date(`${contadoraEndDate}T23:59:59.999`);
+
+      periodSales = issuerSales.filter(sale => {
+        const fiscalDate = getSaleFiscalDate(sale);
+        if (!fiscalDate) return false;
+        return fiscalDate >= start && fiscalDate <= end;
+      });
+
+      const sStr = start.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      const eStr = end.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      periodStr = `Rango: ${sStr} al ${eStr}`;
+    } else {
+      const [targetYear, targetMonth] = contadoraMonth.split('-').map(Number);
+
+      periodSales = issuerSales.filter(sale => {
+        const fiscalDate = getSaleFiscalDate(sale);
+        if (!fiscalDate) return false;
+        return fiscalDate.getFullYear() === targetYear && (fiscalDate.getMonth() + 1) === targetMonth;
+      });
+
+      const monthNames = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+      ];
+      periodStr = `${monthNames[targetMonth - 1] || ''} ${targetYear}`;
+    }
 
     // 3. Procesamiento y Acumulación Tributaria usando Valores Guardados en Firestore
     let numFacturas = 0;
@@ -1973,12 +2001,6 @@ export default function ReportesDashboard({ sales, issuers }) {
       return true;
     });
 
-    const monthNames = [
-      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-    ];
-    const periodStr = `${monthNames[targetMonth - 1] || ''} ${targetYear}`;
-
     return {
       selectedIssuer,
       periodStr,
@@ -1994,7 +2016,7 @@ export default function ReportesDashboard({ sales, issuers }) {
         totalVentas: Number(totalVentas.toFixed(2))
       }
     };
-  }, [sales, issuers, contadoraIssuerId, contadoraMonth, contadoraDocTypeFilter, contadoraStatusFilter, contadoraSearchText]);
+  }, [sales, issuers, contadoraIssuerId, contadoraMonth, contadoraUseCustomRange, contadoraStartDate, contadoraEndDate, contadoraDocTypeFilter, contadoraStatusFilter, contadoraSearchText]);
 
   // Exportación a Excel nativo (.xlsx) mediante librería SheetJS (xlsx)
   const exportContadoraXLSX = () => {
@@ -3810,240 +3832,424 @@ function CierreHermanoView({ sales }) {
         </div>
       ) : mainTab === 'contadora' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* Header Resumen Tributario */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-            <div>
-              <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.5rem', color: '#10b981' }}>
-                <FileText size={26} /> Resumen para Contadora (Resumen Tributario)
-              </h2>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                Informe tributario mensual por emisor (RUC) listo para declaración de impuestos SRI
-              </span>
-            </div>
-            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-              <button
-                onClick={exportContadoraXLSX}
-                style={{
-                  padding: '0.6rem 1.25rem',
-                  borderRadius: '8px',
-                  background: '#059669',
-                  color: 'white',
-                  border: 'none',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: '0 4px 12px rgba(16,185,129,0.3)',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <FileSpreadsheet size={18} /> Exportar a Excel (.xlsx)
-              </button>
-              <button
-                onClick={exportContadoraPDF}
-                style={{
-                  padding: '0.6rem 1.25rem',
-                  borderRadius: '8px',
-                  background: '#2563eb',
-                  color: 'white',
-                  border: 'none',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: '0 4px 12px rgba(37,99,235,0.3)',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <Printer size={18} /> Exportar a PDF
-              </button>
+          {/* Header Resumen Tributario Independiente */}
+          <div className="glass-panel" style={{
+            padding: '1.5rem',
+            background: 'linear-gradient(135deg, rgba(6, 78, 59, 0.7) 0%, rgba(15, 23, 42, 0.95) 100%)',
+            border: '1px solid rgba(16, 185, 129, 0.4)',
+            boxShadow: '0 8px 32px rgba(16, 185, 129, 0.15)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <span style={{ background: '#10b981', color: '#042f2e', fontSize: '0.68rem', fontWeight: '900', letterSpacing: '0.08em', padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                    REPORTE TRIBUTARIO INDEPENDIENTE · SRI ECUADOR
+                  </span>
+                </div>
+                <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.6rem', color: 'white', fontWeight: 'bold' }}>
+                  <FileText size={28} color="#34d399" /> Resumen para Contadora
+                </h2>
+                <p style={{ margin: '6px 0 0 0', color: '#94a3b8', fontSize: '0.9rem' }}>
+                  Modulo de consulta fiscal para declaración de impuestos. Exclusivo por Emisor / RUC sin mezclar información.
+                </p>
+              </div>
+
+              {/* Botones de Acción Destacados en la Parte Superior */}
+              <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center' }}>
+                <button
+                  onClick={exportContadoraPDF}
+                  style={{
+                    padding: '0.75rem 1.4rem',
+                    borderRadius: '8px',
+                    background: '#2563eb',
+                    color: 'white',
+                    border: 'none',
+                    fontWeight: 'bold',
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    boxShadow: '0 4px 14px rgba(37,99,235,0.4)',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <Printer size={18} /> Exportar PDF
+                </button>
+                <button
+                  onClick={exportContadoraXLSX}
+                  style={{
+                    padding: '0.75rem 1.4rem',
+                    borderRadius: '8px',
+                    background: '#059669',
+                    color: 'white',
+                    border: 'none',
+                    fontWeight: 'bold',
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    boxShadow: '0 4px 14px rgba(16,185,129,0.4)',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <FileSpreadsheet size={18} /> Exportar Excel (.xlsx)
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Barra de Filtros: Emisor, Mes, Tipo de Comprobante, Estado SRI, Búsqueda */}
-          <div className="glass-panel" style={{ padding: '1.25rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', alignItems: 'center' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 'bold', color: '#10b981', marginBottom: '6px' }}>
-                🏢 Emisor (RUC Independiente)
-              </label>
-              <select
-                value={contadoraIssuerId}
-                onChange={e => setContadoraIssuerId(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.55rem',
-                  borderRadius: '6px',
-                  background: 'rgba(0,0,0,0.3)',
-                  border: '1px solid var(--panel-border)',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  outline: 'none'
-                }}
-              >
-                {(issuers || []).map(issuer => (
-                  <option key={issuer.id} value={issuer.id} style={{ background: '#1e293b' }}>
-                    {issuer.shortName || issuer.name || issuer.razonSocial} - RUC: {issuer.ruc || 'S/N'}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Barra de Filtros Superior: Emisor, Selección de Período y Filtros de Comprobante */}
+          <div className="glass-panel" style={{ padding: '1.25rem', background: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', alignItems: 'end' }}>
+              
+              {/* Selector de Emisor / RUC */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: '800', color: '#34d399', marginBottom: '6px', letterSpacing: '0.05em' }}>
+                  🏢 Emisor (RUC Independiente)
+                </label>
+                <select
+                  value={contadoraIssuerId}
+                  onChange={e => setContadoraIssuerId(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem',
+                    borderRadius: '8px',
+                    background: 'rgba(0,0,0,0.5)',
+                    border: '1px solid #10b981',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    fontSize: '0.9rem',
+                    outline: 'none'
+                  }}
+                >
+                  {(issuers || []).map(issuer => (
+                    <option key={issuer.id} value={issuer.id} style={{ background: '#0f172a' }}>
+                      {issuer.shortName || issuer.name || issuer.razonSocial} - RUC: {issuer.ruc || 'S/N'}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                📅 Mes de Declaración
-              </label>
-              <input
-                type="month"
-                value={contadoraMonth}
-                onChange={e => setContadoraMonth(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.55rem',
-                  borderRadius: '6px',
-                  background: 'rgba(0,0,0,0.3)',
-                  border: '1px solid var(--panel-border)',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  outline: 'none'
-                }}
-              />
-            </div>
+              {/* Selector de Modo de Período */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: '800', color: '#94a3b8', marginBottom: '6px', letterSpacing: '0.05em' }}>
+                  📅 Modo de Período
+                </label>
+                <div style={{ display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.4)', padding: '3px', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
+                  <button
+                    type="button"
+                    onClick={() => setContadoraUseCustomRange(false)}
+                    style={{
+                      flex: 1,
+                      padding: '6px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: !contadoraUseCustomRange ? '#10b981' : 'transparent',
+                      color: !contadoraUseCustomRange ? '#042f2e' : 'var(--text-muted)',
+                      fontWeight: 'bold',
+                      fontSize: '0.8rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Por Mes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setContadoraUseCustomRange(true)}
+                    style={{
+                      flex: 1,
+                      padding: '6px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: contadoraUseCustomRange ? '#10b981' : 'transparent',
+                      color: contadoraUseCustomRange ? '#042f2e' : 'var(--text-muted)',
+                      fontWeight: 'bold',
+                      fontSize: '0.8rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Rango Personalizado
+                  </button>
+                </div>
+              </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                📄 Tipo de Comprobante
-              </label>
-              <select
-                value={contadoraDocTypeFilter}
-                onChange={e => setContadoraDocTypeFilter(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.55rem',
-                  borderRadius: '6px',
-                  background: 'rgba(0,0,0,0.3)',
-                  border: '1px solid var(--panel-border)',
-                  color: 'white',
-                  outline: 'none'
-                }}
-              >
-                <option value="Todos" style={{ background: '#1e293b' }}>Todos los tipos</option>
-                <option value="Factura" style={{ background: '#1e293b' }}>Facturas</option>
-                <option value="Nota de venta" style={{ background: '#1e293b' }}>Notas de venta</option>
-              </select>
-            </div>
+              {/* Controles de Fecha según Modo */}
+              {!contadoraUseCustomRange ? (
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: '800', color: '#94a3b8', marginBottom: '6px', letterSpacing: '0.05em' }}>
+                    📆 Mes de Declaración
+                  </label>
+                  <input
+                    type="month"
+                    value={contadoraMonth}
+                    onChange={e => setContadoraMonth(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.6rem',
+                      borderRadius: '8px',
+                      background: 'rgba(0,0,0,0.4)',
+                      border: '1px solid var(--panel-border)',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      fontSize: '0.9rem',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 'bold', color: '#94a3b8', marginBottom: '4px' }}>
+                      Desde
+                    </label>
+                    <input
+                      type="date"
+                      value={contadoraStartDate}
+                      onChange={e => setContadoraStartDate(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        borderRadius: '6px',
+                        background: 'rgba(0,0,0,0.4)',
+                        border: '1px solid var(--panel-border)',
+                        color: 'white',
+                        fontSize: '0.85rem',
+                        outline: 'none'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 'bold', color: '#94a3b8', marginBottom: '4px' }}>
+                      Hasta
+                    </label>
+                    <input
+                      type="date"
+                      value={contadoraEndDate}
+                      onChange={e => setContadoraEndDate(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        borderRadius: '6px',
+                        background: 'rgba(0,0,0,0.4)',
+                        border: '1px solid var(--panel-border)',
+                        color: 'white',
+                        fontSize: '0.85rem',
+                        outline: 'none'
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
 
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                🔍 Estado del Comprobante
-              </label>
-              <select
-                value={contadoraStatusFilter}
-                onChange={e => setContadoraStatusFilter(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.55rem',
-                  borderRadius: '6px',
-                  background: 'rgba(0,0,0,0.3)',
-                  border: '1px solid var(--panel-border)',
-                  color: 'white',
-                  outline: 'none'
-                }}
-              >
-                <option value="Todos" style={{ background: '#1e293b' }}>Todos los estados</option>
-                <option value="Valida" style={{ background: '#1e293b' }}>Válidas / Autorizadas</option>
-                <option value="Anulada" style={{ background: '#1e293b' }}>Anuladas</option>
-              </select>
+              {/* Filtro Tipo de Comprobante */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: '800', color: '#94a3b8', marginBottom: '6px', letterSpacing: '0.05em' }}>
+                  📄 Tipo de Comprobante
+                </label>
+                <select
+                  value={contadoraDocTypeFilter}
+                  onChange={e => setContadoraDocTypeFilter(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem',
+                    borderRadius: '8px',
+                    background: 'rgba(0,0,0,0.4)',
+                    border: '1px solid var(--panel-border)',
+                    color: 'white',
+                    fontSize: '0.85rem',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="Todos" style={{ background: '#0f172a' }}>Todos los tipos</option>
+                  <option value="Factura" style={{ background: '#0f172a' }}>Facturas</option>
+                  <option value="Nota de venta" style={{ background: '#0f172a' }}>Notas de venta</option>
+                </select>
+              </div>
+
+              {/* Filtro Estado del Comprobante */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: '800', color: '#94a3b8', marginBottom: '6px', letterSpacing: '0.05em' }}>
+                  🔍 Estado del Comprobante
+                </label>
+                <select
+                  value={contadoraStatusFilter}
+                  onChange={e => setContadoraStatusFilter(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem',
+                    borderRadius: '8px',
+                    background: 'rgba(0,0,0,0.4)',
+                    border: '1px solid var(--panel-border)',
+                    color: 'white',
+                    fontSize: '0.85rem',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="Todos" style={{ background: '#0f172a' }}>Todos los estados</option>
+                  <option value="Valida" style={{ background: '#0f172a' }}>Válidas / Autorizadas</option>
+                  <option value="Anulada" style={{ background: '#0f172a' }}>Anuladas</option>
+                </select>
+              </div>
+
             </div>
           </div>
 
-          {/* Tarjeta de Información del Emisor y Resumen Tributario KPI */}
+          {/* Tarjeta de Información del Emisor Seleccionado */}
           {contadoraData.selectedIssuer && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div className="glass-panel" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(15,23,42,0.6) 100%)', border: '1px solid rgba(16,185,129,0.3)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div className="glass-panel" style={{
+                padding: '1.25rem 1.5rem',
+                background: 'linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(15,23,42,0.85) 100%)',
+                border: '1px solid rgba(16,185,129,0.4)',
+                borderRadius: '12px'
+              }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#34d399', fontWeight: 'bold' }}>
+                    <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#34d399', fontWeight: '800' }}>
+                      INFORMACIÓN DEL RAZÓN SOCIAL / EMISOR FISCAL
+                    </span>
+                    <h3 style={{ margin: '2px 0 0 0', fontSize: '1.35rem', color: 'white', fontWeight: 'bold' }}>
                       {contadoraData.selectedIssuer.razonSocial || contadoraData.selectedIssuer.name}
                     </h3>
-                    <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                      RUC: <strong style={{ color: 'white' }}>{contadoraData.selectedIssuer.ruc || 'N/A'}</strong> | Establecimiento: <strong style={{ color: 'white' }}>{contadoraData.selectedIssuer.estab || '001'}</strong> | Punto Emisión: <strong style={{ color: 'white' }}>{contadoraData.selectedIssuer.ptoEmi || '001'}</strong>
-                    </p>
+                    <div style={{ display: 'flex', gap: '1.25rem', marginTop: '6px', fontSize: '0.88rem', color: '#cbd5e1', flexWrap: 'wrap' }}>
+                      <span>RUC: <strong style={{ color: '#34d399', fontFamily: 'monospace' }}>{contadoraData.selectedIssuer.ruc || 'N/A'}</strong></span>
+                      <span>Establecimiento: <strong style={{ color: 'white' }}>{contadoraData.selectedIssuer.estab || '001'}</strong></span>
+                      <span>Punto Emisión: <strong style={{ color: 'white' }}>{contadoraData.selectedIssuer.ptoEmi || '001'}</strong></span>
+                    </div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Periodo Tributario Declarado</span>
-                    <h4 style={{ margin: '2px 0 0 0', fontSize: '1.1rem', color: '#60a5fa', fontWeight: 'bold' }}>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.75rem 1.25rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'right' }}>
+                    <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#94a3b8', fontWeight: '700' }}>
+                      PERÍODO REPORTADO
+                    </span>
+                    <h4 style={{ margin: '2px 0 0 0', fontSize: '1.2rem', color: '#60a5fa', fontWeight: 'bold' }}>
                       {contadoraData.periodStr}
                     </h4>
                   </div>
                 </div>
               </div>
 
-              {/* Grid KPI de Indicadores Tributarios */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                <div className="glass-panel" style={{ padding: '1rem', borderLeft: '4px solid #60a5fa' }}>
-                  <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 'bold' }}>Facturas Emitidas</span>
-                  <h3 style={{ margin: '4px 0 0 0', fontSize: '1.4rem', color: 'white' }}>{contadoraData.totals.numFacturas}</h3>
-                  <span style={{ fontSize: '0.7rem', color: '#60a5fa' }}>Válidas en SRI</span>
+              {/* Grid KPI de Indicadores Tributarios Grandes */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                
+                {/* Facturas Autorizadas */}
+                <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #60a5fa', background: 'rgba(15,23,42,0.6)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.05em' }}>
+                      Facturas Autorizadas
+                    </span>
+                    <span style={{ background: 'rgba(59,130,246,0.15)', color: '#60a5fa', fontSize: '0.7rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>SRI</span>
+                  </div>
+                  <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.8rem', color: 'white', fontWeight: '800' }}>
+                    {contadoraData.totals.numFacturas}
+                  </h3>
+                  <span style={{ fontSize: '0.75rem', color: '#60a5fa' }}>Comprobantes válidos</span>
                 </div>
 
-                <div className="glass-panel" style={{ padding: '1rem', borderLeft: '4px solid #a78bfa' }}>
-                  <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 'bold' }}>Notas de Venta</span>
-                  <h3 style={{ margin: '4px 0 0 0', fontSize: '1.4rem', color: 'white' }}>{contadoraData.totals.numNotasVenta}</h3>
-                  <span style={{ fontSize: '0.7rem', color: '#a78bfa' }}>Válidas emitidas</span>
+                {/* Notas de Venta */}
+                <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #c084fc', background: 'rgba(15,23,42,0.6)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.05em' }}>
+                      Notas de Venta
+                    </span>
+                    <span style={{ background: 'rgba(168,85,247,0.15)', color: '#c084fc', fontSize: '0.7rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>Interna</span>
+                  </div>
+                  <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.8rem', color: 'white', fontWeight: '800' }}>
+                    {contadoraData.totals.numNotasVenta}
+                  </h3>
+                  <span style={{ fontSize: '0.75rem', color: '#c084fc' }}>Válidas emitidas</span>
                 </div>
 
-                <div className="glass-panel" style={{ padding: '1rem', borderLeft: '4px solid #ef4444' }}>
-                  <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 'bold' }}>Comprobantes Anulados</span>
-                  <h3 style={{ margin: '4px 0 0 0', fontSize: '1.4rem', color: '#f87171' }}>{contadoraData.totals.numAnulados}</h3>
-                  <span style={{ fontSize: '0.7rem', color: '#f87171' }}>Sin impacto impositivo</span>
+                {/* Comprobantes Anulados */}
+                <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #ef4444', background: 'rgba(15,23,42,0.6)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.05em' }}>
+                      Comprobantes Anulados
+                    </span>
+                    <span style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171', fontSize: '0.7rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>0% Imp.</span>
+                  </div>
+                  <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.8rem', color: '#f87171', fontWeight: '800' }}>
+                    {contadoraData.totals.numAnulados}
+                  </h3>
+                  <span style={{ fontSize: '0.75rem', color: '#f87171' }}>Sin efecto tributario</span>
                 </div>
 
-                <div className="glass-panel" style={{ padding: '1rem', borderLeft: '4px solid #34d399' }}>
-                  <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 'bold' }}>Subtotal Gravado (15%)</span>
-                  <h3 style={{ margin: '4px 0 0 0', fontSize: '1.4rem', color: '#34d399' }}>${contadoraData.totals.subtotal15.toFixed(2)}</h3>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Base Imponible IVA 15%</span>
+                {/* Base Gravada 15% */}
+                <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #34d399', background: 'rgba(15,23,42,0.6)' }}>
+                  <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.05em' }}>
+                    Base Gravada (IVA 15%)
+                  </span>
+                  <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.8rem', color: '#34d399', fontWeight: '800' }}>
+                    ${contadoraData.totals.subtotal15.toFixed(2)}
+                  </h3>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Subtotal tarifa 15%</span>
                 </div>
 
-                <div className="glass-panel" style={{ padding: '1rem', borderLeft: '4px solid #fbbf24' }}>
-                  <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 'bold' }}>Subtotal Tarifa 0%</span>
-                  <h3 style={{ margin: '4px 0 0 0', fontSize: '1.4rem', color: '#fbbf24' }}>${contadoraData.totals.subtotal0.toFixed(2)}</h3>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Base Imponible Tarifa 0%</span>
+                {/* Base Tarifa 0% */}
+                <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #fbbf24', background: 'rgba(15,23,42,0.6)' }}>
+                  <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.05em' }}>
+                    Base Tarifa 0%
+                  </span>
+                  <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.8rem', color: '#fbbf24', fontWeight: '800' }}>
+                    ${contadoraData.totals.subtotal0.toFixed(2)}
+                  </h3>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Subtotal tarifa 0%</span>
                 </div>
 
-                <div className="glass-panel" style={{ padding: '1rem', borderLeft: '4px solid #3b82f6' }}>
-                  <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 'bold' }}>Monto IVA (15%)</span>
-                  <h3 style={{ margin: '4px 0 0 0', fontSize: '1.4rem', color: '#60a5fa' }}>${contadoraData.totals.iva15.toFixed(2)}</h3>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Impuesto Acumulado</span>
+                {/* IVA 15% */}
+                <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #3b82f6', background: 'rgba(15,23,42,0.6)' }}>
+                  <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.05em' }}>
+                    IVA 15% Acumulado
+                  </span>
+                  <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.8rem', color: '#60a5fa', fontWeight: '800' }}>
+                    ${contadoraData.totals.iva15.toFixed(2)}
+                  </h3>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monto total impuesto</span>
                 </div>
 
-                <div className="glass-panel" style={{ padding: '1rem', borderLeft: '4px solid #10b981', background: 'rgba(16,185,129,0.1)' }}>
-                  <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#34d399', fontWeight: 'bold' }}>Total Ventas Neta</span>
-                  <h3 style={{ margin: '4px 0 0 0', fontSize: '1.5rem', color: 'white', fontWeight: 'bold' }}>${contadoraData.totals.totalVentas.toFixed(2)}</h3>
-                  <span style={{ fontSize: '0.7rem', color: '#34d399' }}>Subtotales + IVA</span>
+                {/* Total de Ventas Neta */}
+                <div className="glass-panel" style={{
+                  padding: '1.25rem',
+                  borderLeft: '5px solid #10b981',
+                  background: 'linear-gradient(135deg, rgba(16,185,129,0.18) 0%, rgba(15,23,42,0.8) 100%)',
+                  boxShadow: '0 4px 16px rgba(16,185,129,0.15)'
+                }}>
+                  <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: '#34d399', fontWeight: '900', letterSpacing: '0.05em' }}>
+                    Total de Ventas Neta
+                  </span>
+                  <h3 style={{ margin: '8px 0 2px 0', fontSize: '2rem', color: 'white', fontWeight: '900' }}>
+                    ${contadoraData.totals.totalVentas.toFixed(2)}
+                  </h3>
+                  <span style={{ fontSize: '0.75rem', color: '#34d399', fontWeight: 'bold' }}>Bases Imponibles + IVA</span>
                 </div>
+
               </div>
             </div>
           )}
 
-          {/* Tabla Detallada de Comprobantes del Periodo */}
-          <div className="glass-panel" style={{ padding: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <h4 style={{ margin: 0, color: 'white', fontSize: '1.05rem', fontWeight: 'bold' }}>
-                📋 Detalle de Comprobantes ({contadoraData.filteredVouchers.length} registros)
-              </h4>
-              <div style={{ position: 'relative', minWidth: '220px' }}>
+          {/* Tabla Detallada de Comprobantes del Período */}
+          <div className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(15, 23, 42, 0.75)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h4 style={{ margin: 0, color: 'white', fontSize: '1.15rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  📋 Detalle de Comprobantes del Período
+                </h4>
+                <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                  Mostrando {contadoraData.filteredVouchers.length} de {contadoraData.allVouchers.length} comprobantes registrados
+                </span>
+              </div>
+              <div style={{ position: 'relative', minWidth: '260px' }}>
                 <input
                   type="text"
-                  placeholder="Buscar cliente, RUC o No..."
+                  placeholder="Buscar por cliente, RUC o No..."
                   value={contadoraSearchText}
                   onChange={e => setContadoraSearchText(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '0.45rem 0.75rem',
-                    borderRadius: '6px',
-                    background: 'rgba(0,0,0,0.3)',
+                    padding: '0.55rem 0.85rem',
+                    borderRadius: '8px',
+                    background: 'rgba(0,0,0,0.4)',
                     border: '1px solid var(--panel-border)',
                     color: 'white',
                     fontSize: '0.85rem',
@@ -4056,17 +4262,18 @@ function CierreHermanoView({ sales }) {
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                    <th style={{ padding: '10px 8px' }}>Fecha</th>
-                    <th style={{ padding: '10px 8px' }}>Tipo</th>
-                    <th style={{ padding: '10px 8px' }}>No. Comprobante</th>
-                    <th style={{ padding: '10px 8px' }}>Cliente</th>
-                    <th style={{ padding: '10px 8px' }}>RUC / Cédula</th>
-                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Subtotal 15%</th>
-                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Subtotal 0%</th>
-                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>IVA 15%</th>
-                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Total</th>
-                    <th style={{ padding: '10px 8px', textAlign: 'center' }}>Estado</th>
+                  <tr style={{ borderBottom: '2px solid rgba(255,255,255,0.12)', textAlign: 'left', color: '#94a3b8', background: 'rgba(0,0,0,0.2)' }}>
+                    <th style={{ padding: '12px 10px' }}>Fecha</th>
+                    <th style={{ padding: '12px 10px' }}>Tipo</th>
+                    <th style={{ padding: '12px 10px' }}>No. Comprobante</th>
+                    <th style={{ padding: '12px 10px' }}>Cliente</th>
+                    <th style={{ padding: '12px 10px' }}>RUC / Cédula</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'right' }}>Base 15%</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'right' }}>Base 0%</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'right' }}>Subtotal</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'right' }}>IVA 15%</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'right' }}>Total</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center' }}>Estado</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -4081,40 +4288,51 @@ function CierreHermanoView({ sales }) {
                           opacity: isAnul ? 0.75 : 1
                         }}
                       >
-                        <td style={{ padding: '10px 8px', color: 'var(--text-muted)' }}>{v.fecha}</td>
-                        <td style={{ padding: '10px 8px', fontWeight: 'bold' }}>
+                        <td style={{ padding: '12px 10px', color: '#cbd5e1' }}>{v.fecha}</td>
+                        <td style={{ padding: '12px 10px', fontWeight: 'bold' }}>
                           <span style={{
-                            padding: '2px 8px',
-                            borderRadius: '4px',
+                            padding: '3px 10px',
+                            borderRadius: '6px',
                             fontSize: '0.75rem',
-                            background: v.docType === 'Factura' ? 'rgba(59,130,246,0.15)' : 'rgba(168,85,247,0.15)',
-                            color: v.docType === 'Factura' ? '#60a5fa' : '#c084fc'
+                            fontWeight: '700',
+                            background: v.docType === 'Factura' ? 'rgba(59,130,246,0.18)' : 'rgba(168,85,247,0.18)',
+                            color: v.docType === 'Factura' ? '#60a5fa' : '#c084fc',
+                            border: v.docType === 'Factura' ? '1px solid rgba(59,130,246,0.3)' : '1px solid rgba(168,85,247,0.3)'
                           }}>
                             {v.docType}
                           </span>
                         </td>
-                        <td style={{ padding: '10px 8px', fontFamily: 'monospace', fontWeight: 'bold' }}>{v.numeroComprobante}</td>
-                        <td style={{ padding: '10px 8px', color: 'white', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.clienteNombre}</td>
-                        <td style={{ padding: '10px 8px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{v.clienteRuc}</td>
-                        <td style={{ padding: '10px 8px', textAlign: 'right', color: isAnul ? '#ef4444' : 'var(--text-main)' }}>
+                        <td style={{ padding: '12px 10px', fontFamily: 'monospace', fontWeight: 'bold', color: 'white' }}>
+                          {v.numeroComprobante}
+                        </td>
+                        <td style={{ padding: '12px 10px', color: 'white', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {v.clienteNombre}
+                        </td>
+                        <td style={{ padding: '12px 10px', color: '#94a3b8', fontFamily: 'monospace' }}>
+                          {v.clienteRuc}
+                        </td>
+                        <td style={{ padding: '12px 10px', textAlign: 'right', color: isAnul ? '#ef4444' : 'var(--text-main)' }}>
                           ${isAnul ? '0.00' : v.vSubtotal15.toFixed(2)}
                         </td>
-                        <td style={{ padding: '10px 8px', textAlign: 'right', color: isAnul ? '#ef4444' : 'var(--text-main)' }}>
+                        <td style={{ padding: '12px 10px', textAlign: 'right', color: isAnul ? '#ef4444' : 'var(--text-main)' }}>
                           ${isAnul ? '0.00' : v.vSubtotal0.toFixed(2)}
                         </td>
-                        <td style={{ padding: '10px 8px', textAlign: 'right', color: isAnul ? '#ef4444' : '#60a5fa' }}>
+                        <td style={{ padding: '12px 10px', textAlign: 'right', color: isAnul ? '#ef4444' : 'var(--text-main)' }}>
+                          ${isAnul ? '0.00' : v.subtotal.toFixed(2)}
+                        </td>
+                        <td style={{ padding: '12px 10px', textAlign: 'right', color: isAnul ? '#ef4444' : '#60a5fa', fontWeight: 'bold' }}>
                           ${isAnul ? '0.00' : v.iva.toFixed(2)}
                         </td>
-                        <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 'bold', color: isAnul ? '#ef4444' : '#34d399' }}>
+                        <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold', color: isAnul ? '#ef4444' : '#34d399', fontSize: '0.9rem' }}>
                           ${isAnul ? '0.00' : v.total.toFixed(2)}
                         </td>
-                        <td style={{ padding: '10px 8px', textAlign: 'center' }}>
+                        <td style={{ padding: '12px 10px', textAlign: 'center' }}>
                           {isAnul ? (
-                            <span style={{ color: '#ef4444', fontWeight: 'bold', fontSize: '0.75rem', padding: '2px 8px', background: 'rgba(239,68,68,0.2)', borderRadius: '4px' }}>
+                            <span style={{ color: '#f87171', fontWeight: 'bold', fontSize: '0.75rem', padding: '3px 10px', background: 'rgba(239,68,68,0.2)', borderRadius: '6px', border: '1px solid rgba(239,68,68,0.3)' }}>
                               Anulada
                             </span>
                           ) : (
-                            <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '0.75rem', padding: '2px 8px', background: 'rgba(16,185,129,0.2)', borderRadius: '4px' }}>
+                            <span style={{ color: '#34d399', fontWeight: 'bold', fontSize: '0.75rem', padding: '3px 10px', background: 'rgba(16,185,129,0.2)', borderRadius: '6px', border: '1px solid rgba(16,185,129,0.3)' }}>
                               Válida
                             </span>
                           )}
@@ -4124,8 +4342,8 @@ function CierreHermanoView({ sales }) {
                   })}
                   {contadoraData.filteredVouchers.length === 0 && (
                     <tr>
-                      <td colSpan="10" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                        No se encontraron comprobantes para el emisor y periodo seleccionado.
+                      <td colSpan="11" style={{ textAlign: 'center', padding: '3rem 1rem', color: '#94a3b8' }}>
+                        No se encontraron comprobantes registrados para el emisor y período seleccionado.
                       </td>
                     </tr>
                   )}
