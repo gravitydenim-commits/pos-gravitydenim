@@ -2479,14 +2479,15 @@ export default function ReportesDashboard({ sales, issuers }) {
                             <span style={{ fontSize: '0.7rem' }}>{sale.claveAcceso || sale.id}</span>
                             <div style={{ display: 'flex', gap: '4px' }}>
                               <button 
-                                onClick={() => generarFacturaA4(sale, issuer)}
-                                style={{ background: '#10b981', border: 'none', padding: '4px', borderRadius: '4px', color: 'white', cursor: 'pointer' }}
-                                title="Descargar PDF (RIDE A4)"
+                                onClick={() => window.open(`/api/sri/pdf?claveAcceso=${sale.claveAcceso || sale.id}`, '_blank')}
+                                style={{ background: '#10b981', border: 'none', padding: '4px 6px', borderRadius: '4px', color: 'white', cursor: 'pointer' }}
+                                title="Descargar RIDE PDF SRI"
                               >
                                 <FileText size={14} />
                               </button>
                               <button 
-                                style={{ background: '#ef4444', border: 'none', padding: '4px', borderRadius: '4px', color: 'white', cursor: 'pointer', opacity: 0.7 }}
+                                onClick={() => window.open(`/api/sri/xml?claveAcceso=${sale.claveAcceso || sale.id}`, '_blank')}
+                                style={{ background: '#ef4444', border: 'none', padding: '4px 6px', borderRadius: '4px', color: 'white', cursor: 'pointer' }}
                                 title="Descargar XML"
                               >
                                 <FileCode2 size={14} />
