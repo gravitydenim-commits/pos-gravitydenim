@@ -20,6 +20,11 @@ export default async function handler(req, res) {
   let mensajesSri = [];
   let rawSriResponse = null;
   let errorTecnico = null;
+  let errorStack = null;
+  let soapFault = null;
+  let httpStatus = 500;
+  let authResult = null;
+  let sriTimeout = false;
 
   try {
     const adminAuth = getAdminAuth();
@@ -139,14 +144,6 @@ export default async function handler(req, res) {
     const sriEnvConfig = (process.env.SRI_ENVIRONMENT || '').trim().toLowerCase();
     const isProdEnv = sriEnvConfig === 'production';
     const sriEnv = isProdEnv ? 'prod' : 'test';
-
-    let errorTecnico = null;
-    let authResult = null;
-    let sriTimeout = false;
-    let codigoRespuesta = null;
-    let mensajeRespuesta = null;
-    let informacionAdicional = null;
-    let estadoRespuestaSRI = 'PENDIENTE_ENVIO';
 
     console.log(`[SRI REINTENTO] Clave: ${claveAcceso} | Modo: ${isProdEnv ? 'PRODUCCIÓN' : 'PRUEBAS'} (${sriEnv})`);
 

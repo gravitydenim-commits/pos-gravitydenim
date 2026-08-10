@@ -29,7 +29,7 @@ export default function FacturasSRI({ isAdmin }) {
   const [ventas, setVentas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('contingencia'); // 'contingencia' o 'historial'
-  const [procesando, setProcesando] = useState(false);
+  const [procesandoId, setProcesandoId] = useState(null);
   const [eliminandoId, setEliminandoId] = useState(null);
 
   // Estados de filtros
@@ -100,7 +100,8 @@ export default function FacturasSRI({ isAdmin }) {
   }, [baseList, filterDateFrom, filterDateTo, filterClient, filterInvoice, filterSriState]);
 
   const handleReenviar = async (venta) => {
-    setProcesando(true);
+    const targetId = venta.id || venta.claveAcceso;
+    setProcesandoId(targetId);
     try {
       const claveAcceso = venta.claveAcceso || venta.id;
       console.log(`Intentando reenviar factura ${claveAcceso} al SRI...`);
@@ -138,7 +139,7 @@ export default function FacturasSRI({ isAdmin }) {
     } catch (error) {
       alert(`No fue posible comunicarse con el SRI.\nDetalle: ${error.message}`);
     } finally {
-      setProcesando(false);
+      setProcesandoId(null);
     }
   };
 
@@ -146,7 +147,8 @@ export default function FacturasSRI({ isAdmin }) {
     if (!confirm("¿Está seguro de que desea reemitir esta factura?\n\nSe reservará un NUEVO secuencial de forma atómica y se generará una nueva clave de acceso en el SRI, descartando el secuencial anterior.")) {
       return;
     }
-    setProcesando(true);
+    const targetId = venta.id || venta.claveAcceso;
+    setProcesandoId(targetId);
     try {
       const claveAcceso = venta.claveAcceso || venta.id;
       console.log(`Reemitiendo factura ${claveAcceso} con nuevo secuencial...`);
@@ -174,7 +176,7 @@ export default function FacturasSRI({ isAdmin }) {
     } catch (error) {
       alert(`No fue posible reemitir la factura.\nDetalle: ${error.message}`);
     } finally {
-      setProcesando(false);
+      setProcesandoId(null);
     }
   };
 
@@ -442,6 +444,9 @@ export default function FacturasSRI({ isAdmin }) {
                 const dateStr = saleDate ? `${saleDate.toLocaleDateString()} ${saleDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : 'S/F';
                 const est = (venta.estadoSri || venta.status || 'PENDIENTE_ENVIO').toUpperCase();
                 const isContingency = est !== 'AUTORIZADO' && est !== 'AUTORIZADA' && est !== 'NOTA_DE_VENTA';
+                const rowKey = venta.id || venta.claveAcceso;
+                const isRowProcessing = (procesandoId === rowKey);
+                const isAnyProcessing = (procesandoId !== null);
                 
                 return (
                   <tr key={venta.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
@@ -464,18 +469,18 @@ export default function FacturasSRI({ isAdmin }) {
                           </button>
                           <button 
                             onClick={() => handleReenviar(venta)}
-                            disabled={procesando}
-                            style={{ padding: '6px 12px', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '4px', cursor: procesando ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                            disabled={isAnyProcessing}
+                            style={{ padding: '6px 12px', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '4px', cursor: isAnyProcessing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                           >
-                            <RefreshCw size={14} className={procesando ? "animate-spin" : ""} /> 
-                            {procesando ? 'Enviando...' : 'Reenviar SRI'}
+                            <RefreshCw size={14} className={isRowProcessing ? "animate-spin" : ""} /> 
+                            {isRowProcessing ? 'Enviando...' : 'Reenviar SRI'}
                           </button>
                           <button 
                             onClick={() => handleReemitir(venta)}
-                            disabled={procesando}
-                            style={{ padding: '6px 12px', background: '#e11d48', color: 'white', border: 'none', borderRadius: '4px', cursor: procesando ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                            disabled={isAnyProcessing}
+                            style={{ padding: '6px 12px', background: '#e11d48', color: 'white', border: 'none', borderRadius: '4px', cursor: isAnyProcessing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                           >
-                            <RefreshCw size={14} className={procesando ? "animate-spin" : ""} /> 
+                            <RefreshCw size={14} className={isRowProcessing ? "animate-spin" : ""} /> 
                             Reemitir (Nuevo Secuencial)
                           </button>
                           {isAdmin && ['DEVUELTO', 'DEVUELTA', 'ERROR', 'RECHAZADO', 'RECHAZADA', 'ERROR_INTERNO', 'ERROR_FIRMA', 'TIMEOUT'].includes(est) && !venta.numeroAutorizacion && !venta.fechaAutorizacion && (
