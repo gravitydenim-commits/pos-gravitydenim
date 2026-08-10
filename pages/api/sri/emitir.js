@@ -10,7 +10,7 @@ const { generateXmlInvoice, signXml, validateXml, authorizeXml } = require('osod
 import fs from 'fs';
 import path from 'path';
 import forge from 'node-forge';
-import { TAX_CONFIG, calculateTotals } from '../../../src/utils/taxes';
+import { TAX_CONFIG, calculateTotals, getCodigoPrincipal } from '../../../src/utils/taxes';
 import { sanitizeFirestorePayload } from '../../../src/utils/sanitize';
 
 const round2 = (val) => Number(Number(val).toFixed(2));
@@ -158,7 +158,7 @@ export default async function handler(req, res) {
     const importeTotal = totalsCalc.total;
 
     const detalles = totalsCalc.detalles.map(d => ({
-      codigoPrincipal: d.id,
+      codigoPrincipal: d.codigoPrincipal || getCodigoPrincipal(d),
       descripcion: d.nombre,
       cantidad: d.qty,
       precioUnitario: d.precioUnitario,

@@ -1,7 +1,7 @@
 import { getAdminAuth, getAdminDb } from '../../../src/lib/firebaseAdmin';
 import { sendInvoiceEmail } from '../../../src/lib/mailer';
 import { generateRidePdf } from '../../../src/lib/pdfGenerator';
-import { TAX_CONFIG, calculateTotals } from '../../../src/utils/taxes';
+import { TAX_CONFIG, calculateTotals, getCodigoPrincipal } from '../../../src/utils/taxes';
 import { sanitizeFirestorePayload } from '../../../src/utils/sanitize';
 
 // CRITICAL: Forzar zona horaria Ecuador y mitigar errores TLS IP SNI en Vercel
@@ -173,7 +173,7 @@ export default async function handler(req, res) {
       },
       detalles: {
         detalle: totalsCalc.detalles.map(d => ({
-          codigoPrincipal: d.sku || d.id || 'CUSTOM',
+          codigoPrincipal: d.codigoPrincipal || getCodigoPrincipal(d),
           descripcion: d.nombre,
           cantidad: d.qty.toFixed(6),
           precioUnitario: d.precioUnitario.toFixed(6),

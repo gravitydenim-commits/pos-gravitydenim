@@ -13,6 +13,33 @@ export const TAX_CONFIG = {
 export const round2 = (val) => Number(Math.round(Number(val + 'e2')) + 'e-2') || Number(Number(val).toFixed(2));
 
 /**
+ * Genera o rescata el código principal de un producto para el XML del SRI.
+ * Regla:
+ * 1. Si el producto tiene SKU/código en inventario, usa exactamente ese código.
+ * 2. Si no tiene SKU, genera las primeras 3 letras del nombre en MAYÚSCULAS + '01'.
+ * NUNCA utiliza el ID automático de Firestore.
+ */
+export function getCodigoPrincipal(item = {}) {
+  const rawCode = (item.sku || item.codigo || item.codigoBarras || item.code || '').toString().trim();
+  if (rawCode && rawCode !== '' && rawCode !== '-' && rawCode !== '0000') {
+    return rawCode;
+  }
+
+  const nombre = (item.name || item.nombre || 'PROD').toString().trim();
+  const cleanLetters = nombre
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .toUpperCase();
+  
+  const prefix = cleanLetters.length >= 3 
+    ? cleanLetters.slice(0, 3) 
+    : (cleanLetters.length > 0 ? cleanLetters : 'PRO');
+
+  return `${prefix}01`;
+}
+
+/**
  * Función única y centralizada para cálculo de impuestos SRI y POS.
  * @param {Array} items Array de productos [{ price/precio, qty/cantidad, descuento }]
  * @param {Boolean} vatIncluded True si el precio ya incluye IVA (se desglosa), false si se le suma el IVA
@@ -56,8 +83,12 @@ export function calculateTotals(items = [], vatIncluded = true, isNotaVenta = fa
     valorIva += itemIva;
     importeTotal += itemTotal;
 
+    const codigoPrincipal = getCodigoPrincipal(item);
+
     return {
       id: item.id || item.codigo || '0000',
+      sku: item.sku || item.codigoBarras || item.codigo || '',
+      codigoPrincipal,
       nombre: item.name || item.nombre || 'Producto',
       qty,
       precioUnitario: precioUnitarioSinIva,
@@ -80,3 +111,4 @@ export function calculateTotals(items = [], vatIncluded = true, isNotaVenta = fa
     detalles
   };
 }
+
