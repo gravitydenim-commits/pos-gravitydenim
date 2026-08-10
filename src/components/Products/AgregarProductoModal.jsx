@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PackagePlus, Edit, X, Save, Loader2, Image as ImageIcon, Search } from 'lucide-react';
+import { PackagePlus, Edit, X, Save, Loader2, ImageIcon, Search } from 'lucide-react';
 
 export default function AgregarProductoModal({ onClose, onSave, initialData }) {
   const isEditing = !!initialData;
