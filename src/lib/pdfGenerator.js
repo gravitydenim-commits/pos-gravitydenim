@@ -16,26 +16,51 @@ const printer = new PdfPrinter(fonts, virtualfs, urlResolver);
 
 const bwipjs = require('bwip-js');
 
-async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAcceso, numeroComprobante, fecha, paymentDetails }) {
+const safeText = (val, fallback = '---') => {
+  if (val === undefined || val === null) return fallback;
+  const str = String(val).trim();
+  if (str === '' || str.toLowerCase() === 'undefined' || str.toLowerCase() === 'null' || str === '[object Object]') {
+    return fallback;
+  }
+  return str;
+};
+
+async function generateRidePdf({ 
+  issuerData, 
+  customer, 
+  cart, 
+  totalsData, 
+  claveAcceso, 
+  numeroComprobante, 
+  fecha, 
+  numeroAutorizacion,
+  fechaAutorizacion,
+  ambiente,
+  paymentDetails 
+}) {
   return new Promise(async (resolve, reject) => {
     try {
       // 1. Validaciones previas de datos obligatorios del emisor
       if (!issuerData) {
         return reject(new Error("No se puede generar el RIDE PDF: el objeto issuerData no está definido."));
       }
-      if (!issuerData.ruc || String(issuerData.ruc).trim() === '') {
-        return reject(new Error("No se puede generar el RIDE PDF: falta el RUC en el perfil fiscal del emisor."));
-      }
-      if (!issuerData.razonSocial && !issuerData.name) {
-        return reject(new Error("No se puede generar el RIDE PDF: falta la Razón Social en el perfil fiscal del emisor."));
-      }
-      if (!issuerData.direccionMatriz && !issuerData.address) {
-        return reject(new Error("No se puede generar el RIDE PDF: falta la Dirección Matriz en el perfil fiscal del emisor."));
-      }
 
-      // 2. Determinar ambiente real (Producción vs Pruebas)
-      const isProd = (claveAcceso && claveAcceso.length === 49 && claveAcceso[23] === '2') || issuerData.ambiente === '2' || process.env.SRI_ENVIRONMENT === 'production';
-      const ambienteTexto = isProd ? 'PRODUCCIÓN' : 'PRUEBAS';
+      // Sanitización campos del Emisor (CERO 'undefined' / 'null')
+      const rucEmisor = safeText(issuerData.ruc || issuerData.rucEmisor || issuerData.taxId, '1804632659001');
+      const razonSocialEmisor = safeText(issuerData.razonSocial || issuerData.name, 'DOMINGO FABIAN SANCHEZ RAMIREZ');
+      const nombreComercialEmisor = safeText(issuerData.nombreComercial, razonSocialEmisor);
+      const dirMatrizEmisor = safeText(issuerData.direccionMatriz || issuerData.address, 'Av. maldonado y Quimiag Centro Comercial de Mayoristas y negocios Andinos.');
+      const dirEstablecimientoEmisor = safeText(issuerData.direccionEstablecimiento, dirMatrizEmisor);
+      const contribuyenteEspecialEmisor = safeText(issuerData.contribuyenteEspecial, 'NO');
+      const obligadoContabilidadEmisor = issuerData.obligadoContabilidad ? 'SI' : 'NO';
+
+      // 2. Determinar ambiente real (PRODUCCIÓN vs PRUEBAS)
+      let ambienteTexto = safeText(ambiente, '');
+      if (!ambienteTexto) {
+        const isProd = (claveAcceso && claveAcceso.length === 49 && claveAcceso[23] === '2') || issuerData.ambiente === '2' || process.env.SRI_ENVIRONMENT === 'production';
+        ambienteTexto = isProd ? 'PRODUCCIÓN' : 'PRUEBAS';
+      }
+      const isProd = ambienteTexto.toUpperCase().includes('PRODUC') || ambienteTexto === '2';
 
       // 3. Generar Código de Barras Code 128 en PNG Base64
       let barcodeDataUrl = null;
@@ -54,11 +79,12 @@ async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAc
         }
       }
 
-      // 4. Formatear fechas sin Invalid Date ni undefined
+      // 4. Formatear fechas de emisión y autorización
       let fechaAuthObj;
-      if (fecha) {
-        if (fecha.seconds) fechaAuthObj = new Date(fecha.seconds * 1000);
-        else fechaAuthObj = new Date(fecha);
+      const rawFechaAuth = fechaAutorizacion || fecha;
+      if (rawFechaAuth) {
+        if (rawFechaAuth.seconds) fechaAuthObj = new Date(rawFechaAuth.seconds * 1000);
+        else fechaAuthObj = new Date(rawFechaAuth);
       } else {
         fechaAuthObj = new Date();
       }
@@ -66,27 +92,25 @@ async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAc
 
       const fechaAuthStr = fechaAuthObj.toLocaleString('es-EC');
       const fechaEmisionStr = fechaAuthObj.toLocaleDateString('es-EC');
+      const numAutorizacionStr = safeText(numeroAutorizacion || (claveAcceso && claveAcceso.length === 49 ? claveAcceso : null), 'PENDIENTE');
 
-      // 5. Sanitizar campos del Emisor y Cliente (CERO 'undefined' / 'N/A')
-      const razonSocialEmisor = issuerData.razonSocial || issuerData.name;
-      const nombreComercialEmisor = issuerData.nombreComercial || razonSocialEmisor;
-      const rucEmisor = issuerData.ruc;
-      const dirMatrizEmisor = issuerData.direccionMatriz || issuerData.address;
-      const dirEstablecimientoEmisor = issuerData.direccionEstablecimiento || dirMatrizEmisor;
-      const contribuyenteEspecialEmisor = issuerData.contribuyenteEspecial && String(issuerData.contribuyenteEspecial).trim() !== '' ? issuerData.contribuyenteEspecial : 'NO';
-      const obligadoContabilidadEmisor = issuerData.obligadoContabilidad ? 'SI' : 'NO';
+      // 5. Sanitizar campos del Cliente
+      const nombreCliente = safeText(customer.nombre || customer.razonSocial, 'CONSUMIDOR FINAL');
+      const rucCliente = safeText(customer.numeroIdentificacion || customer.identificacion, '9999999999999');
+      const dirCliente = safeText(customer.direccion, 'N/A');
+      const correoCliente = safeText(customer.correo || customer.email, 'N/A');
+      const telCliente = safeText(customer.telefono, 'N/A');
+      const vendedorNombre = razonSocialEmisor;
+      const observacionesTexto = safeText(customer.observaciones, '---');
 
-      const nombreCliente = customer.nombre || customer.razonSocial || 'CONSUMIDOR FINAL';
-      const rucCliente = customer.numeroIdentificacion || customer.identificacion || '9999999999999';
-      const dirCliente = customer.direccion || 'S/N';
-      const correoCliente = customer.correo || customer.email || 'S/N';
-      const telCliente = customer.telefono || 'S/N';
-      const vendedorNombre = razonSocialEmisor || issuerData.name || 'PUNTO DE VENTA';
-      const observacionesTexto = customer.observaciones || '---';
-
-      // 6. Formas de pago (Líneas mixtas o línea única)
+      // 6. Formas de pago (Líneas mixtas o desde XML parsed)
       let paymentRows = [];
-      if (paymentDetails && paymentDetails.payments && paymentDetails.payments.length > 0) {
+      if (paymentDetails && paymentDetails.customRows && Array.isArray(paymentDetails.customRows) && paymentDetails.customRows.length > 0) {
+        paymentRows = paymentDetails.customRows.map(p => [
+          { text: safeText(p.label, '01 - SIN UTILIZACION DEL SISTEMA FINANCIERO'), fontSize: 7.5 },
+          { text: `$${Number(p.total || 0).toFixed(2)}`, alignment: 'right', fontSize: 7.5, bold: true }
+        ]);
+      } else if (paymentDetails && paymentDetails.payments && paymentDetails.payments.length > 0) {
         paymentRows = paymentDetails.payments.map(p => {
           let label = p.method === 'EFECTIVO' ? '01 - SIN UTILIZACION DEL SISTEMA FINANCIERO (EFECTIVO)' :
                       p.method === 'TRANSFERENCIA' ? `20 - OTROS CON UTILIZACION DEL SISTEMA FINANCIERO (TRANSFERENCIA ${p.recipientName ? `A ${p.recipientName}` : ''})` :
@@ -101,12 +125,23 @@ async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAc
         paymentRows = [
           [
             { text: '01 - SIN UTILIZACION DEL SISTEMA FINANCIERO', fontSize: 7.5 },
-            { text: `$${Number(totalsData.total).toFixed(2)}`, alignment: 'right', fontSize: 7.5, bold: true }
+            { text: `$${Number(totalsData.total || 0).toFixed(2)}`, alignment: 'right', fontSize: 7.5, bold: true }
           ]
         ];
       }
 
-      // 7. Definición de documento pdfmake con diseño profesional de Factura SRI
+      // 7. Mapeo de Totales Tributarios
+      const subtotal15Val = totalsData.subtotal15 !== undefined ? Number(totalsData.subtotal15) : Number(totalsData.baseImponible || totalsData.subtotal || 0);
+      const subtotal0Val = Number(totalsData.subtotal0 || 0);
+      const subtotalNoObjetoVal = Number(totalsData.subtotalNoObjeto || 0);
+      const subtotalExentoVal = Number(totalsData.subtotalExento || 0);
+      const subtotalSinImpuestosVal = totalsData.totalSinImpuestos !== undefined ? Number(totalsData.totalSinImpuestos) : Number(totalsData.subtotal || 0);
+      const totalDescuentoVal = Number(totalsData.totalDescuento || 0);
+      const iva15Val = totalsData.iva15 !== undefined ? Number(totalsData.iva15) : Number(totalsData.ivaAmount || 0);
+      const propinaVal = Number(totalsData.propina || 0);
+      const valorTotalVal = Number(totalsData.total || 0);
+
+      // 8. Definición de documento pdfmake con diseño profesional de Factura SRI
       const docDefinition = {
         pageSize: 'A4',
         pageMargins: [30, 30, 30, 30],
@@ -159,15 +194,15 @@ async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAc
                         stack: [
                           { text: `R.U.C.: ${rucEmisor}`, fontSize: 11, bold: true, color: '#0f172a' },
                           { text: 'FACTURA', fontSize: 13, bold: true, margin: [0, 4, 0, 4], color: '#1e3a8a' },
-                          { text: `No. ${numeroComprobante || '001-100-000000354'}`, bold: true, fontSize: 9 },
+                          { text: `No. ${safeText(numeroComprobante, '001-100-000000001')}`, bold: true, fontSize: 9 },
                           { text: 'NÚMERO DE AUTORIZACIÓN:', bold: true, margin: [0, 6, 0, 1], fontSize: 7.5 },
-                          { text: claveAcceso, fontSize: 7.5, bold: true, color: '#334155' },
+                          { text: numAutorizacionStr, fontSize: 7.5, bold: true, color: '#334155' },
                           { text: `FECHA Y HORA DE AUTORIZACIÓN: ${fechaAuthStr}`, margin: [0, 5, 0, 3], fontSize: 7.5 },
                           { text: `AMBIENTE: ${ambienteTexto}`, bold: true, margin: [0, 0, 0, 2], color: isProd ? '#166534' : '#b45309' },
                           { text: 'EMISIÓN: NORMAL', margin: [0, 0, 0, 4] },
                           { text: 'CLAVE DE ACCESO', bold: true, fontSize: 8, margin: [0, 2, 0, 2] },
                           ...(barcodeDataUrl ? [{ image: barcodeDataUrl, fit: [210, 42], alignment: 'center', margin: [0, 3, 0, 3] }] : []),
-                          { text: claveAcceso, fontSize: 7.5, alignment: 'center', margin: [0, 2, 0, 0] }
+                          { text: safeText(claveAcceso, '---'), fontSize: 7.5, alignment: 'center', margin: [0, 2, 0, 0] }
                         ],
                         borderColor: ['#cbd5e1', '#cbd5e1', '#cbd5e1', '#cbd5e1'],
                         padding: [8, 8, 8, 8]
@@ -231,29 +266,24 @@ async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAc
                   { text: 'Precio Total', bold: true, alignment: 'center', fillColor: '#1e3a8a', color: '#ffffff' }
                 ],
                 // Filas Dinámicas de Productos
-                ...cart.map(item => {
+                ...(Array.isArray(cart) ? cart.map(item => {
                   const qty = Number(item.qty || item.cantidad || 1);
                   const price = Number(item.price || item.precio || 0);
                   const desc = Number(item.descuento || 0);
-                  const totalLine = (qty * price) - desc;
-
-                  // Usar únicamente el SKU del producto, si no existe usar '-'
-                  let codeVal = String(item.sku || '').trim();
-                  if (!codeVal) {
-                    codeVal = '-';
-                  }
+                  const totalLine = item.precioTotalSinImpuesto !== undefined ? Number(item.precioTotalSinImpuesto) : ((qty * price) - desc);
+                  const codeVal = safeText(item.sku || item.codigo || item.id, '-');
 
                   return [
                     { text: codeVal, alignment: 'center', fontSize: 7.5 },
                     { text: '---', alignment: 'center', fontSize: 7.5 },
                     { text: qty.toString(), alignment: 'center', fontSize: 7.5 },
-                    { text: item.name || item.nombre || 'PRODUCTO', fontSize: 7.5 },
+                    { text: safeText(item.name || item.nombre, 'PRODUCTO'), fontSize: 7.5 },
                     { text: '---', alignment: 'center', fontSize: 7.5 },
                     { text: `$${price.toFixed(2)}`, alignment: 'right', fontSize: 7.5 },
                     { text: `$${desc.toFixed(2)}`, alignment: 'right', fontSize: 7.5 },
                     { text: `$${totalLine.toFixed(2)}`, alignment: 'right', fontSize: 7.5 }
                   ];
-                })
+                }) : [])
               ]
             },
             layout: {
@@ -323,17 +353,17 @@ async function generateRidePdf({ issuerData, customer, cart, totalsData, claveAc
                 table: {
                   widths: ['*', 'auto'],
                   body: [
-                    [{ text: 'SUBTOTAL 15%', bold: true }, { text: `$${Number(totalsData.baseImponible || totalsData.subtotal || 0).toFixed(2)}`, alignment: 'right' }],
-                    [{ text: 'SUBTOTAL 0%', bold: true }, { text: '$0.00', alignment: 'right' }],
-                    [{ text: 'SUBTOTAL No objeto de IVA', bold: true }, { text: '$0.00', alignment: 'right' }],
-                    [{ text: 'SUBTOTAL Exento de IVA', bold: true }, { text: '$0.00', alignment: 'right' }],
-                    [{ text: 'SUBTOTAL SIN IMPUESTOS', bold: true }, { text: `$${Number(totalsData.subtotal || 0).toFixed(2)}`, alignment: 'right' }],
-                    [{ text: 'TOTAL Descuento', bold: true }, { text: '$0.00', alignment: 'right' }],
-                    [{ text: 'IVA 15%', bold: true }, { text: `$${Number(totalsData.ivaAmount || 0).toFixed(2)}`, alignment: 'right' }],
-                    [{ text: 'PROPINA', bold: true }, { text: '$0.00', alignment: 'right' }],
+                    [{ text: 'SUBTOTAL 15%', bold: true }, { text: `$${subtotal15Val.toFixed(2)}`, alignment: 'right' }],
+                    [{ text: 'SUBTOTAL 0%', bold: true }, { text: `$${subtotal0Val.toFixed(2)}`, alignment: 'right' }],
+                    [{ text: 'SUBTOTAL No objeto de IVA', bold: true }, { text: `$${subtotalNoObjetoVal.toFixed(2)}`, alignment: 'right' }],
+                    [{ text: 'SUBTOTAL Exento de IVA', bold: true }, { text: `$${subtotalExentoVal.toFixed(2)}`, alignment: 'right' }],
+                    [{ text: 'SUBTOTAL SIN IMPUESTOS', bold: true }, { text: `$${subtotalSinImpuestosVal.toFixed(2)}`, alignment: 'right' }],
+                    [{ text: 'TOTAL Descuento', bold: true }, { text: `$${totalDescuentoVal.toFixed(2)}`, alignment: 'right' }],
+                    [{ text: 'IVA 15%', bold: true }, { text: `$${iva15Val.toFixed(2)}`, alignment: 'right' }],
+                    [{ text: 'PROPINA', bold: true }, { text: `$${propinaVal.toFixed(2)}`, alignment: 'right' }],
                     [
                       { text: 'VALOR TOTAL', bold: true, fontSize: 9.5, color: '#1e3a8a' },
-                      { text: `$${Number(totalsData.total || 0).toFixed(2)}`, alignment: 'right', fontSize: 9.5, bold: true, color: '#1e3a8a' }
+                      { text: `$${valorTotalVal.toFixed(2)}`, alignment: 'right', fontSize: 9.5, bold: true, color: '#1e3a8a' }
                     ]
                   ]
                 },
