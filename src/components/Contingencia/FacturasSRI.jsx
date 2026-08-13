@@ -3,6 +3,7 @@ import { db } from '../../firebase/config';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { AlertTriangle, CheckCircle, RefreshCw, Printer, Search, FileCode } from 'lucide-react';
 import ModalAnularFactura from './ModalAnularFactura';
+import ModalSolicitarAnulacionSRI from './ModalSolicitarAnulacionSRI';
 
 const parseSaleDate = (sale) => {
   const rawDate =
@@ -74,6 +75,7 @@ export default function FacturasSRI({ isAdmin, issuers = [] }) {
   const [procesandoId, setProcesandoId] = useState(null);
   const [eliminandoId, setEliminandoId] = useState(null);
   const [ventaAnular, setVentaAnular] = useState(null);
+  const [ventaAnulacionSRI, setVentaAnulacionSRI] = useState(null);
   const [localIssuers, setLocalIssuers] = useState(issuers);
 
   useEffect(() => {
@@ -455,6 +457,14 @@ export default function FacturasSRI({ isAdmin, issuers = [] }) {
       bg = 'rgba(234, 88, 12, 0.2)';
       color = '#f97316';
       text = 'NC RECHAZADA';
+    } else if (status === 'SOLICITADA_ANULACION_SRI') {
+      bg = 'rgba(245, 158, 11, 0.2)';
+      color = '#f59e0b';
+      text = 'SOLICITUD ANULACIÓN SRI';
+    } else if (status === 'ANULADA_SRI' || status === 'ANULADA' || status === 'ANULADO') {
+      bg = 'rgba(239, 68, 68, 0.25)';
+      color = '#f87171';
+      text = 'ANULADA SRI';
     }
 
     return (
@@ -644,6 +654,22 @@ export default function FacturasSRI({ isAdmin, issuers = [] }) {
                                Revertir con NC
                              </button>
                            )}
+                           {isAdmin && (est === 'AUTORIZADO' || est === 'AUTORIZADA') && est !== 'SOLICITADA_ANULACION_SRI' && est !== 'ANULADA_SRI' && est !== 'REVERTIDA_NC' && (
+                             <button 
+                               onClick={() => setVentaAnulacionSRI(venta)}
+                               style={{ padding: '6px 10px', background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.4)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                             >
+                               Solicitar anulación
+                             </button>
+                           )}
+                           {isAdmin && est === 'SOLICITADA_ANULACION_SRI' && (
+                             <button 
+                               onClick={() => setVentaAnulacionSRI(venta)}
+                               style={{ padding: '6px 10px', background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                             >
+                               Confirmar Anulación SRI
+                             </button>
+                           )}
                          </div>
                        )}
                      </td>
@@ -756,13 +782,21 @@ export default function FacturasSRI({ isAdmin, issuers = [] }) {
          </div>
        )}
 
-       {ventaAnular && (
-         <ModalAnularFactura
-           venta={ventaAnular}
-           onClose={() => setVentaAnular(null)}
-           onSuccess={() => { setVentaAnular(null); }}
-         />
-       )}
+        {ventaAnular && (
+          <ModalAnularFactura
+            venta={ventaAnular}
+            onClose={() => setVentaAnular(null)}
+            onSuccess={() => { setVentaAnular(null); }}
+          />
+        )}
+
+        {ventaAnulacionSRI && (
+          <ModalSolicitarAnulacionSRI
+            venta={ventaAnulacionSRI}
+            onClose={() => setVentaAnulacionSRI(null)}
+            currentUser={{ uid: 'admin', displayName: 'Administrador' }}
+          />
+        )}
      </div>
   );
 }

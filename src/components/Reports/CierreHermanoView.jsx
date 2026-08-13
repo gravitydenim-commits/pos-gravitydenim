@@ -66,7 +66,7 @@ export default function CierreHermanoView({ sales }) {
   const salesInDateRange = useMemo(() => {
     return sales.filter(sale => {
       const est = (sale.estadoSri || sale.status || '').toUpperCase();
-      const isReverted = est === 'REVERTIDA_NC' || sale.notaCreditoEmitida === true;
+      const isReverted = est === 'REVERTIDA_NC' || est === 'ANULADA_SRI' || est === 'ANULADA' || est === 'ANULADO' || sale.notaCreditoEmitida === true;
       const isNC = sale.isNotaCredito || sale.tipoComprobante === 'NOTA_CREDITO' || sale.estadoVenta === 'NOTA_CREDITO';
       const isDuplicated = est === 'ERROR_DUPLICADO' || est === 'REEMPLAZADO';
       if (isReverted || isNC || isDuplicated) return false;

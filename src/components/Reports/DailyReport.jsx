@@ -8,7 +8,7 @@ export default function DailyReport({ issuers, sales }) {
     return issuers.map(issuer => {
       const issuerSales = sales.filter(s => {
         const est = (s.estadoSri || s.status || s.estado || '').toUpperCase();
-        const isInvalid = est === 'ERROR_DUPLICADO' || est === 'REVERTIDA_NC' || s.notaCreditoEmitida === true || s.isNotaCredito === true || s.tipoComprobante === 'NOTA_CREDITO';
+        const isInvalid = est === 'ERROR_DUPLICADO' || est === 'REVERTIDA_NC' || est === 'ANULADA_SRI' || est === 'ANULADA' || est === 'ANULADO' || s.notaCreditoEmitida === true || s.isNotaCredito === true || s.tipoComprobante === 'NOTA_CREDITO';
         return s.issuerId === issuer.id && !isInvalid;
       });
       const sriSales = issuerSales.filter(s => s.status !== 'NOTA_DE_VENTA');
