@@ -62,6 +62,32 @@ export default async function handler(req, res) {
     if (!emisorId || !cliente || !productos || productos.length === 0) {
       return res.status(400).json({ error: 'Faltan datos obligatorios para emitir la factura.' });
     }
+
+    // 🔴 PROTECCIÓN CRÍTICA 1: BLOQUEO DE CONSUMIDOR FINAL PARA FACTURAS ELECTRÓNICAS
+    if (!isNotaVenta) {
+      const tipoDocCli = (cliente.tipoDocumento || cliente.tipoIdentificacion || '').toString().trim().toUpperCase();
+      const numIdCli = (cliente.numeroIdentificacion || cliente.cedula || cliente.ruc || '').toString().trim();
+      const nombreCli = (cliente.nombre || cliente.name || '').toString().trim().toUpperCase();
+
+      const isConsumidorFinalBackend = tipoDocCli === 'CONSUMIDOR_FINAL' || numIdCli === '9999999999999' || numIdCli === '9999999999' || nombreCli === 'CONSUMIDOR FINAL';
+
+      if (isConsumidorFinalBackend) {
+        return res.status(400).json({
+          error: 'No se puede emitir esta factura. Seleccione o registre un cliente con identificación válida.'
+        });
+      }
+
+      // 🔴 PROTECCIÓN CRÍTICA 2: BLOQUEO DE FACTURAS CON VALOR TOTAL $0,00
+      const vatIncludedPre = req.body.vatIncluded !== false;
+      const totalsCalcPre = calculateTotals(productos, vatIncludedPre, isNotaVenta);
+      const importeTotalPre = totalsCalcPre.total;
+
+      if (!importeTotalPre || importeTotalPre <= 0 || Number(importeTotalPre.toFixed(2)) === 0) {
+        return res.status(400).json({
+          error: 'No se puede emitir una factura con valor total $0,00.'
+        });
+      }
+    }
     
     const transactionId = req.body.transactionId;
     if (!transactionId) {

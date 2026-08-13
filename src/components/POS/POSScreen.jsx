@@ -770,10 +770,23 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
     }
 
     if (!isNotaVenta) {
-      const ci = customer.numeroIdentificacion.trim();
-      const tipo = customer.tipoDocumento;
+      const ci = (customer.numeroIdentificacion || '').trim();
+      const tipo = (customer.tipoDocumento || '').trim().toUpperCase();
+      const nombre = (customer.nombre || '').trim().toUpperCase();
+      const isConsumidorFinal = tipo === 'CONSUMIDOR_FINAL' || ci === '9999999999999' || ci === '9999999999' || nombre === 'CONSUMIDOR FINAL';
+
+      if (isConsumidorFinal) {
+        alert("No se puede emitir esta factura. Seleccione o registre un cliente con identificación válida.");
+        return;
+      }
+
+      if (!total || Number(total) <= 0 || Number(total.toFixed(2)) === 0) {
+        alert("No se puede emitir una factura con valor total $0,00.");
+        return;
+      }
+
       if (tipo === 'CEDULA') {
-        if (ci.length !== 10 && ci !== '9999999999') {
+        if (ci.length !== 10) {
           alert("⚠️ EL NÚMERO DE CÉDULA DEBE TENER EXACTAMENTE 10 DÍGITOS.\n\nPara RUCs (13 dígitos) cambia el tipo de documento a RUC.");
           return;
         }
@@ -783,7 +796,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
         }
       }
       if (tipo === 'RUC') {
-        if (ci.length !== 13 && ci !== '9999999999999') {
+        if (ci.length !== 13) {
           alert("⚠️ EL RUC DEBE TENER EXACTAMENTE 13 DÍGITOS.");
           return;
         }
@@ -791,10 +804,6 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
           alert("❌ EL RUC INGRESADO ES INVÁLIDO.\n\nPor favor, verifica el número y vuelve a intentarlo.");
           return;
         }
-      }
-      if (tipo === 'CONSUMIDOR_FINAL' && ci !== '9999999999999' && ci !== '9999999999') {
-        alert("⚠️ PARA CONSUMIDOR FINAL EL NÚMERO DEBE SER 9999999999999.");
-        return;
       }
     }
 
@@ -990,6 +999,24 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
   // --- CONFIRMAR PAGO REAL (SRI Y FIREBASE) ---
   const confirmCheckout = async () => {
     if (isProcessing) return; // Bloqueo anti doble clic
+
+    // 🔴 PROTECCIONES OBLIGATORIAS FRONTEND PARA FACTURAS ELECTRÓNICAS
+    if (!isNotaVenta) {
+      const ci = (customer?.numeroIdentificacion || '').trim();
+      const tipo = (customer?.tipoDocumento || '').trim().toUpperCase();
+      const nombre = (customer?.nombre || '').trim().toUpperCase();
+      const isConsumidorFinal = tipo === 'CONSUMIDOR_FINAL' || ci === '9999999999999' || ci === '9999999999' || nombre === 'CONSUMIDOR FINAL';
+
+      if (isConsumidorFinal) {
+        alert("No se puede emitir esta factura. Seleccione o registre un cliente con identificación válida.");
+        return;
+      }
+
+      if (!total || Number(total) <= 0 || Number(total.toFixed(2)) === 0) {
+        alert("No se puede emitir una factura con valor total $0,00.");
+        return;
+      }
+    }
 
     if (paymentMethod === 'TRANSFERENCIA' && !transferRecipientId) {
       alert("⚠️ DEBES SELECCIONAR A QUIÉN SE REALIZÓ LA TRANSFERENCIA.");

@@ -495,6 +495,12 @@ export default function FacturasSRI({ isAdmin }) {
                 const isRowProcessing = (procesandoId === rowKey);
                 const isAnyProcessing = (procesandoId !== null);
                 
+                const clientObj = venta.cliente || venta.customer || {};
+                const clientDoc = (clientObj.numeroIdentificacion || clientObj.cedula || clientObj.ruc || '').toString().trim();
+                const clientType = (clientObj.tipoDocumento || '').toString().trim().toUpperCase();
+                const clientName = (clientObj.nombre || '').toString().trim().toUpperCase();
+                const isCF = clientType === 'CONSUMIDOR_FINAL' || clientDoc === '9999999999999' || clientDoc === '9999999999' || clientName === 'CONSUMIDOR FINAL';
+
                 return (
                   <tr key={venta.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                     <td style={{ padding: '12px' }}>{dateStr}</td>
@@ -576,7 +582,7 @@ export default function FacturasSRI({ isAdmin }) {
                            >
                              XML
                            </button>
-                           {isAdmin && (est === 'AUTORIZADO' || est === 'AUTORIZADA') && !venta.notaCreditoEmitida && est !== 'REVERTIDA_NC' && (
+                           {isAdmin && (est === 'AUTORIZADO' || est === 'AUTORIZADA') && !venta.notaCreditoEmitida && est !== 'REVERTIDA_NC' && !isCF && (
                              <button 
                                onClick={() => setVentaAnular(venta)}
                                style={{ padding: '6px 10px', background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
