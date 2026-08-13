@@ -6,7 +6,11 @@ export default function DailyReport({ issuers, sales }) {
   // Procesamiento de datos: Agrupar ventas por emisor (hermano)
   const reportData = useMemo(() => {
     return issuers.map(issuer => {
-      const issuerSales = sales.filter(s => s.issuerId === issuer.id && (s.status || s.estado || '').toUpperCase() !== 'ERROR_DUPLICADO');
+      const issuerSales = sales.filter(s => {
+        const est = (s.estadoSri || s.status || s.estado || '').toUpperCase();
+        const isInvalid = est === 'ERROR_DUPLICADO' || est === 'REVERTIDA_NC' || s.notaCreditoEmitida === true || s.isNotaCredito === true || s.tipoComprobante === 'NOTA_CREDITO';
+        return s.issuerId === issuer.id && !isInvalid;
+      });
       const sriSales = issuerSales.filter(s => s.status !== 'NOTA_DE_VENTA');
       const notaVentaSales = issuerSales.filter(s => s.status === 'NOTA_DE_VENTA');
 

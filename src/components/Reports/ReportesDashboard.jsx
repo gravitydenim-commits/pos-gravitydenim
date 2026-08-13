@@ -1967,13 +1967,14 @@ export default function ReportesDashboard({ sales, issuers }) {
       const fiscalDate = getSaleFiscalDate(sale);
       const fechaStr = fiscalDate ? fiscalDate.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A';
 
+      const isNC = Boolean(sale.isNotaCredito || sale.tipoComprobante === 'NOTA_CREDITO' || sale.estadoVenta === 'NOTA_CREDITO');
       const isNota = Boolean(sale.isNotaVenta || sale.estadoSri === 'NOTA_DE_VENTA' || sale.status === 'NOTA_DE_VENTA' || sale.tipoComprobante === 'NOTA_DE_VENTA');
-      const docType = isNota ? 'Nota de venta' : 'Factura';
+      const docType = isNC ? 'Nota de crédito' : isNota ? 'Nota de venta' : 'Factura';
 
-      // REGLA ESTRICTA DE ANULADOS: Se contabiliza EXCLUSIVAMENTE si el estado es ANULADO / ANULADA.
-      // Los documentos RECHAZADOS / ERROR / DEVUELTA NO se cuentan como ANULADO.
+      // REGLA ESTRICTA DE ANULADOS / REVERTIDOS:
+      // Se consideran sin efecto de venta si estado es ANULADO, ANULADA, ANULADA_SRI, REVERTIDA_NC, o si es una Nota de Crédito.
       const sriState = (sale.estadoSri || sale.status || sale.estadoVenta || '').toString().toUpperCase();
-      const isAnulado = sriState === 'ANULADO' || sriState === 'ANULADA' || sale.anulado === true;
+      const isAnulado = sriState === 'ANULADO' || sriState === 'ANULADA' || sriState === 'ANULADA_SRI' || sriState === 'REVERTIDA_NC' || sale.anulado === true || sale.notaCreditoEmitida === true || isNC;
 
       const numeroComprobante = sale.numeroComprobante || sale.secuencial || 'S/N';
       const clienteNombre = (sale.cliente || sale.customer)?.nombre || 'CONSUMIDOR FINAL';

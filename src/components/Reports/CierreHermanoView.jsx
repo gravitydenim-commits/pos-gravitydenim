@@ -62,9 +62,15 @@ export default function CierreHermanoView({ sales }) {
     });
   }, [users]);
 
-  // Filtrar ventas por fecha
+  // Filtrar ventas por fecha (excluyendo revertidas con NC y notas de crédito)
   const salesInDateRange = useMemo(() => {
     return sales.filter(sale => {
+      const est = (sale.estadoSri || sale.status || '').toUpperCase();
+      const isReverted = est === 'REVERTIDA_NC' || sale.notaCreditoEmitida === true;
+      const isNC = sale.isNotaCredito || sale.tipoComprobante === 'NOTA_CREDITO' || sale.estadoVenta === 'NOTA_CREDITO';
+      const isDuplicated = est === 'ERROR_DUPLICADO' || est === 'REEMPLAZADO';
+      if (isReverted || isNC || isDuplicated) return false;
+
       const saleDate = parseSaleDate(sale);
       if (!saleDate) return false;
       const dateStr = saleDate.toISOString().split('T')[0];

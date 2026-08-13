@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { AlertTriangle, CheckCircle, RefreshCw, Printer, Search, FileCode } from 'lucide-react';
+import ModalAnularFactura from './ModalAnularFactura';
 
 const parseSaleDate = (sale) => {
   const rawDate =
@@ -31,6 +32,7 @@ export default function FacturasSRI({ isAdmin }) {
   const [activeTab, setActiveTab] = useState('contingencia'); // 'contingencia' o 'historial'
   const [procesandoId, setProcesandoId] = useState(null);
   const [eliminandoId, setEliminandoId] = useState(null);
+  const [ventaAnular, setVentaAnular] = useState(null);
 
   // Estados de filtros
   const [filterDateFrom, setFilterDateFrom] = useState('');
@@ -138,6 +140,37 @@ export default function FacturasSRI({ isAdmin }) {
       }
     } catch (error) {
       alert(`No fue posible comunicarse con el SRI.\nDetalle: ${error.message}`);
+    } finally {
+      setProcesandoId(null);
+    }
+  };
+
+  const handleConsultarNC = async (venta) => {
+    const targetId = venta.id || venta.claveAcceso;
+    setProcesandoId(targetId);
+    try {
+      const { getAuth } = await import('firebase/auth');
+      const auth = getAuth();
+      const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : '';
+
+      const response = await fetch('/api/sri/consultar-anulacion', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ claveAcceso: venta.notaCreditoClaveAcceso || venta.claveAcceso })
+      });
+
+      const resData = await response.json();
+
+      if (response.ok && resData.success) {
+        alert(`✅ Estado actualizado: ${resData.estado}`);
+      } else {
+        alert(`❌ Error al consultar estado: ${resData.error || 'Fallo desconocido'}`);
+      }
+    } catch (error) {
+      alert(`No fue posible comunicarse con el servidor.\nDetalle: ${error.message}`);
     } finally {
       setProcesandoId(null);
     }
@@ -356,6 +389,18 @@ export default function FacturasSRI({ isAdmin }) {
       bg = 'rgba(107, 114, 128, 0.2)';
       color = '#9ca3af';
       text = 'DEVUELTA';
+    } else if (status === 'REVERTIDA_NC') {
+      bg = 'rgba(127, 29, 29, 0.2)';
+      color = '#f87171';
+      text = 'REVERTIDA CON NC';
+    } else if (status === 'NC_EN_PROCESO') {
+      bg = 'rgba(217, 119, 6, 0.2)';
+      color = '#fbbf24';
+      text = 'NC EN PROCESO';
+    } else if (status === 'NC_RECHAZADA') {
+      bg = 'rgba(234, 88, 12, 0.2)';
+      color = '#f97316';
+      text = 'NC RECHAZADA';
     }
 
     return (
@@ -413,6 +458,8 @@ export default function FacturasSRI({ isAdmin }) {
             <option value="PENDIENTE_ENVIO">Pendiente Envío</option>
             <option value="RECHAZADA">Rechazada</option>
             <option value="DEVUELTA">Devuelta</option>
+            <option value="REVERTIDA_NC">Revertida con NC</option>
+            <option value="NC_EN_PROCESO">NC en Proceso</option>
           </select>
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-end' }}>
@@ -492,6 +539,16 @@ export default function FacturasSRI({ isAdmin }) {
                               {eliminandoId === venta.id ? 'Eliminando...' : 'Eliminar prueba'}
                             </button>
                           )}
+                          {est === 'NC_EN_PROCESO' && (
+                            <button 
+                              onClick={() => handleConsultarNC(venta)}
+                              disabled={isAnyProcessing}
+                              style={{ padding: '6px 12px', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '4px', cursor: isAnyProcessing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                            >
+                              <RefreshCw size={14} className={isRowProcessing ? "animate-spin" : ""} /> 
+                              Consultar Estado NC
+                            </button>
+                          )}
                         </div>
                        ) : (
                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
@@ -519,6 +576,14 @@ export default function FacturasSRI({ isAdmin }) {
                            >
                              XML
                            </button>
+                           {isAdmin && (est === 'AUTORIZADO' || est === 'AUTORIZADA') && !venta.notaCreditoEmitida && est !== 'REVERTIDA_NC' && (
+                             <button 
+                               onClick={() => setVentaAnular(venta)}
+                               style={{ padding: '6px 10px', background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                             >
+                               Revertir con NC
+                             </button>
+                           )}
                          </div>
                        )}
                      </td>
@@ -629,6 +694,14 @@ export default function FacturasSRI({ isAdmin }) {
              </div>
            </div>
          </div>
+       )}
+
+       {ventaAnular && (
+         <ModalAnularFactura
+           venta={ventaAnular}
+           onClose={() => setVentaAnular(null)}
+           onSuccess={() => { setVentaAnular(null); }}
+         />
        )}
      </div>
   );
