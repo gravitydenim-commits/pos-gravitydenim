@@ -1949,20 +1949,7 @@ export default function ReportesDashboard({ sales, issuers }) {
     const eStr = end.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const periodStr = `${sStr} al ${eStr}`;
 
-    // 3. Procesamiento y Acumulación Tributaria
-    let numFacturas = 0;
-    let numNotasVenta = 0;
-    let numAnulados = 0;
-
-    let subtotal15 = 0;
-    let subtotal0 = 0;
-    let iva15 = 0;
-    let totalVentas = 0;
-
-    let totalEfectivo = 0;
-    let totalTransferencias = 0;
-    let totalPagosMixtos = 0;
-
+    // 3. Procesamiento de comprobantes del período
     const vouchers = periodSales.map(sale => {
       const fiscalDate = getSaleFiscalDate(sale);
       const fechaStr = fiscalDate ? fiscalDate.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A';
@@ -2003,29 +1990,6 @@ export default function ReportesDashboard({ sales, issuers }) {
       const isMixto = Boolean(sale.paymentDetails?.payments && sale.paymentDetails.payments.length > 1);
       const displayPayment = isMixto ? 'MIXTO' : pMethod.includes('TRANSFER') ? 'TRANSFERENCIA' : 'EFECTIVO';
 
-      if (isAnulado) {
-        numAnulados++;
-      } else {
-        if (isNota) {
-          numNotasVenta++;
-        } else {
-          numFacturas++;
-        }
-
-        subtotal15 += vSubtotal15;
-        subtotal0 += vSubtotal0;
-        iva15 += saleIva;
-        totalVentas += saleTotal;
-
-        if (isMixto) {
-          totalPagosMixtos += saleTotal;
-        } else if (pMethod.includes('TRANSFER')) {
-          totalTransferencias += saleTotal;
-        } else {
-          totalEfectivo += saleTotal;
-        }
-      }
-
       return {
         id: sale.id,
         fecha: fechaStr,
@@ -2040,6 +2004,7 @@ export default function ReportesDashboard({ sales, issuers }) {
         iva: saleIva,
         total: saleTotal,
         isAnulado,
+        isNota,
         estado: isAnulado ? 'Anulada' : 'Válida',
         pMethod: displayPayment,
         rawSale: sale
@@ -2079,6 +2044,45 @@ export default function ReportesDashboard({ sales, issuers }) {
       return true;
     });
 
+    // 5. Acumular totales tributarios sobre los comprobantes FILTRADOS por todos los criterios activos
+    let numFacturas = 0;
+    let numNotasVenta = 0;
+    let numAnulados = 0;
+
+    let subtotal15 = 0;
+    let subtotal0 = 0;
+    let iva15 = 0;
+    let totalVentas = 0;
+
+    let totalEfectivo = 0;
+    let totalTransferencias = 0;
+    let totalPagosMixtos = 0;
+
+    filteredVouchers.forEach(v => {
+      if (v.isAnulado) {
+        numAnulados++;
+      } else {
+        if (v.isNota) {
+          numNotasVenta++;
+        } else {
+          numFacturas++;
+        }
+
+        subtotal15 += v.vSubtotal15;
+        subtotal0 += v.vSubtotal0;
+        iva15 += v.iva;
+        totalVentas += v.total;
+
+        if (v.pMethod === 'MIXTO') {
+          totalPagosMixtos += v.total;
+        } else if (v.pMethod === 'TRANSFERENCIA') {
+          totalTransferencias += v.total;
+        } else {
+          totalEfectivo += v.total;
+        }
+      }
+    });
+
     return {
       selectedIssuer,
       periodStr,
@@ -2101,17 +2105,16 @@ export default function ReportesDashboard({ sales, issuers }) {
 
   // Exportación a Excel nativo (.xlsx) mediante librería SheetJS (xlsx)
   const exportContadoraXLSX = () => {
-    if (!contadoraData.selectedIssuer) {
-      alert("⚠️ Seleccione un emisor para exportar.");
-      return;
-    }
-
     try {
       const XLSX = require('xlsx');
       const wb = XLSX.utils.book_new();
 
-      const issuerName = contadoraData.selectedIssuer.razonSocial || contadoraData.selectedIssuer.name || 'Emisor';
-      const issuerRuc = contadoraData.selectedIssuer.ruc || 'S/N';
+      const issuerName = contadoraData.selectedIssuer
+        ? (contadoraData.selectedIssuer.razonSocial || contadoraData.selectedIssuer.name || 'Emisor')
+        : (contadoraIssuerId === 'TODOS' ? 'TODOS LOS EMISORES' : 'Emisor');
+      const issuerRuc = contadoraData.selectedIssuer
+        ? (contadoraData.selectedIssuer.ruc || 'S/N')
+        : (contadoraIssuerId === 'TODOS' ? 'VARIOS (TODOS)' : 'S/N');
       const period = contadoraData.periodStr;
 
       // Hoja 1: Resumen Tributario
@@ -2132,7 +2135,10 @@ export default function ReportesDashboard({ sales, issuers }) {
         ["Subtotal Gravado (Tarifa 15%)", contadoraData.totals.subtotal15],
         ["Subtotal Tarifa 0%", contadoraData.totals.subtotal0],
         ["Monto IVA 15%", contadoraData.totals.iva15],
-        ["Total de Ventas Neta", contadoraData.totals.totalVentas]
+        ["Total de Ventas Neta", contadoraData.totals.totalVentas],
+        ["Total Efectivo", contadoraData.totals.totalEfectivo],
+        ["Total Transferencias", contadoraData.totals.totalTransferencias],
+        ["Total Pagos Mixtos", contadoraData.totals.totalPagosMixtos]
       ];
 
       const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
@@ -2146,6 +2152,7 @@ export default function ReportesDashboard({ sales, issuers }) {
         "Número Comprobante",
         "Cliente",
         "RUC/Cédula",
+        "Forma de Pago",
         "Subtotal 15%",
         "Subtotal 0%",
         "Subtotal Total",
@@ -2160,6 +2167,7 @@ export default function ReportesDashboard({ sales, issuers }) {
         v.numeroComprobante,
         v.clienteNombre,
         v.clienteRuc,
+        v.pMethod,
         v.isAnulado ? 0 : v.vSubtotal15,
         v.isAnulado ? 0 : v.vSubtotal0,
         v.isAnulado ? 0 : v.subtotal,
@@ -2171,13 +2179,20 @@ export default function ReportesDashboard({ sales, issuers }) {
       const wsDetail = XLSX.utils.aoa_to_sheet([detailHeader, ...detailRows]);
       wsDetail['!cols'] = [
         { wch: 12 }, { wch: 18 }, { wch: 22 }, { wch: 30 },
-        { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
-        { wch: 12 }, { wch: 14 }, { wch: 12 }
+        { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 14 },
+        { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 12 }
       ];
       XLSX.utils.book_append_sheet(wb, wsDetail, "Detalle Comprobantes");
 
-      const cleanName = (contadoraData.selectedIssuer.shortName || 'Emisor').replace(/\s+/g, '_');
-      const filename = `Resumen_Contadora_${cleanName}_${contadoraMonth}.xlsx`;
+      const cleanIssuer = contadoraData.selectedIssuer
+        ? (contadoraData.selectedIssuer.shortName || contadoraData.selectedIssuer.name || 'Emisor').replace(/\s+/g, '_')
+        : 'Todos_Emisores';
+
+      const dateSuffix = (appliedStartDate && appliedEndDate)
+        ? `${appliedStartDate}_a_${appliedEndDate}`
+        : 'Periodo_Completo';
+
+      const filename = `Resumen_Contadora_${cleanIssuer}_${dateSuffix}.xlsx`;
       XLSX.writeFile(wb, filename);
     } catch (err) {
       console.error("Error al exportar a Excel:", err);
@@ -2187,19 +2202,18 @@ export default function ReportesDashboard({ sales, issuers }) {
 
   // Exportación a PDF / Vista de Impresión estructurada A4
   const exportContadoraPDF = () => {
-    if (!contadoraData.selectedIssuer) {
-      alert("⚠️ Seleccione un emisor para exportar.");
-      return;
-    }
-
     const win = window.open('', '_blank');
     if (!win) {
       alert("⚠️ El navegador bloqueó la ventana emergente de impresión PDF. Por favor, permita las ventanas emergentes.");
       return;
     }
 
-    const issuerName = contadoraData.selectedIssuer.razonSocial || contadoraData.selectedIssuer.name || 'Emisor';
-    const issuerRuc = contadoraData.selectedIssuer.ruc || 'S/N';
+    const issuerName = contadoraData.selectedIssuer
+      ? (contadoraData.selectedIssuer.razonSocial || contadoraData.selectedIssuer.name || 'Emisor')
+      : (contadoraIssuerId === 'TODOS' ? 'TODOS LOS EMISORES' : 'Emisor');
+    const issuerRuc = contadoraData.selectedIssuer
+      ? (contadoraData.selectedIssuer.ruc || 'S/N')
+      : (contadoraIssuerId === 'TODOS' ? 'VARIOS (TODOS)' : 'S/N');
     const period = contadoraData.periodStr;
 
     let rowsHtml = '';
