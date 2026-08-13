@@ -552,7 +552,7 @@ function App() {
             <ReportesDashboard issuers={issuers} sales={salesDB} />
           )}
           {(currentView === 'sri' && isAdmin) && (
-            <FacturasSRI isAdmin={isAdmin} />
+            <FacturasSRI isAdmin={isAdmin} issuers={issuers} />
           )}
 
           {(currentView === 'settings' && isAdmin) && (

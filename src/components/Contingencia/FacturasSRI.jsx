@@ -26,13 +26,67 @@ const parseSaleDate = (sale) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
-export default function FacturasSRI({ isAdmin }) {
+const getNombreEmisorReal = (venta, issuersList = []) => {
+  if (!venta) return 'GRAVITY DENIM';
+
+  const targetEmisorId = venta.emisorId || venta.issuerId;
+
+  // 1. Buscar coincidencia en la colección 'issuers'
+  if (targetEmisorId && Array.isArray(issuersList) && issuersList.length > 0) {
+    const found = issuersList.find(i => i.id === targetEmisorId);
+    if (found) {
+      const emisorNombre = found.name || found.nombre || found.razonSocial;
+      if (emisorNombre) return emisorNombre;
+    }
+  }
+
+  // 2. Mapeo por emisorId conocido en Firestore
+  const idMap = {
+    'hermano_geovanny': 'Edgar Sánchez',
+    'hermano_carlos': 'Carlos Sánchez',
+    'hermano_fabian': 'Fabián Sánchez',
+    'hermano_amparito': 'Amparito Sánchez'
+  };
+  if (targetEmisorId && idMap[targetEmisorId]) {
+    return idMap[targetEmisorId];
+  }
+
+  // 3. Nombre directo de cajero/usuario guardado en la venta
+  if (venta.cajeroNombre) return venta.cajeroNombre;
+  if (venta.usuarioNombre) return venta.usuarioNombre;
+
+  // 4. Mapeo fallback por establecimiento / punto de emisión
+  const estab = venta.establecimiento || venta.estab;
+  const ptoEmi = venta.puntoEmision || venta.ptoEmi;
+  const numComp = venta.numeroComprobante || '';
+
+  if (numComp.startsWith('001-100') || (estab === '001' && ptoEmi === '100')) {
+    return 'Edgar Sánchez';
+  }
+
+  return venta.issuerName || 'GRAVITY DENIM';
+};
+
+export default function FacturasSRI({ isAdmin, issuers = [] }) {
   const [ventas, setVentas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('contingencia'); // 'contingencia' o 'historial'
   const [procesandoId, setProcesandoId] = useState(null);
   const [eliminandoId, setEliminandoId] = useState(null);
   const [ventaAnular, setVentaAnular] = useState(null);
+  const [localIssuers, setLocalIssuers] = useState(issuers);
+
+  useEffect(() => {
+    if (issuers && issuers.length > 0) {
+      setLocalIssuers(issuers);
+      return;
+    }
+    const unsub = onSnapshot(collection(db, 'issuers'), (snapshot) => {
+      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setLocalIssuers(docs);
+    });
+    return () => unsub();
+  }, [issuers]);
 
   // Estados de filtros
   const [filterDateFrom, setFilterDateFrom] = useState('');
@@ -505,7 +559,7 @@ export default function FacturasSRI({ isAdmin }) {
                   <tr key={venta.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                     <td style={{ padding: '12px' }}>{dateStr}</td>
                     <td style={{ padding: '12px' }}>{venta.numeroComprobante || 'S/N'}</td>
-                    <td style={{ padding: '12px' }}>{venta.issuerName || 'GRAVITY DENIM'}</td>
+                    <td style={{ padding: '12px' }}>{getNombreEmisorReal(venta, localIssuers)}</td>
                     <td style={{ padding: '12px' }}>{(venta.cliente || venta.customer)?.nombre || 'Consumidor Final'}</td>
                     <td style={{ padding: '12px', fontWeight: 'bold' }}>${(venta.totals?.total || venta.total || 0).toFixed(2)}</td>
                     <td style={{ padding: '12px' }}>
