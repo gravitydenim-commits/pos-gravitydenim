@@ -3,6 +3,68 @@ import { AlertTriangle, Copy, ExternalLink, CheckCircle2, X } from 'lucide-react
 import { db } from '../../firebase/config';
 import { doc, updateDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
+/**
+ * Calcula el plazo legal máximo para solicitar la anulación en línea ante el SRI.
+ * Regla SRI (Normativa comprobantes desde 01/08/2025):
+ * La solicitud de anulación en línea puede realizarse hasta el día 7 del mes subsiguiente a la emisión.
+ * Si el día 7 cae en fin de semana (sábado o domingo), se desplaza al siguiente día hábil (lunes).
+ * Nota: Los feriados nacionales no se ajustan dinámicamente al no disponer de una API oficial de feriados.
+ */
+export function calcularPlazoAnulacionSRI(sale) {
+  const rawDate = sale?.fechaTransaccion ?? sale?.fechaEmision ?? sale?.date ?? sale?.fecha ?? sale?.createdAt;
+  if (!rawDate) {
+    return { fechaEmisionStr: 'S/F', fechaLimiteStr: 'S/F', dentroDePlazo: true };
+  }
+
+  let dateObj;
+  if (typeof rawDate?.toDate === 'function') {
+    dateObj = rawDate.toDate();
+  } else if (rawDate?.seconds) {
+    dateObj = new Date(rawDate.seconds * 1000);
+  } else {
+    dateObj = new Date(rawDate);
+  }
+
+  if (Number.isNaN(dateObj.getTime())) {
+    return { fechaEmisionStr: 'S/F', fechaLimiteStr: 'S/F', dentroDePlazo: true };
+  }
+
+  const emisionYear = dateObj.getFullYear();
+  const emisionMonth = dateObj.getMonth(); // 0-indexed
+
+  // Día 7 del mes siguiente a la emisión
+  let limiteYear = emisionYear;
+  let limiteMonth = emisionMonth + 1;
+  if (limiteMonth > 11) {
+    limiteMonth = 0;
+    limiteYear += 1;
+  }
+
+  // Crear fecha para el día 7 del mes siguiente a las 23:59:59.999
+  let limiteDate = new Date(limiteYear, limiteMonth, 7, 23, 59, 59, 999);
+
+  // Ajuste por fin de semana: Sábado (6) -> Lunes 9; Domingo (0) -> Lunes 8
+  const dayOfWeek = limiteDate.getDay();
+  if (dayOfWeek === 6) {
+    limiteDate.setDate(9);
+  } else if (dayOfWeek === 0) {
+    limiteDate.setDate(8);
+  }
+
+  const now = new Date();
+  const dentroDePlazo = now <= limiteDate;
+
+  const fechaEmisionStr = dateObj.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const fechaLimiteStr = `${limiteDate.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' })} 23:59`;
+
+  return {
+    fechaEmisionStr,
+    fechaLimiteStr,
+    fechaLimiteDate: limiteDate,
+    dentroDePlazo
+  };
+}
+
 export default function ModalSolicitarAnulacionSRI({ venta, onClose, currentUser }) {
   if (!venta) return null;
 
@@ -23,6 +85,16 @@ export default function ModalSolicitarAnulacionSRI({ venta, onClose, currentUser
   const estadoActual = (venta.estadoSri || venta.status || '').toUpperCase();
   const isSolicitado = estadoActual === 'SOLICITADA_ANULACION_SRI';
 
+  // 1. Doble protección contra anulación de facturas a Consumidor Final
+  const clientObj = venta.cliente || venta.customer || {};
+  const clientDoc = (clientObj.numeroIdentificacion || clientObj.cedula || clientObj.ruc || '').toString().trim();
+  const clientType = (clientObj.tipoDocumento || '').toString().trim().toUpperCase();
+  const clientName = (clientObj.nombre || '').toString().trim().toUpperCase();
+  const isConsumidorFinal = clientType === 'CONSUMIDOR_FINAL' || clientDoc === '9999999999999' || clientDoc === '9999999999' || clientName === 'CONSUMIDOR FINAL';
+
+  // 2. Cálculo legal de plazo de anulación ante el SRI
+  const { fechaEmisionStr, fechaLimiteStr, dentroDePlazo } = calcularPlazoAnulacionSRI(venta);
+
   const handleCopyClave = () => {
     if (!claveAcceso) return;
     navigator.clipboard.writeText(claveAcceso);
@@ -32,6 +104,16 @@ export default function ModalSolicitarAnulacionSRI({ venta, onClose, currentUser
 
   // Paso 1: Registrar Solicitud y Redirigir a SRI en Línea
   const handleRegistrarSolicitud = async () => {
+    if (isConsumidorFinal) {
+      setError('Este comprobante fue emitido a CONSUMIDOR FINAL y no puede solicitarse su anulación por este mecanismo.');
+      return;
+    }
+
+    if (!dentroDePlazo) {
+      setError('FUERA DEL PLAZO DE ANULACIÓN EN LÍNEA DEL SRI. No se puede iniciar la solicitud.');
+      return;
+    }
+
     if (!motivo.trim()) {
       setError('Por favor, ingrese el motivo de la solicitud de anulación.');
       return;
@@ -63,6 +145,9 @@ export default function ModalSolicitarAnulacionSRI({ venta, onClose, currentUser
         estadoAnterior: estadoActual,
         estadoNuevo: 'SOLICITADA_ANULACION_SRI',
         motivo: motivo.trim(),
+        fechaEmision: fechaEmisionStr,
+        fechaLimiteSri: fechaLimiteStr,
+        dentroDePlazo,
         usuarioUid: currentUser?.uid || 'admin',
         usuarioNombre: currentUser?.displayName || currentUser?.email || 'Administrador',
         fechaRegistro: now,
@@ -144,7 +229,7 @@ export default function ModalSolicitarAnulacionSRI({ venta, onClose, currentUser
         border: '1px solid rgba(255, 255, 255, 0.1)',
         borderRadius: '16px',
         width: '100%',
-        maxWidth: '560px',
+        maxWidth: '580px',
         color: 'white',
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)',
         overflow: 'hidden'
@@ -204,6 +289,38 @@ export default function ModalSolicitarAnulacionSRI({ venta, onClose, currentUser
             <div><span style={{ color: '#94a3b8' }}>Est-PtoEmi:</span> {estab}-{ptoEmi}</div>
           </div>
 
+          {/* Estado de Plazo Legal SRI */}
+          {!isSolicitado && (
+            <div style={{
+              background: 'rgba(15, 23, 42, 0.9)',
+              border: `1px solid ${dentroDePlazo ? 'rgba(52, 211, 153, 0.3)' : 'rgba(239, 68, 68, 0.4)'}`,
+              borderRadius: '10px',
+              padding: '0.85rem 1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+              fontSize: '0.84rem'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#94a3b8', fontWeight: 'bold' }}>🗓️ Plazo Legal de Anulación SRI:</span>
+                <span style={{
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  fontSize: '0.75rem',
+                  fontWeight: 'bold',
+                  background: dentroDePlazo ? 'rgba(52, 211, 153, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                  color: dentroDePlazo ? '#34d399' : '#f87171'
+                }}>
+                  {dentroDePlazo ? 'DENTRO DEL PLAZO' : 'FUERA DEL PLAZO'}
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', color: '#e2e8f0', fontSize: '0.8rem' }}>
+                <div>Emisión: <strong>{fechaEmisionStr}</strong></div>
+                <div>Límite SRI: <strong>{fechaLimiteStr}</strong></div>
+              </div>
+            </div>
+          )}
+
           {/* Clave de Acceso y Botón de Copiado */}
           <div>
             <label style={{ display: 'block', fontSize: '0.78rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: 'bold', marginBottom: '6px' }}>
@@ -249,6 +366,36 @@ export default function ModalSolicitarAnulacionSRI({ venta, onClose, currentUser
             </div>
           </div>
 
+          {/* Bloqueo si es Consumidor Final */}
+          {isConsumidorFinal && !isSolicitado && (
+            <div style={{
+              background: 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid #ef4444',
+              borderRadius: '8px',
+              padding: '12px',
+              fontSize: '0.84rem',
+              color: '#fca5a5',
+              fontWeight: 'bold'
+            }}>
+              🚫 Este comprobante fue emitido a CONSUMIDOR FINAL y no puede solicitarse su anulación por este mecanismo.
+            </div>
+          )}
+
+          {/* Bloqueo si está Fuera del Plazo */}
+          {!dentroDePlazo && !isSolicitado && !isConsumidorFinal && (
+            <div style={{
+              background: 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid #ef4444',
+              borderRadius: '8px',
+              padding: '12px',
+              fontSize: '0.84rem',
+              color: '#fca5a5',
+              fontWeight: 'bold'
+            }}>
+              ⚠️ FUERA DEL PLAZO DE ANULACIÓN EN LÍNEA DEL SRI.
+            </div>
+          )}
+
           {!isSolicitado ? (
             /* Formulario Paso 1: Solicitar */
             <>
@@ -259,6 +406,7 @@ export default function ModalSolicitarAnulacionSRI({ venta, onClose, currentUser
                 <textarea
                   value={motivo}
                   onChange={(e) => setMotivo(e.target.value)}
+                  disabled={isConsumidorFinal || !dentroDePlazo}
                   placeholder="Ej: Factura de $0,00 emitida por error / Anulación por duplicado..."
                   rows={3}
                   style={{
@@ -306,14 +454,14 @@ export default function ModalSolicitarAnulacionSRI({ venta, onClose, currentUser
                 <button
                   type="button"
                   onClick={handleRegistrarSolicitud}
-                  disabled={loading}
+                  disabled={loading || isConsumidorFinal || !dentroDePlazo}
                   style={{
                     padding: '10px 20px',
                     borderRadius: '8px',
-                    background: '#f59e0b',
-                    color: '#0f172a',
+                    background: (isConsumidorFinal || !dentroDePlazo) ? '#475569' : '#f59e0b',
+                    color: (isConsumidorFinal || !dentroDePlazo) ? '#94a3b8' : '#0f172a',
                     border: 'none',
-                    cursor: 'pointer',
+                    cursor: (isConsumidorFinal || !dentroDePlazo) ? 'not-allowed' : 'pointer',
                     fontWeight: 'bold',
                     display: 'flex',
                     alignItems: 'center',
