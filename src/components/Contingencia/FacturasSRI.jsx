@@ -497,37 +497,37 @@ export default function FacturasSRI({ isAdmin, issuers = [] }) {
       </div>
 
       {/* Filtros de Facturas SRI */}
-      <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginBottom: '1.5rem', background: 'rgba(0,0,0,0.2)', padding: '15px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', color: 'white' }}>
+      <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginBottom: '1.5rem', background: 'var(--card-bg)', padding: '15px', borderRadius: '8px', border: '1px solid var(--panel-border)', color: 'var(--text-main)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Desde:</label>
-          <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white' }} />
+          <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid var(--panel-border)', background: 'var(--input-bg)', color: 'var(--text-main)' }} />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Hasta:</label>
-          <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white' }} />
+          <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid var(--panel-border)', background: 'var(--input-bg)', color: 'var(--text-main)' }} />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: '150px' }}>
           <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Cliente:</label>
-          <input type="text" placeholder="Buscar cliente..." value={filterClient} onChange={(e) => setFilterClient(e.target.value)} style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white' }} />
+          <input type="text" placeholder="Buscar cliente..." value={filterClient} onChange={(e) => setFilterClient(e.target.value)} style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid var(--panel-border)', background: 'var(--input-bg)', color: 'var(--text-main)' }} />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: '150px' }}>
           <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No. Factura/ID:</label>
-          <input type="text" placeholder="Buscar número o clave..." value={filterInvoice} onChange={(e) => setFilterInvoice(e.target.value)} style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white' }} />
+          <input type="text" placeholder="Buscar número o clave..." value={filterInvoice} onChange={(e) => setFilterInvoice(e.target.value)} style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid var(--panel-border)', background: 'var(--input-bg)', color: 'var(--text-main)' }} />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Estado:</label>
-          <select value={filterSriState} onChange={(e) => setFilterSriState(e.target.value)} style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white' }}>
-            <option value="">Todos</option>
-            <option value="AUTORIZADO">Autorizada</option>
-            <option value="PENDIENTE_ENVIO">Pendiente Envío</option>
-            <option value="RECHAZADA">Rechazada</option>
-            <option value="DEVUELTA">Devuelta</option>
-            <option value="REVERTIDA_NC">Revertida con NC</option>
-            <option value="NC_EN_PROCESO">NC en Proceso</option>
+          <select value={filterSriState} onChange={(e) => setFilterSriState(e.target.value)} style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid var(--panel-border)', background: 'var(--input-bg)', color: 'var(--text-main)' }}>
+            <option value="" style={{ background: 'var(--bg-color)', color: 'var(--text-main)' }}>Todos</option>
+            <option value="AUTORIZADO" style={{ background: 'var(--bg-color)', color: 'var(--text-main)' }}>Autorizada</option>
+            <option value="PENDIENTE_ENVIO" style={{ background: 'var(--bg-color)', color: 'var(--text-main)' }}>Pendiente Envío</option>
+            <option value="RECHAZADA" style={{ background: 'var(--bg-color)', color: 'var(--text-main)' }}>Rechazada</option>
+            <option value="DEVUELTA" style={{ background: 'var(--bg-color)', color: 'var(--text-main)' }}>Devuelta</option>
+            <option value="REVERTIDA_NC" style={{ background: 'var(--bg-color)', color: 'var(--text-main)' }}>Revertida con NC</option>
+            <option value="NC_EN_PROCESO" style={{ background: 'var(--bg-color)', color: 'var(--text-main)' }}>NC en Proceso</option>
           </select>
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-          <button onClick={() => { setFilterDateFrom(''); setFilterDateTo(''); setFilterClient(''); setFilterInvoice(''); setFilterSriState(''); }} style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer' }}>Limpiar Filtros</button>
+          <button onClick={() => { setFilterDateFrom(''); setFilterDateTo(''); setFilterClient(''); setFilterInvoice(''); setFilterSriState(''); }} style={{ padding: '6px 12px', background: 'var(--card-hover)', border: '1px solid var(--panel-border)', borderRadius: '4px', color: 'var(--text-main)', cursor: 'pointer' }}>Limpiar Filtros</button>
         </div>
       </div>
 
@@ -537,9 +537,9 @@ export default function FacturasSRI({ isAdmin, issuers = [] }) {
         ) : facturasMostradas.length === 0 ? (
           <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>No hay documentos para mostrar en esta sección.</div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', color: 'white', fontSize: '0.9rem' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', color: 'var(--text-main)', fontSize: '0.9rem' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left', color: 'var(--text-muted)' }}>
+              <tr style={{ borderBottom: '1px solid var(--panel-border)', textAlign: 'left', color: 'var(--text-muted)' }}>
                 <th style={{ padding: '12px' }}>Fecha</th>
                 <th style={{ padding: '12px' }}>Comprobante</th>
                 <th style={{ padding: '12px' }}>Emisor</th>
@@ -566,12 +566,12 @@ export default function FacturasSRI({ isAdmin, issuers = [] }) {
                 const isCF = clientType === 'CONSUMIDOR_FINAL' || clientDoc === '9999999999999' || clientDoc === '9999999999' || clientName === 'CONSUMIDOR FINAL';
 
                 return (
-                  <tr key={venta.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: '12px' }}>{dateStr}</td>
-                    <td style={{ padding: '12px' }}>{venta.numeroComprobante || 'S/N'}</td>
-                    <td style={{ padding: '12px' }}>{getNombreEmisorReal(venta, localIssuers)}</td>
-                    <td style={{ padding: '12px' }}>{(venta.cliente || venta.customer)?.nombre || 'Consumidor Final'}</td>
-                    <td style={{ padding: '12px', fontWeight: 'bold' }}>${(venta.totals?.total || venta.total || 0).toFixed(2)}</td>
+                  <tr key={venta.id} style={{ borderBottom: '1px solid var(--panel-border)' }}>
+                    <td style={{ padding: '12px', color: 'var(--text-main)' }}>{dateStr}</td>
+                    <td style={{ padding: '12px', color: 'var(--text-main)', fontWeight: '600' }}>{venta.numeroComprobante || 'S/N'}</td>
+                    <td style={{ padding: '12px', color: 'var(--text-main)' }}>{getNombreEmisorReal(venta, localIssuers)}</td>
+                    <td style={{ padding: '12px', color: 'var(--text-main)' }}>{(venta.cliente || venta.customer)?.nombre || 'Consumidor Final'}</td>
+                    <td style={{ padding: '12px', fontWeight: 'bold', color: 'var(--text-main)' }}>${(venta.totals?.total || venta.total || 0).toFixed(2)}</td>
                     <td style={{ padding: '12px' }}>
                       {renderStatusBadge(venta.estadoSri || venta.status)}
                     </td>
@@ -580,7 +580,7 @@ export default function FacturasSRI({ isAdmin, issuers = [] }) {
                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                           <button 
                             onClick={() => setSelectedVenta(venta)}
-                            style={{ padding: '6px 10px', background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.4)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                            style={{ padding: '6px 10px', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent)', border: '1px solid rgba(59, 130, 246, 0.4)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600' }}
                           >
                             Ver
                           </button>
@@ -604,7 +604,7 @@ export default function FacturasSRI({ isAdmin, issuers = [] }) {
                             <button 
                               onClick={() => handleEliminar(venta)}
                               disabled={eliminandoId !== null}
-                              style={{ padding: '6px 12px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: (eliminandoId !== null) ? 'not-allowed' : 'pointer', fontSize: '0.8rem' }}
+                              style={{ padding: '6px 12px', background: 'var(--danger)', color: 'white', border: 'none', borderRadius: '4px', cursor: (eliminandoId !== null) ? 'not-allowed' : 'pointer', fontSize: '0.8rem' }}
                             >
                               {eliminandoId === venta.id ? 'Eliminando...' : 'Eliminar prueba'}
                             </button>
@@ -624,32 +624,32 @@ export default function FacturasSRI({ isAdmin, issuers = [] }) {
                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                            <button 
                              onClick={() => setSelectedVenta(venta)}
-                             style={{ padding: '6px 10px', background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.4)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                             style={{ padding: '6px 10px', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent)', border: '1px solid rgba(59, 130, 246, 0.4)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600' }}
                            >
                              Ver
                            </button>
                            <button 
                              onClick={() => handleReimprimirClick(venta)}
-                             style={{ padding: '6px 10px', background: 'rgba(255, 255, 255, 0.1)', color: 'white', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                             style={{ padding: '6px 10px', background: 'var(--card-hover)', color: 'var(--text-main)', border: '1px solid var(--panel-border)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '500' }}
                            >
                              <Printer size={12} /> Reimprimir
                            </button>
                            <button 
                              onClick={() => window.open(`/api/sri/pdf?claveAcceso=${venta.claveAcceso || venta.id}`, '_blank')}
-                             style={{ padding: '6px 10px', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.4)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                             style={{ padding: '6px 10px', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--success)', border: '1px solid rgba(16, 185, 129, 0.4)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600' }}
                            >
                              PDF
                            </button>
                            <button 
                              onClick={() => window.open(`/api/sri/xml?claveAcceso=${venta.claveAcceso || venta.id}`, '_blank')}
-                             style={{ padding: '6px 10px', background: 'rgba(139, 92, 246, 0.2)', color: '#a78bfa', border: '1px solid rgba(139, 92, 246, 0.4)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                             style={{ padding: '6px 10px', background: 'rgba(139, 92, 246, 0.15)', color: '#8b5cf6', border: '1px solid rgba(139, 92, 246, 0.4)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600' }}
                            >
                              XML
                            </button>
                            {isAdmin && (est === 'AUTORIZADO' || est === 'AUTORIZADA') && !venta.notaCreditoEmitida && est !== 'REVERTIDA_NC' && !isCF && (
                              <button 
                                onClick={() => setVentaAnular(venta)}
-                               style={{ padding: '6px 10px', background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                               style={{ padding: '6px 10px', background: 'rgba(239, 68, 68, 0.15)', color: 'var(--danger)', border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600' }}
                              >
                                Revertir con NC
                              </button>
@@ -657,7 +657,7 @@ export default function FacturasSRI({ isAdmin, issuers = [] }) {
                            {isAdmin && (est === 'AUTORIZADO' || est === 'AUTORIZADA') && est !== 'SOLICITADA_ANULACION_SRI' && est !== 'ANULADA_SRI' && est !== 'REVERTIDA_NC' && (
                              <button 
                                onClick={() => setVentaAnulacionSRI(venta)}
-                               style={{ padding: '6px 10px', background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.4)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                               style={{ padding: '6px 10px', background: 'rgba(245, 158, 11, 0.15)', color: 'var(--warning)', border: '1px solid rgba(245, 158, 11, 0.4)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600' }}
                              >
                                Solicitar anulación
                              </button>
@@ -665,7 +665,7 @@ export default function FacturasSRI({ isAdmin, issuers = [] }) {
                            {isAdmin && est === 'SOLICITADA_ANULACION_SRI' && (
                              <button 
                                onClick={() => setVentaAnulacionSRI(venta)}
-                               style={{ padding: '6px 10px', background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                               style={{ padding: '6px 10px', background: 'rgba(239, 68, 68, 0.15)', color: 'var(--danger)', border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600' }}
                              >
                                Confirmar Anulación SRI
                              </button>
@@ -684,13 +684,13 @@ export default function FacturasSRI({ isAdmin, issuers = [] }) {
        {/* Detalle Modal */}
        {selectedVenta && (
          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-           <div className="glass-panel" style={{ width: '100%', maxWidth: '600px', padding: '2rem', maxHeight: '90vh', overflowY: 'auto', background: 'var(--panel-bg)', border: '1px solid var(--panel-border)', borderRadius: '12px', color: 'white' }}>
-             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>
-               <h3 style={{ margin: 0 }}>Detalle de Factura SRI</h3>
-               <button onClick={() => setSelectedVenta(null)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer', lineHeight: '1' }}>&times;</button>
+           <div className="glass-panel" style={{ width: '100%', maxWidth: '600px', padding: '2rem', maxHeight: '90vh', overflowY: 'auto', background: 'var(--panel-bg)', border: '1px solid var(--panel-border)', borderRadius: '12px', color: 'var(--text-main)' }}>
+             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', borderBottom: '1px solid var(--panel-border)', paddingBottom: '10px' }}>
+               <h3 style={{ margin: 0, color: 'var(--text-main)' }}>Detalle de Factura SRI</h3>
+               <button onClick={() => setSelectedVenta(null)} style={{ background: 'none', border: 'none', color: 'var(--text-main)', fontSize: '1.5rem', cursor: 'pointer', lineHeight: '1' }}>&times;</button>
              </div>
 
-             <div style={{ fontSize: '0.9rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '1.5rem' }}>
+             <div style={{ fontSize: '0.9rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '1.5rem', color: 'var(--text-main)' }}>
                <div>
                  <h4 style={{ margin: '0 0 5px 0', color: 'var(--accent)' }}>Emisor</h4>
                  <div><b>Nombre/Razón Social:</b> {selectedVenta.issuerName || 'GRAVITY DENIM'}</div>
@@ -706,9 +706,9 @@ export default function FacturasSRI({ isAdmin, issuers = [] }) {
 
              <div style={{ marginBottom: '1.5rem' }}>
                <h4 style={{ margin: '0 0 8px 0', color: 'var(--accent)' }}>Productos</h4>
-               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', color: 'var(--text-main)' }}>
                  <thead>
-                   <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-muted)' }}>
+                   <tr style={{ borderBottom: '1px solid var(--panel-border)', textAlign: 'left', color: 'var(--text-muted)' }}>
                      <th style={{ padding: '6px' }}>Cant</th>
                      <th style={{ padding: '6px' }}>Descripción</th>
                      <th style={{ padding: '6px', textAlign: 'right' }}>P.Unit</th>
@@ -717,21 +717,21 @@ export default function FacturasSRI({ isAdmin, issuers = [] }) {
                  </thead>
                  <tbody>
                    {(selectedVenta.productos || selectedVenta.items || []).map((p, idx) => (
-                     <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                       <td style={{ padding: '6px' }}>{p.qty || p.cantidad || 1}</td>
-                       <td style={{ padding: '6px' }}>{p.name || p.nombre}</td>
-                       <td style={{ padding: '6px', textAlign: 'right' }}>${Number(p.price || p.precio || 0).toFixed(2)}</td>
-                       <td style={{ padding: '6px', textAlign: 'right' }}>${((p.price || p.precio || 0) * (p.qty || p.cantidad || 1) - (p.descuento || 0)).toFixed(2)}</td>
+                     <tr key={idx} style={{ borderBottom: '1px solid var(--panel-border)' }}>
+                       <td style={{ padding: '6px', color: 'var(--text-main)' }}>{p.qty || p.cantidad || 1}</td>
+                       <td style={{ padding: '6px', color: 'var(--text-main)' }}>{p.name || p.nombre}</td>
+                       <td style={{ padding: '6px', textAlign: 'right', color: 'var(--text-main)' }}>${Number(p.price || p.precio || 0).toFixed(2)}</td>
+                       <td style={{ padding: '6px', textAlign: 'right', color: 'var(--text-main)' }}>${((p.price || p.precio || 0) * (p.qty || p.cantidad || 1) - (p.descuento || 0)).toFixed(2)}</td>
                      </tr>
                    ))}
                  </tbody>
                </table>
              </div>
 
-             <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+             <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--panel-border)', paddingTop: '10px', fontSize: '0.9rem', marginBottom: '1.5rem', color: 'var(--text-main)' }}>
                <div>
                  <div><b>Forma de Pago:</b> {selectedVenta.paymentMethod || 'EFECTIVO'}</div>
-                 <div><b>Estado SRI:</b> <span style={{ color: '#22c55e', fontWeight: 'bold' }}>{selectedVenta.status || selectedVenta.estadoSri}</span></div>
+                 <div><b>Estado SRI:</b> <span style={{ color: 'var(--success)', fontWeight: 'bold' }}>{selectedVenta.status || selectedVenta.estadoSri}</span></div>
                </div>
                <div style={{ textAlign: 'right' }}>
                  <div>Subtotal: ${(selectedVenta.totals?.subtotal || selectedVenta.subtotal || 0).toFixed(2)}</div>
@@ -740,15 +740,15 @@ export default function FacturasSRI({ isAdmin, issuers = [] }) {
                </div>
              </div>
 
-              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '12px', borderRadius: '8px', fontSize: '0.82rem', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ background: 'var(--card-bg)', padding: '12px', borderRadius: '8px', fontSize: '0.82rem', border: '1px solid var(--panel-border)', display: 'flex', flexDirection: 'column', gap: '4px', color: 'var(--text-main)' }}>
                 <div style={{ color: 'var(--accent)', fontWeight: 'bold', marginBottom: '4px' }}>🔍 Información y Diagnóstico SRI</div>
-                <div><b>Estado Respuesta SRI:</b> <span style={{ color: selectedVenta.estadoSri === 'AUTORIZADO' ? '#34d399' : '#f87171', fontWeight: 'bold' }}>{selectedVenta.estadoRespuestaSRI || selectedVenta.estadoSri || selectedVenta.status || 'N/A'}</span></div>
+                <div><b>Estado Respuesta SRI:</b> <span style={{ color: selectedVenta.estadoSri === 'AUTORIZADO' ? 'var(--success)' : 'var(--danger)', fontWeight: 'bold' }}>{selectedVenta.estadoRespuestaSRI || selectedVenta.estadoSri || selectedVenta.status || 'N/A'}</span></div>
                 <div><b>Código Respuesta:</b> {selectedVenta.codigoRespuesta || (selectedVenta.mensajesSri?.[0]?.identificador) || 'N/A'}</div>
                 <div><b>Mensaje Respuesta:</b> {selectedVenta.mensajeRespuesta || (selectedVenta.mensajesSri?.[0]?.mensaje) || selectedVenta.errorTecnico || 'N/A'}</div>
                 <div><b>Información Adicional:</b> {selectedVenta.informacionAdicional || (selectedVenta.mensajesSri?.[0]?.informacionAdicional) || 'N/A'}</div>
                 <div><b>SOAP Fault:</b> {selectedVenta.soapFault ? (typeof selectedVenta.soapFault === 'object' ? JSON.stringify(selectedVenta.soapFault) : String(selectedVenta.soapFault)) : 'Ninguno'}</div>
                 <div><b>HTTP Status:</b> {selectedVenta.httpStatus || '200'}</div>
-                <div style={{ marginTop: '8px', borderTop: '1px dashed rgba(255,255,255,0.1)', paddingTop: '6px' }}>
+                <div style={{ marginTop: '8px', borderTop: '1px dashed var(--panel-border)', paddingTop: '6px' }}>
                   <div><b>Clave Acceso:</b> {selectedVenta.claveAcceso || selectedVenta.id}</div>
                   <div><b>Número Autorización:</b> {selectedVenta.numeroAutorizacion || 'N/A'}</div>
                   <div><b>Fecha Autorización:</b> {selectedVenta.fechaAutorizacion || 'N/A'}</div>
@@ -756,20 +756,20 @@ export default function FacturasSRI({ isAdmin, issuers = [] }) {
               </div>
 
              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
-               <button onClick={() => handleReimprimirClick(selectedVenta)} style={{ padding: '8px 16px', background: 'rgba(255, 255, 255, 0.1)', color: 'white', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+               <button onClick={() => handleReimprimirClick(selectedVenta)} style={{ padding: '8px 16px', background: 'var(--card-hover)', color: 'var(--text-main)', border: '1px solid var(--panel-border)', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
                  <Printer size={16} /> Reimprimir
                </button>
-               <button onClick={() => window.open(`/api/sri/pdf?claveAcceso=${selectedVenta.claveAcceso || selectedVenta.id}`, '_blank')} style={{ padding: '8px 16px', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.4)', borderRadius: '4px', cursor: 'pointer' }}>
+               <button onClick={() => window.open(`/api/sri/pdf?claveAcceso=${selectedVenta.claveAcceso || selectedVenta.id}`, '_blank')} style={{ padding: '8px 16px', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--success)', border: '1px solid rgba(16, 185, 129, 0.4)', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>
                  Descargar PDF
                </button>
-               <button onClick={() => window.open(`/api/sri/xml?claveAcceso=${selectedVenta.claveAcceso || selectedVenta.id}`, '_blank')} style={{ padding: '8px 16px', background: 'rgba(139, 92, 246, 0.2)', color: '#a78bfa', border: '1px solid rgba(139, 92, 246, 0.4)', borderRadius: '4px', cursor: 'pointer' }}>
+               <button onClick={() => window.open(`/api/sri/xml?claveAcceso=${selectedVenta.claveAcceso || selectedVenta.id}`, '_blank')} style={{ padding: '8px 16px', background: 'rgba(139, 92, 246, 0.15)', color: '#8b5cf6', border: '1px solid rgba(139, 92, 246, 0.4)', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>
                  Descargar XML
                </button>
                {isAdmin && ['DEVUELTO', 'DEVUELTA', 'ERROR', 'RECHAZADO', 'RECHAZADA', 'ERROR_INTERNO', 'ERROR_FIRMA', 'TIMEOUT'].includes((selectedVenta.estadoSri || selectedVenta.status || '').toUpperCase()) && !selectedVenta.numeroAutorizacion && !selectedVenta.fechaAutorizacion && (
                   <button 
                     onClick={() => { handleEliminar(selectedVenta); }}
                     disabled={eliminandoId !== null}
-                    style={{ padding: '8px 16px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: (eliminandoId !== null) ? 'not-allowed' : 'pointer' }}
+                    style={{ padding: '8px 16px', background: 'var(--danger)', color: 'white', border: 'none', borderRadius: '4px', cursor: (eliminandoId !== null) ? 'not-allowed' : 'pointer' }}
                   >
                     {eliminandoId === selectedVenta.id ? 'Eliminando...' : 'Eliminar prueba'}
                   </button>
