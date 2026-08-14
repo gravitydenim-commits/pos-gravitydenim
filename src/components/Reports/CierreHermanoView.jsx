@@ -343,90 +343,92 @@ export default function CierreHermanoView({ sales }) {
   }, [selectedSiblingId, salesInDateRange, siblingProfiles]);
 
   return (
-    <div className="glass-panel" style={{ padding: '2rem', marginTop: '1rem', color: 'white' }}>
-      <h3 style={{ color: '#f59e0b', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        📊 Cierre Diario por Hermano y Compensaciones
+    <div style={{ padding: '1.5rem', background: '#0e0f14', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.08)', color: '#f1f5f9' }}>
+      <h3 style={{ color: '#f1f5f9', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '1.25rem', fontWeight: '700' }}>
+        <span style={{ color: '#0a84ff' }}>📊</span> Cierre Diario por Hermano y Compensaciones
       </h3>
 
       {/* Selectores de Filtro */}
-      <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginBottom: '2rem', background: 'rgba(0,0,0,0.2)', padding: '15px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '200px' }}>
-          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Seleccionar Hermano / Propietario:</label>
+      <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginBottom: '2rem', background: '#181920', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '220px' }}>
+          <label style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            👤 Seleccionar Hermano / Propietario:
+          </label>
           <select 
             value={selectedSiblingId} 
             onChange={(e) => setSelectedSiblingId(e.target.value)}
-            style={{ padding: '8px 12px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white', fontWeight: 'bold' }}
+            style={{ padding: '9px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.12)', background: '#121318', color: '#f1f5f9', fontWeight: 'bold', outline: 'none', fontSize: '0.88rem' }}
           >
-            <option value="">Selecciona...</option>
-            <option value="Todos">Todos los Hermanos / General</option>
+            <option value="" style={{ background: '#121318' }}>Selecciona...</option>
+            <option value="Todos" style={{ background: '#121318' }}>Todos los Hermanos / General</option>
             {siblingProfiles.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
+              <option key={p.id} value={p.id} style={{ background: '#121318' }}>{p.name}</option>
             ))}
           </select>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Desde:</label>
-          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ padding: '7px 10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <label style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>📅 Desde:</label>
+          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.12)', background: '#121318', color: '#f1f5f9', fontWeight: 'bold', outline: 'none', fontSize: '0.88rem' }} />
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Hasta:</label>
-          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ padding: '7px 10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <label style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>📅 Hasta:</label>
+          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.12)', background: '#121318', color: '#f1f5f9', fontWeight: 'bold', outline: 'none', fontSize: '0.88rem' }} />
         </div>
       </div>
 
       {!selectedSiblingId ? (
-        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+        <div style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8', background: '#181920', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
           💡 Selecciona un hermano de la lista para ver su balance de cierre diario.
         </div>
       ) : siblingData ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
           
           {/* Fila de KPIs de Ventas Propias */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
-            <div className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(34, 197, 94, 0.05)', borderLeft: '4px solid #22c55e' }}>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 5px 0' }}>Total Vendido Propio</p>
-              <h3 style={{ fontSize: '1.8rem', margin: 0, color: '#22c55e' }}>${siblingData.ventasPropiasTotal.toFixed(2)}</h3>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{siblingData.ventasPropiasCantidad} prendas vendidas</span>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
+            <div style={{ padding: '1.25rem', background: '#181920', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.08)', borderLeft: '4px solid #30d158' }}>
+              <p style={{ color: '#94a3b8', fontSize: '0.82rem', margin: '0 0 5px 0', textTransform: 'uppercase', fontWeight: '700' }}>Total Vendido Propio</p>
+              <h3 style={{ fontSize: '1.8rem', margin: 0, color: '#30d158', fontWeight: 'bold' }}>${siblingData.ventasPropiasTotal.toFixed(2)}</h3>
+              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{siblingData.ventasPropiasCantidad} prendas vendidas</span>
             </div>
 
-            <div className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)', borderLeft: '4px solid rgba(255,255,255,0.1)' }}>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 5px 0' }}>Proporción Efectivo</p>
-              <h3 style={{ fontSize: '1.8rem', margin: 0 }}>${siblingData.ventasPropiasEfectivo.toFixed(2)}</h3>
+            <div style={{ padding: '1.25rem', background: '#181920', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.08)', borderLeft: '4px solid #f1f5f9' }}>
+              <p style={{ color: '#94a3b8', fontSize: '0.82rem', margin: '0 0 5px 0', textTransform: 'uppercase', fontWeight: '700' }}>Proporción Efectivo</p>
+              <h3 style={{ fontSize: '1.8rem', margin: 0, color: '#f1f5f9', fontWeight: 'bold' }}>${siblingData.ventasPropiasEfectivo.toFixed(2)}</h3>
             </div>
 
-            <div className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(59, 130, 246, 0.05)', borderLeft: '4px solid #3b82f6' }}>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 5px 0' }}>Proporción Transferencias</p>
-              <h3 style={{ fontSize: '1.8rem', margin: 0, color: '#3b82f6' }}>${siblingData.ventasPropiasTransferencias.toFixed(2)}</h3>
+            <div style={{ padding: '1.25rem', background: '#181920', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.08)', borderLeft: '4px solid #64d2ff' }}>
+              <p style={{ color: '#94a3b8', fontSize: '0.82rem', margin: '0 0 5px 0', textTransform: 'uppercase', fontWeight: '700' }}>Proporción Transferencias</p>
+              <h3 style={{ fontSize: '1.8rem', margin: 0, color: '#64d2ff', fontWeight: 'bold' }}>${siblingData.ventasPropiasTransferencias.toFixed(2)}</h3>
             </div>
           </div>
 
           {/* Sección 1: Detalle de Ventas Propias */}
-          <div className="glass-panel" style={{ padding: '1.25rem' }}>
-            <h4 style={{ color: '#60a5fa', margin: '0 0 1rem 0' }}>📦 Detalle de prendas vendidas pertenecientes a {siblingData.siblingName}</h4>
+          <div style={{ padding: '1.25rem', background: '#181920', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <h4 style={{ color: '#60a5fa', margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: 'bold' }}>📦 Detalle de prendas vendidas pertenecientes a {siblingData.siblingName}</h4>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                    <th style={{ padding: '8px' }}>No. Venta</th>
-                    <th style={{ padding: '8px' }}>Cliente</th>
-                    <th style={{ padding: '8px' }}>Detalle Prendas</th>
-                    <th style={{ padding: '8px', textAlign: 'right' }}>Monto Propio</th>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'left', color: '#94a3b8', background: '#13141a' }}>
+                    <th style={{ padding: '10px' }}>No. Venta</th>
+                    <th style={{ padding: '10px' }}>Cliente</th>
+                    <th style={{ padding: '10px' }}>Detalle Prendas</th>
+                    <th style={{ padding: '10px', textAlign: 'right' }}>Monto Propio</th>
                   </tr>
                 </thead>
                 <tbody>
                   {siblingData.ventasPropiasDetalle.map((v, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <td style={{ padding: '8px' }}>{v.numeroVenta}</td>
-                      <td style={{ padding: '8px' }}>{v.cliente}</td>
-                      <td style={{ padding: '8px', color: 'var(--text-main)' }}>{v.productos}</td>
-                      <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', color: 'var(--success)' }}>${v.montoTotal.toFixed(2)}</td>
+                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td style={{ padding: '10px', color: '#f1f5f9', fontWeight: 'bold' }}>{v.numeroVenta}</td>
+                      <td style={{ padding: '10px', color: '#e2e8f0' }}>{v.cliente}</td>
+                      <td style={{ padding: '10px', color: '#f1f5f9' }}>{v.productos}</td>
+                      <td style={{ padding: '10px', textAlign: 'right', fontWeight: 'bold', color: '#30d158' }}>${v.montoTotal.toFixed(2)}</td>
                     </tr>
                   ))}
                   {siblingData.ventasPropiasDetalle.length === 0 && (
                     <tr>
-                      <td colSpan="4" style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)' }}>No se vendieron prendas de este hermano en el rango de fechas.</td>
+                      <td colSpan="4" style={{ textAlign: 'center', padding: '1.5rem', color: '#94a3b8' }}>No se vendieron prendas de este hermano en el rango de fechas.</td>
                     </tr>
                   )}
                 </tbody>
@@ -435,30 +437,30 @@ export default function CierreHermanoView({ sales }) {
           </div>
 
           {/* Sección 2: Transferencias recibidas en su cuenta (De otros hermanos) */}
-          <div className="glass-panel" style={{ padding: '1.25rem' }}>
-            <h4 style={{ color: '#a78bfa', margin: '0 0 1rem 0' }}>🏦 Transferencias recibidas en cuenta de {siblingData.siblingName} por productos de otros</h4>
+          <div style={{ padding: '1.25rem', background: '#181920', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <h4 style={{ color: '#c084fc', margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: 'bold' }}>🏦 Transferencias recibidas en cuenta de {siblingData.siblingName} por productos de otros</h4>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                    <th style={{ padding: '8px' }}>No. Venta</th>
-                    <th style={{ padding: '8px' }}>Cliente</th>
-                    <th style={{ padding: '8px' }}>Dueño del Producto</th>
-                    <th style={{ padding: '8px', textAlign: 'right' }}>Monto Recibido</th>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'left', color: '#94a3b8', background: '#13141a' }}>
+                    <th style={{ padding: '10px' }}>No. Venta</th>
+                    <th style={{ padding: '10px' }}>Cliente</th>
+                    <th style={{ padding: '10px' }}>Dueño del Producto</th>
+                    <th style={{ padding: '10px', textAlign: 'right' }}>Monto Recibido</th>
                   </tr>
                 </thead>
                 <tbody>
                   {siblingData.transferenciasRecibidas.map((v, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <td style={{ padding: '8px' }}>{v.numeroVenta}</td>
-                      <td style={{ padding: '8px' }}>{v.cliente}</td>
-                      <td style={{ padding: '8px', fontWeight: 'bold' }}>{v.ownerName}</td>
-                      <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', color: '#a78bfa' }}>${v.amount.toFixed(2)}</td>
+                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td style={{ padding: '10px', color: '#f1f5f9', fontWeight: 'bold' }}>{v.numeroVenta}</td>
+                      <td style={{ padding: '10px', color: '#e2e8f0' }}>{v.cliente}</td>
+                      <td style={{ padding: '10px', fontWeight: 'bold', color: '#f1f5f9' }}>{v.ownerName}</td>
+                      <td style={{ padding: '10px', textAlign: 'right', fontWeight: 'bold', color: '#c084fc' }}>${v.amount.toFixed(2)}</td>
                     </tr>
                   ))}
                   {siblingData.transferenciasRecibidas.length === 0 && (
                     <tr>
-                      <td colSpan="4" style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)' }}>No se recibieron transferencias ajenas en su cuenta.</td>
+                      <td colSpan="4" style={{ textAlign: 'center', padding: '1.5rem', color: '#94a3b8' }}>No se recibieron transferencias ajenas en su cuenta.</td>
                     </tr>
                   )}
                 </tbody>
@@ -467,30 +469,30 @@ export default function CierreHermanoView({ sales }) {
           </div>
 
           {/* Sección 3: Transferencias propias en cuentas de otros hermanos */}
-          <div className="glass-panel" style={{ padding: '1.25rem' }}>
-            <h4 style={{ color: '#f59e0b', margin: '0 0 1rem 0' }}>🔀 Transferencias de productos de {siblingData.siblingName} recibidas en cuentas de otros</h4>
+          <div style={{ padding: '1.25rem', background: '#181920', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <h4 style={{ color: '#ff9f0a', margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: 'bold' }}>🔀 Transferencias de productos de {siblingData.siblingName} recibidas en cuentas de otros</h4>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                    <th style={{ padding: '8px' }}>No. Venta</th>
-                    <th style={{ padding: '8px' }}>Cliente</th>
-                    <th style={{ padding: '8px' }}>Quién recibió la transferencia</th>
-                    <th style={{ padding: '8px', textAlign: 'right' }}>Monto a Recuperar</th>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'left', color: '#94a3b8', background: '#13141a' }}>
+                    <th style={{ padding: '10px' }}>No. Venta</th>
+                    <th style={{ padding: '10px' }}>Cliente</th>
+                    <th style={{ padding: '10px' }}>Quién recibió la transferencia</th>
+                    <th style={{ padding: '10px', textAlign: 'right' }}>Monto a Recuperar</th>
                   </tr>
                 </thead>
                 <tbody>
                   {siblingData.transferenciasPropiasEnOtrosHermanos.map((v, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <td style={{ padding: '8px' }}>{v.numeroVenta}</td>
-                      <td style={{ padding: '8px' }}>{v.cliente}</td>
-                      <td style={{ padding: '8px', fontWeight: 'bold' }}>{v.recipientName}</td>
-                      <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', color: '#f59e0b' }}>${v.amount.toFixed(2)}</td>
+                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td style={{ padding: '10px', color: '#f1f5f9', fontWeight: 'bold' }}>{v.numeroVenta}</td>
+                      <td style={{ padding: '10px', color: '#e2e8f0' }}>{v.cliente}</td>
+                      <td style={{ padding: '10px', fontWeight: 'bold', color: '#f1f5f9' }}>{v.recipientName}</td>
+                      <td style={{ padding: '10px', textAlign: 'right', fontWeight: 'bold', color: '#ff9f0a' }}>${v.amount.toFixed(2)}</td>
                     </tr>
                   ))}
                   {siblingData.transferenciasPropiasEnOtrosHermanos.length === 0 && (
                     <tr>
-                      <td colSpan="4" style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)' }}>Ninguna transferencia propia fue recibida por otros hermanos.</td>
+                      <td colSpan="4" style={{ textAlign: 'center', padding: '1.5rem', color: '#94a3b8' }}>Ninguna transferencia propia fue recibida por otros hermanos.</td>
                     </tr>
                   )}
                 </tbody>
@@ -499,41 +501,41 @@ export default function CierreHermanoView({ sales }) {
           </div>
 
           {/* Sección 4: Tabla Resumen de Compensaciones */}
-          <div className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <h4 style={{ color: 'var(--success)', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ padding: '1.25rem', background: '#181920', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <h4 style={{ color: '#30d158', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '1rem', fontWeight: 'bold' }}>
               ⚖️ Matriz de Compensaciones para {siblingData.siblingName}
             </h4>
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                    <th style={{ padding: '10px 8px' }}>Hermano</th>
-                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Debe entregar a {siblingData.siblingName}</th>
-                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>{siblingData.siblingName} debe entregarle</th>
-                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Saldo Neto</th>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'left', color: '#94a3b8', background: '#13141a' }}>
+                    <th style={{ padding: '10px' }}>Hermano</th>
+                    <th style={{ padding: '10px', textAlign: 'right' }}>Debe entregar a {siblingData.siblingName}</th>
+                    <th style={{ padding: '10px', textAlign: 'right' }}>{siblingData.siblingName} debe entregarle</th>
+                    <th style={{ padding: '10px', textAlign: 'right' }}>Saldo Neto</th>
                   </tr>
                 </thead>
                 <tbody>
                   {Object.entries(siblingData.compensations).map(([bId, comp]) => {
                     const net = comp.amountOwedToSibling - comp.amountSiblingOwesToUs;
-                    let netColor = 'white';
+                    let netColor = '#f1f5f9';
                     let netText = `$${Math.abs(net).toFixed(2)}`;
                     if (net > 0) {
-                      netColor = '#22c55e';
+                      netColor = '#30d158';
                       netText = `A favor: +${netText}`;
                     } else if (net < 0) {
-                      netColor = '#ef4444';
+                      netColor = '#ff453a';
                       netText = `En contra: -${netText}`;
                     } else {
                       netText = `$0.00`;
                     }
 
                     return (
-                      <tr key={bId} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <td style={{ padding: '10px 8px', fontWeight: 'bold' }}>{comp.brotherName}</td>
-                        <td style={{ padding: '10px 8px', textAlign: 'right', color: '#22c55e' }}>${comp.amountOwedToSibling.toFixed(2)}</td>
-                        <td style={{ padding: '10px 8px', textAlign: 'right', color: '#ef4444' }}>${comp.amountSiblingOwesToUs.toFixed(2)}</td>
-                        <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 'bold', color: netColor }}>{netText}</td>
+                      <tr key={bId} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                        <td style={{ padding: '10px', fontWeight: 'bold', color: '#f1f5f9' }}>{comp.brotherName}</td>
+                        <td style={{ padding: '10px', textAlign: 'right', color: '#30d158', fontWeight: 'bold' }}>${comp.amountOwedToSibling.toFixed(2)}</td>
+                        <td style={{ padding: '10px', textAlign: 'right', color: '#ff453a', fontWeight: 'bold' }}>${comp.amountSiblingOwesToUs.toFixed(2)}</td>
+                        <td style={{ padding: '10px', textAlign: 'right', fontWeight: 'bold', color: netColor }}>{netText}</td>
                       </tr>
                     );
                   })}

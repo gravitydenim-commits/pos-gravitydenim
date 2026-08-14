@@ -2324,27 +2324,31 @@ export default function ReportesDashboard({ sales, issuers }) {
   };
 
   return (
-    <div className="report-container animate-fade-in" style={{ padding: '2rem' }}>
+    <div className="report-container animate-fade-in" style={{ padding: '1.5rem', background: '#0e0f14', color: '#f1f5f9', minHeight: '100vh', borderRadius: '16px' }}>
       <style>{`
         .pos-table th, .pos-table td {
-          padding: 14px 18px !important;
+          padding: 12px 16px !important;
           text-align: left;
           vertical-align: middle;
           white-space: nowrap;
         }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+          filter: invert(0.8);
+          cursor: pointer;
+        }
       `}</style>
       {/* Pestañas de Navegación Principal: Resumen para Contadora vs Reporte General */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--panel-border)', marginBottom: '2rem', gap: '1rem' }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', marginBottom: '1.75rem', gap: '1rem' }}>
         <button
           onClick={() => setMainTab('contadora')}
           style={{
-            padding: '1rem 2rem',
+            padding: '0.85rem 1.75rem',
             background: 'transparent',
             border: 'none',
-            borderBottom: mainTab === 'contadora' ? '3px solid #10b981' : '3px solid transparent',
-            color: mainTab === 'contadora' ? '#10b981' : 'var(--text-muted)',
+            borderBottom: mainTab === 'contadora' ? '3px solid #0a84ff' : '3px solid transparent',
+            color: mainTab === 'contadora' ? '#0a84ff' : '#94a3b8',
             fontWeight: 'bold',
-            fontSize: '1.1rem',
+            fontSize: '1.05rem',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
             display: 'flex',
@@ -2352,18 +2356,18 @@ export default function ReportesDashboard({ sales, issuers }) {
             gap: '8px'
           }}
         >
-          <FileText size={20} /> Resumen para Contadora (Reporte Tributario)
+          <FileText size={19} /> Resumen para Contadora (Reporte Tributario)
         </button>
         <button
           onClick={() => setMainTab('general')}
           style={{
-            padding: '1rem 2rem',
+            padding: '0.85rem 1.75rem',
             background: 'transparent',
             border: 'none',
-            borderBottom: mainTab === 'general' ? '3px solid var(--accent)' : '3px solid transparent',
-            color: mainTab === 'general' ? 'white' : 'var(--text-muted)',
+            borderBottom: mainTab === 'general' ? '3px solid #0a84ff' : '3px solid transparent',
+            color: mainTab === 'general' ? '#f1f5f9' : '#94a3b8',
             fontWeight: 'bold',
-            fontSize: '1.1rem',
+            fontSize: '1.05rem',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
             display: 'flex',
@@ -2371,40 +2375,43 @@ export default function ReportesDashboard({ sales, issuers }) {
             gap: '8px'
           }}
         >
-          <BarChart3 size={20} /> Reporte general y Cierre por Hermano
+          <BarChart3 size={19} /> Reporte general y Cierre por Hermano
         </button>
       </div>
 
       {mainTab === 'general' ? (
         <>
-          <div className="header" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="header" style={{ marginBottom: '1.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h2><Activity className="inline" style={{verticalAlign: 'bottom'}}/> Dashboard de Reportes</h2>
-          <span style={{color: 'var(--text-muted)'}}>Inteligencia Multi-RUC y Rendimiento</span>
+          <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 'bold', color: '#f1f5f9', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Activity size={24} color="#0a84ff" /> Dashboard de Reportes
+          </h2>
+          <span style={{ color: '#94a3b8', fontSize: '0.88rem' }}>Inteligencia Multi-RUC y Rendimiento</span>
         </div>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <button 
             onClick={handleImprimirReporteDelDia}
-            className="btn-success" 
-            style={{ padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ padding: '0.55rem 1.1rem', borderRadius: '8px', background: 'rgba(48, 209, 88, 0.15)', border: '1px solid rgba(48, 209, 88, 0.35)', color: '#30d158', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem', transition: 'all 0.2s ease' }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#16a34a'; e.currentTarget.style.color = '#fff'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(48, 209, 88, 0.15)'; e.currentTarget.style.color = '#30d158'; }}
           >
             <Printer size={16} /> Imprimir Cierre del Día
           </button>
           <button 
             onClick={() => setActiveTab('sri')}
-            style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: activeTab === 'sri' ? 'var(--accent)' : 'transparent', border: '1px solid var(--accent)', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}
+            style={{ padding: '0.55rem 1.1rem', borderRadius: '8px', background: activeTab === 'sri' ? '#0a84ff' : '#181920', border: '1px solid rgba(255, 255, 255, 0.1)', color: activeTab === 'sri' ? 'white' : '#94a3b8', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.88rem', transition: 'all 0.2s ease' }}
           >
             📊 Reporte General de Ventas
           </button>
           <button 
             onClick={() => setActiveTab('notas_venta')}
-            style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: activeTab === 'notas_venta' ? '#f59e0b' : 'transparent', border: '1px solid #f59e0b', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}
+            style={{ padding: '0.55rem 1.1rem', borderRadius: '8px', background: activeTab === 'notas_venta' ? 'rgba(191, 90, 242, 0.18)' : '#181920', border: activeTab === 'notas_venta' ? '1px solid #bf5af2' : '1px solid rgba(255, 255, 255, 0.1)', color: activeTab === 'notas_venta' ? '#c084fc' : '#94a3b8', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.88rem', transition: 'all 0.2s ease' }}
           >
             🧾 Historial de Notas de Venta
           </button>
           <button 
             onClick={() => setActiveTab('cierre_hermano')}
-            style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: activeTab === 'cierre_hermano' ? '#6366f1' : 'transparent', border: '1px solid #6366f1', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}
+            style={{ padding: '0.55rem 1.1rem', borderRadius: '8px', background: activeTab === 'cierre_hermano' ? 'rgba(100, 210, 255, 0.18)' : '#181920', border: activeTab === 'cierre_hermano' ? '1px solid #64d2ff' : '1px solid rgba(255, 255, 255, 0.1)', color: activeTab === 'cierre_hermano' ? '#64d2ff' : '#94a3b8', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.88rem', transition: 'all 0.2s ease' }}
           >
             👥 Cierre por Hermano
           </button>
@@ -2414,77 +2421,77 @@ export default function ReportesDashboard({ sales, issuers }) {
       {activeTab === 'sri' && (
         <>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.75rem' }}>
         
         {/* KPI: Facturas Emitidas */}
-        <div className="glass-panel" style={{ padding: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-          <div style={{ padding: '12px', background: 'rgba(59, 130, 246, 0.15)', borderRadius: '50%', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FileText size={24} />
+        <div style={{ padding: '1.2rem', background: '#16171e', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', alignItems: 'center', gap: '0.8rem', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
+          <div style={{ padding: '10px', background: 'rgba(10, 132, 255, 0.12)', borderRadius: '10px', color: '#0a84ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <FileText size={22} />
           </div>
           <div>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0 0 0.2rem 0' }}>Facturas Emitidas</p>
-            <h3 style={{ fontSize: '1.4rem', margin: 0, fontWeight: 'bold', color: 'white' }}>{numFacturasMes}</h3>
+            <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.2rem 0', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Facturas Emitidas</p>
+            <h3 style={{ fontSize: '1.4rem', margin: 0, fontWeight: 'bold', color: '#f1f5f9' }}>{numFacturasMes}</h3>
           </div>
         </div>
 
         {/* KPI: Notas de Venta */}
-        <div className="glass-panel" style={{ padding: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-          <div style={{ padding: '12px', background: 'rgba(245, 158, 11, 0.15)', borderRadius: '50%', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FileText size={24} />
+        <div style={{ padding: '1.2rem', background: '#16171e', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', alignItems: 'center', gap: '0.8rem', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
+          <div style={{ padding: '10px', background: 'rgba(191, 90, 242, 0.12)', borderRadius: '10px', color: '#bf5af2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <FileText size={22} />
           </div>
           <div>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0 0 0.2rem 0' }}>Notas de Venta</p>
-            <h3 style={{ fontSize: '1.4rem', margin: 0, fontWeight: 'bold', color: 'white' }}>{numNotasMes}</h3>
+            <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.2rem 0', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Notas de Venta</p>
+            <h3 style={{ fontSize: '1.4rem', margin: 0, fontWeight: 'bold', color: '#f1f5f9' }}>{numNotasMes}</h3>
           </div>
         </div>
 
         {/* KPI: Ventas del Mes */}
-        <div className="glass-panel" style={{ padding: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-          <div style={{ padding: '12px', background: 'rgba(16, 185, 129, 0.15)', borderRadius: '50%', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <DollarSign size={24} />
+        <div style={{ padding: '1.2rem', background: '#16171e', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', alignItems: 'center', gap: '0.8rem', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
+          <div style={{ padding: '10px', background: 'rgba(48, 209, 88, 0.12)', borderRadius: '10px', color: '#30d158', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <DollarSign size={22} />
           </div>
           <div>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0 0 0.2rem 0' }}>Ventas del Mes</p>
-            <h3 style={{ fontSize: '1.4rem', margin: 0, fontWeight: 'bold', color: 'white' }}>${currentMonthTotal.toFixed(2)}</h3>
+            <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.2rem 0', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Ventas del Mes</p>
+            <h3 style={{ fontSize: '1.4rem', margin: 0, fontWeight: 'bold', color: '#30d158' }}>${currentMonthTotal.toFixed(2)}</h3>
           </div>
         </div>
 
         {/* KPI: IVA Declarado */}
-        <div className="glass-panel" style={{ padding: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-          <div style={{ padding: '12px', background: 'rgba(239, 68, 68, 0.15)', borderRadius: '50%', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Percent size={24} />
+        <div style={{ padding: '1.2rem', background: '#16171e', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', alignItems: 'center', gap: '0.8rem', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
+          <div style={{ padding: '10px', background: 'rgba(100, 210, 255, 0.12)', borderRadius: '10px', color: '#64d2ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Percent size={22} />
           </div>
           <div>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0 0 0.2rem 0' }}>IVA Declarado</p>
-            <h3 style={{ fontSize: '1.4rem', margin: 0, fontWeight: 'bold', color: 'white' }}>${currentMonthIVA.toFixed(2)}</h3>
+            <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.2rem 0', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>IVA Declarado</p>
+            <h3 style={{ fontSize: '1.4rem', margin: 0, fontWeight: 'bold', color: '#64d2ff' }}>${currentMonthIVA.toFixed(2)}</h3>
           </div>
         </div>
 
         {/* KPI: Promedio por Venta */}
-        <div className="glass-panel" style={{ padding: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-          <div style={{ padding: '12px', background: 'rgba(168, 85, 247, 0.15)', borderRadius: '50%', color: '#a855f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <TrendingUp size={24} />
+        <div style={{ padding: '1.2rem', background: '#16171e', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', alignItems: 'center', gap: '0.8rem', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
+          <div style={{ padding: '10px', background: 'rgba(255, 159, 10, 0.12)', borderRadius: '10px', color: '#ff9f0a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <TrendingUp size={22} />
           </div>
           <div>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0 0 0.2rem 0' }}>Promedio por Venta</p>
-            <h3 style={{ fontSize: '1.4rem', margin: 0, fontWeight: 'bold', color: 'white' }}>${promedioVentaMes.toFixed(2)}</h3>
+            <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.2rem 0', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Promedio por Venta</p>
+            <h3 style={{ fontSize: '1.4rem', margin: 0, fontWeight: 'bold', color: '#f1f5f9' }}>${promedioVentaMes.toFixed(2)}</h3>
           </div>
         </div>
 
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.75rem' }}>
         
         {/* Reporte de Ventas Estilo Ecufac */}
-        <div className="glass-panel" style={{ padding: '1.5rem', overflowX: 'auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '2px solid var(--accent)', paddingBottom: '10px' }}>
-            <h3 style={{ color: 'var(--text-main)', margin: 0, fontSize: '1.2rem' }}>Reporte de ventas</h3>
+        <div style={{ padding: '1.4rem', background: '#16171e', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.08)', overflowX: 'auto', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '10px' }}>
+            <h3 style={{ color: '#f1f5f9', margin: 0, fontSize: '1.15rem', fontWeight: 'bold' }}>Reporte de ventas</h3>
           </div>
           
           <div style={{ minWidth: '1500px' }}>
             <table className="pos-table" style={{ fontSize: '0.85rem' }}>
               <thead>
-                <tr style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)' }}>
+                <tr style={{ background: '#101116', color: '#8e919e' }}>
                   <th>EMISION</th>
                   <th>AUTORIZACION</th>
                   <th>EST</th>
@@ -2507,7 +2514,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                   if (facturasSri.length === 0) {
                     return (
                       <tr>
-                        <td colSpan="15" style={{ textAlign: 'center', color: '#f87171', padding: '3rem', fontWeight: 'bold', fontSize: '1.1rem' }}>
+                        <td colSpan="15" style={{ textAlign: 'center', color: '#ff453a', padding: '3rem', fontWeight: 'bold', fontSize: '1rem' }}>
                           No existen facturas electrónicas emitidas.
                         </td>
                       </tr>
@@ -2523,47 +2530,47 @@ export default function ReportesDashboard({ sales, issuers }) {
                     return dateB - dateA;
                   }).map((sale, idx) => {
                     const saleDate = parseSaleDate(sale);
-                    if (!saleDate) return <tr key={idx}><td colSpan="15" style={{textAlign: 'center', color: 'var(--text-muted)'}}>Sin fecha</td></tr>;
+                    if (!saleDate) return <tr key={idx}><td colSpan="15" style={{textAlign: 'center', color: '#94a3b8'}}>Sin fecha</td></tr>;
                     const isAutorizado = (sale.estadoSri || sale.status) === 'AUTORIZADO';
                     const issuer = issuers?.find(i => i.id === sale.issuerId) || {};
                     
                     return (
-                      <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <td>{saleDate.toLocaleDateString('sv-SE')}</td>
-                        <td>{isAutorizado ? saleDate.toLocaleString('sv-SE', {hour12: false}) : ''}</td>
+                      <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                        <td style={{ color: '#e2e8f0' }}>{saleDate.toLocaleDateString('sv-SE')}</td>
+                        <td style={{ color: '#94a3b8' }}>{isAutorizado ? saleDate.toLocaleString('sv-SE', {hour12: false}) : ''}</td>
                         <td>{issuer.establecimiento || '001'}</td>
                         <td>{issuer.puntoEmision || issuer.ptoEmi || '001'}</td>
-                        <td style={{ background: '#3b82f6', color: 'white', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', margin: '4px' }}>
+                        <td style={{ background: '#0a84ff', color: 'white', padding: '2px 8px', borderRadius: '4px', display: 'inline-block', margin: '4px', fontWeight: 'bold', fontFamily: 'monospace' }}>
                           {sale.numeroComprobante ? sale.numeroComprobante.split('-')[2] : (sale.secuencial || '000')}
                         </td>
-                        <td>{(sale.cliente || sale.customer)?.nombre || 'CONSUMIDOR FINAL'}</td>
-                        <td>{(sale.cliente || sale.customer)?.numeroIdentificacion || '9999999999999'}</td>
+                        <td style={{ color: '#f1f5f9' }}>{(sale.cliente || sale.customer)?.nombre || 'CONSUMIDOR FINAL'}</td>
+                        <td style={{ color: '#94a3b8', fontFamily: 'monospace' }}>{(sale.cliente || sale.customer)?.numeroIdentificacion || '9999999999999'}</td>
                         <td className="text-right">0.00</td>
                         <td className="text-right">{(sale.totals?.baseImponible || 0).toFixed(2)}</td>
-                        <td className="text-right">{(sale.totals?.ivaAmount || 0).toFixed(2)}</td>
-                        <td className="text-right font-bold" style={{ color: 'var(--accent)' }}>{(sale.totals?.total || 0).toFixed(2)}</td>
+                        <td className="text-right" style={{ color: '#64d2ff' }}>{(sale.totals?.ivaAmount || 0).toFixed(2)}</td>
+                        <td className="text-right font-bold" style={{ color: '#30d158' }}>{(sale.totals?.total || 0).toFixed(2)}</td>
                         <td>
-                          <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.1)', padding: '2px 4px', borderRadius: '4px' }}>
+                          <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.06)', padding: '3px 8px', borderRadius: '6px', color: '#cbd5e1', fontWeight: '600' }}>
                             {sale.paymentMethod || 'EFECTIVO'} {sale.transferRecipient ? `(${sale.transferRecipient})` : ''}
                           </span>
                         </td>
-                        <td style={{ color: isAutorizado ? '#10b981' : 'var(--text-muted)', fontWeight: 'bold' }}>
+                        <td style={{ color: isAutorizado ? '#30d158' : '#94a3b8', fontWeight: 'bold' }}>
                           {(sale.estadoSri || sale.status)}
                         </td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <span style={{ fontSize: '0.7rem' }}>{sale.claveAcceso || sale.id}</span>
+                            <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontFamily: 'monospace' }}>{sale.claveAcceso || sale.id}</span>
                             <div style={{ display: 'flex', gap: '4px' }}>
                               <button 
                                 onClick={() => window.open(`/api/sri/pdf?claveAcceso=${sale.claveAcceso || sale.id}`, '_blank')}
-                                style={{ background: '#10b981', border: 'none', padding: '4px 6px', borderRadius: '4px', color: 'white', cursor: 'pointer' }}
+                                style={{ background: '#0a84ff', border: 'none', padding: '4px 8px', borderRadius: '4px', color: 'white', cursor: 'pointer' }}
                                 title="Descargar RIDE PDF SRI"
                               >
                                 <FileText size={14} />
                               </button>
                               <button 
                                 onClick={() => window.open(`/api/sri/xml?claveAcceso=${sale.claveAcceso || sale.id}`, '_blank')}
-                                style={{ background: '#ef4444', border: 'none', padding: '4px 6px', borderRadius: '4px', color: 'white', cursor: 'pointer' }}
+                                style={{ background: '#059669', border: 'none', padding: '4px 8px', borderRadius: '4px', color: 'white', cursor: 'pointer' }}
                                 title="Descargar XML"
                               >
                                 <FileCode2 size={14} />
@@ -2581,15 +2588,15 @@ export default function ReportesDashboard({ sales, issuers }) {
         </div>
         
         {/* Reporte de Notas de Venta */}
-        <div className="glass-panel" style={{ padding: '1.5rem', overflowX: 'auto', borderTop: '4px solid var(--warning)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '2px solid var(--warning)', paddingBottom: '10px' }}>
-            <h3 style={{ color: 'var(--warning)', margin: 0, fontSize: '1.2rem' }}>Control Interno (Notas de Venta)</h3>
+        <div style={{ padding: '1.4rem', background: '#16171e', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.08)', overflowX: 'auto', borderTop: '4px solid #bf5af2', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '10px' }}>
+            <h3 style={{ color: '#c084fc', margin: 0, fontSize: '1.15rem', fontWeight: 'bold' }}>Control Interno (Notas de Venta)</h3>
           </div>
           
           <div style={{ minWidth: '1300px' }}>
             <table className="pos-table" style={{ fontSize: '0.85rem' }}>
               <thead>
-                <tr style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)' }}>
+                <tr style={{ background: '#101116', color: '#8e919e' }}>
                   <th>EMISION</th>
                   <th>EST</th>
                   <th>PEM</th>
@@ -2613,36 +2620,36 @@ export default function ReportesDashboard({ sales, issuers }) {
                   return dateB - dateA;
                 }).map((sale, idx) => {
                   const saleDate = parseSaleDate(sale);
-                  if (!saleDate) return <tr key={idx}><td colSpan="15" style={{textAlign: 'center', color: 'var(--text-muted)'}}>Sin fecha</td></tr>;
+                  if (!saleDate) return <tr key={idx}><td colSpan="15" style={{textAlign: 'center', color: '#94a3b8'}}>Sin fecha</td></tr>;
                   const issuer = issuers?.find(i => i.id === sale.issuerId) || {};
                   
                   return (
-                    <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <td>{saleDate.toLocaleDateString('sv-SE')}</td>
+                    <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td style={{ color: '#e2e8f0' }}>{saleDate.toLocaleDateString('sv-SE')}</td>
                       <td>{issuer.establecimiento || '001'}</td>
                       <td>{issuer.puntoEmision || issuer.ptoEmi || '001'}</td>
-                      <td style={{ background: 'var(--warning)', color: 'white', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', margin: '4px' }}>
+                      <td style={{ background: '#bf5af2', color: 'white', padding: '2px 8px', borderRadius: '4px', display: 'inline-block', margin: '4px', fontWeight: 'bold', fontFamily: 'monospace' }}>
                         {sale.numeroComprobante || 'S/N'}
                       </td>
-                      <td>{(sale.cliente || sale.customer)?.nombre || 'CONSUMIDOR FINAL'}</td>
-                      <td>{(sale.cliente || sale.customer)?.numeroIdentificacion || '9999999999999'}</td>
+                      <td style={{ color: '#f1f5f9' }}>{(sale.cliente || sale.customer)?.nombre || 'CONSUMIDOR FINAL'}</td>
+                      <td style={{ color: '#94a3b8', fontFamily: 'monospace' }}>{(sale.cliente || sale.customer)?.numeroIdentificacion || '9999999999999'}</td>
                       <td className="text-right">{(sale.totals?.baseImponible || 0).toFixed(2)}</td>
-                      <td className="text-right font-bold" style={{ color: 'var(--warning)' }}>{(sale.totals?.total || 0).toFixed(2)}</td>
+                      <td className="text-right font-bold" style={{ color: '#c084fc' }}>{(sale.totals?.total || 0).toFixed(2)}</td>
                       <td>
-                        <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.1)', padding: '2px 4px', borderRadius: '4px' }}>
+                        <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.06)', padding: '3px 8px', borderRadius: '6px', color: '#cbd5e1', fontWeight: '600' }}>
                           {sale.paymentMethod || 'EFECTIVO'} {sale.transferRecipient ? `(${sale.transferRecipient})` : ''}
                         </span>
                       </td>
-                      <td style={{ color: 'var(--warning)', fontWeight: 'bold' }}>
+                      <td style={{ color: '#c084fc', fontWeight: 'bold' }}>
                         {(sale.estadoSri || sale.status)}
                       </td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '0.7rem' }}>{sale.claveAcceso || sale.id}</span>
+                          <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontFamily: 'monospace' }}>{sale.claveAcceso || sale.id}</span>
                           <div style={{ display: 'flex', gap: '4px' }}>
                             <button 
                               onClick={() => generarFacturaA4(sale, issuer)}
-                              style={{ background: '#10b981', border: 'none', padding: '4px', borderRadius: '4px', color: 'white', cursor: 'pointer' }}
+                              style={{ background: '#0a84ff', border: 'none', padding: '4px 8px', borderRadius: '4px', color: 'white', cursor: 'pointer' }}
                               title="Descargar Comprobante A4"
                             >
                               <FileText size={14} />
@@ -2880,23 +2887,24 @@ export default function ReportesDashboard({ sales, issuers }) {
       ) : mainTab === 'contadora' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {/* Header Resumen Tributario por Rango de Fechas */}
-          <div className="glass-panel" style={{
+          <div style={{
             padding: '1.5rem',
-            background: 'linear-gradient(135deg, rgba(6, 78, 59, 0.75) 0%, rgba(15, 23, 42, 0.95) 100%)',
-            border: '1px solid rgba(16, 185, 129, 0.4)',
-            boxShadow: '0 8px 32px rgba(16, 185, 129, 0.15)'
+            background: '#16171e',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '14px',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                  <span style={{ background: '#10b981', color: '#042f2e', fontSize: '0.68rem', fontWeight: '900', letterSpacing: '0.08em', padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                  <span style={{ background: 'rgba(10, 132, 255, 0.15)', color: '#60a5fa', border: '1px solid rgba(10, 132, 255, 0.3)', fontSize: '0.68rem', fontWeight: '900', letterSpacing: '0.08em', padding: '3px 10px', borderRadius: '6px', textTransform: 'uppercase' }}>
                     REPORTE TRIBUTARIO DE VENTAS · SRI ECUADOR
                   </span>
                 </div>
-                <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.6rem', color: 'white', fontWeight: 'bold' }}>
-                  <FileText size={28} color="#34d399" /> Resumen para Contadora
+                <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.5rem', color: '#f1f5f9', fontWeight: 'bold' }}>
+                  <FileText size={26} color="#0a84ff" /> Resumen para Contadora
                 </h2>
-                <p style={{ margin: '6px 0 0 0', color: '#94a3b8', fontSize: '0.9rem' }}>
+                <p style={{ margin: '6px 0 0 0', color: '#94a3b8', fontSize: '0.88rem' }}>
                   Módulo de consulta tributaria por rango de fechas. Consolida información por emisor o global.
                 </p>
               </div>
@@ -2906,54 +2914,58 @@ export default function ReportesDashboard({ sales, issuers }) {
                 <button
                   onClick={exportContadoraPDF}
                   style={{
-                    padding: '0.75rem 1.4rem',
+                    padding: '0.7rem 1.3rem',
                     borderRadius: '8px',
-                    background: '#2563eb',
-                    color: 'white',
-                    border: 'none',
+                    background: '#1c2536',
+                    color: '#60a5fa',
+                    border: '1px solid rgba(59, 130, 246, 0.35)',
                     fontWeight: 'bold',
-                    fontSize: '0.9rem',
+                    fontSize: '0.88rem',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    boxShadow: '0 4px 14px rgba(37,99,235,0.4)',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
                     transition: 'all 0.2s ease'
                   }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#0a84ff'; e.currentTarget.style.color = '#fff'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#1c2536'; e.currentTarget.style.color = '#60a5fa'; }}
                 >
-                  <Printer size={18} /> Exportar PDF
+                  <Printer size={17} /> Exportar PDF
                 </button>
                 <button
                   onClick={exportContadoraXLSX}
                   style={{
-                    padding: '0.75rem 1.4rem',
+                    padding: '0.7rem 1.3rem',
                     borderRadius: '8px',
-                    background: '#059669',
-                    color: 'white',
-                    border: 'none',
+                    background: '#132e22',
+                    color: '#34d399',
+                    border: '1px solid rgba(52, 211, 153, 0.35)',
                     fontWeight: 'bold',
-                    fontSize: '0.9rem',
+                    fontSize: '0.88rem',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    boxShadow: '0 4px 14px rgba(16,185,129,0.4)',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
                     transition: 'all 0.2s ease'
                   }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#059669'; e.currentTarget.style.color = '#fff'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#132e22'; e.currentTarget.style.color = '#34d399'; }}
                 >
-                  <FileSpreadsheet size={18} /> Exportar Excel (.xlsx)
+                  <FileSpreadsheet size={17} /> Exportar Excel (.xlsx)
                 </button>
               </div>
             </div>
           </div>
 
           {/* Panel de Controles de Rango de Fechas (Fecha Desde, Fecha Hasta, Aplicar, Limpiar) */}
-          <div className="glass-panel" style={{ padding: '1.25rem', background: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+          <div style={{ padding: '1.25rem', background: '#16171e', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '14px', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', alignItems: 'end' }}>
               
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: '800', color: '#34d399', marginBottom: '6px', letterSpacing: '0.05em' }}>
-                  📅 Fecha Desde
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: '700', color: '#94a3b8', marginBottom: '6px', letterSpacing: '0.05em' }}>
+                  <Calendar size={14} color="#0a84ff" /> Fecha Desde
                 </label>
                 <input
                   type="date"
@@ -2961,21 +2973,24 @@ export default function ReportesDashboard({ sales, issuers }) {
                   onChange={e => setContadoraStartDate(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '0.6rem',
+                    padding: '0.65rem 0.85rem',
                     borderRadius: '8px',
-                    background: 'rgba(0,0,0,0.5)',
-                    border: '1px solid var(--panel-border)',
-                    color: 'white',
+                    background: '#101116',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    color: '#f1f5f9',
                     fontWeight: 'bold',
                     fontSize: '0.9rem',
-                    outline: 'none'
+                    outline: 'none',
+                    transition: 'border-color 0.2s ease, box-shadow 0.2s ease'
                   }}
+                  onFocus={e => { e.target.style.borderColor = '#0a84ff'; e.target.style.boxShadow = '0 0 0 3px rgba(10, 132, 255, 0.25)'; }}
+                  onBlur={e => { e.target.style.borderColor = 'rgba(255, 255, 255, 0.12)'; e.target.style.boxShadow = 'none'; }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: '800', color: '#34d399', marginBottom: '6px', letterSpacing: '0.05em' }}>
-                  📅 Fecha Hasta
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: '700', color: '#94a3b8', marginBottom: '6px', letterSpacing: '0.05em' }}>
+                  <Calendar size={14} color="#0a84ff" /> Fecha Hasta
                 </label>
                 <input
                   type="date"
@@ -2983,15 +2998,18 @@ export default function ReportesDashboard({ sales, issuers }) {
                   onChange={e => setContadoraEndDate(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '0.6rem',
+                    padding: '0.65rem 0.85rem',
                     borderRadius: '8px',
-                    background: 'rgba(0,0,0,0.5)',
-                    border: '1px solid var(--panel-border)',
-                    color: 'white',
+                    background: '#101116',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    color: '#f1f5f9',
                     fontWeight: 'bold',
                     fontSize: '0.9rem',
-                    outline: 'none'
+                    outline: 'none',
+                    transition: 'border-color 0.2s ease, box-shadow 0.2s ease'
                   }}
+                  onFocus={e => { e.target.style.borderColor = '#0a84ff'; e.target.style.boxShadow = '0 0 0 3px rgba(10, 132, 255, 0.25)'; }}
+                  onBlur={e => { e.target.style.borderColor = 'rgba(255, 255, 255, 0.12)'; e.target.style.boxShadow = 'none'; }}
                 />
               </div>
 
@@ -2999,19 +3017,24 @@ export default function ReportesDashboard({ sales, issuers }) {
                 <button
                   type="button"
                   onClick={handleApplyRange}
-                  className="btn-success"
                   style={{
                     flex: 1,
                     padding: '0.65rem',
                     borderRadius: '8px',
+                    background: '#0a84ff',
+                    color: 'white',
+                    border: 'none',
                     fontWeight: 'bold',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '6px',
-                    fontSize: '0.9rem'
+                    fontSize: '0.88rem',
+                    transition: 'all 0.2s ease'
                   }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#0071e3'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#0a84ff'; }}
                 >
                   <Filter size={16} /> Aplicar Rango
                 </button>
@@ -3022,16 +3045,17 @@ export default function ReportesDashboard({ sales, issuers }) {
                     flex: 1,
                     padding: '0.65rem',
                     borderRadius: '8px',
-                    background: 'rgba(255,255,255,0.08)',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    color: 'white',
+                    background: 'rgba(255, 255, 255, 0.06)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    color: '#e2e8f0',
                     fontWeight: 'bold',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '6px',
-                    fontSize: '0.9rem'
+                    fontSize: '0.88rem',
+                    transition: 'all 0.2s ease'
                   }}
                 >
                   <RotateCcw size={16} /> Limpiar
@@ -3039,10 +3063,10 @@ export default function ReportesDashboard({ sales, issuers }) {
               </div>
 
               <div>
-                <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '4px', letterSpacing: '0.04em' }}>
                   Período Aplicado
                 </span>
-                <div style={{ padding: '0.6rem 0.85rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px', color: '#34d399', fontWeight: 'bold', fontSize: '0.88rem', textAlign: 'center' }}>
+                <div style={{ padding: '0.6rem 0.85rem', background: 'rgba(10, 132, 255, 0.1)', border: '1px solid rgba(10, 132, 255, 0.25)', borderRadius: '8px', color: '#60a5fa', fontWeight: 'bold', fontSize: '0.88rem', textAlign: 'center' }}>
                   {contadoraData.periodStr}
                 </div>
               </div>
@@ -3051,7 +3075,7 @@ export default function ReportesDashboard({ sales, issuers }) {
 
             {/* Accesos Rápidos de Período */}
             <div style={{ marginTop: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.6rem', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '4px' }}>
+              <span style={{ fontSize: '0.72rem', color: '#8e919e', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '4px' }}>
                 Acceso rápido:
               </span>
               {[
@@ -3067,24 +3091,24 @@ export default function ReportesDashboard({ sales, issuers }) {
                   style={{
                     padding: '0.4rem 0.9rem',
                     borderRadius: '20px',
-                    background: 'rgba(16, 185, 129, 0.12)',
-                    border: '1px solid rgba(16, 185, 129, 0.35)',
-                    color: '#34d399',
-                    fontWeight: '700',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#cbd5e1',
+                    fontWeight: '600',
                     fontSize: '0.78rem',
                     cursor: 'pointer',
                     transition: 'all 0.18s ease',
                     letterSpacing: '0.02em'
                   }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.background = 'rgba(16,185,129,0.28)';
-                    e.currentTarget.style.borderColor = '#10b981';
-                    e.currentTarget.style.color = '#fff';
+                    e.currentTarget.style.background = 'rgba(10, 132, 255, 0.15)';
+                    e.currentTarget.style.borderColor = 'rgba(10, 132, 255, 0.4)';
+                    e.currentTarget.style.color = '#60a5fa';
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.background = 'rgba(16,185,129,0.12)';
-                    e.currentTarget.style.borderColor = 'rgba(16,185,129,0.35)';
-                    e.currentTarget.style.color = '#34d399';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                    e.currentTarget.style.color = '#cbd5e1';
                   }}
                 >
                   {label}
@@ -3097,133 +3121,133 @@ export default function ReportesDashboard({ sales, issuers }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
             
             {/* 1. Total Vendido */}
-            <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #10b981', background: 'linear-gradient(135deg, rgba(16,185,129,0.18) 0%, rgba(15,23,42,0.85) 100%)' }}>
-              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#34d399', fontWeight: '900', letterSpacing: '0.05em' }}>
+            <div style={{ padding: '1.25rem', background: '#16171e', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', borderLeft: '4px solid #30d158', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
+              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '700', letterSpacing: '0.05em' }}>
                 Total Vendido
               </span>
-              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.8rem', color: 'white', fontWeight: '900' }}>
+              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.8rem', color: '#30d158', fontWeight: 'bold' }}>
                 ${contadoraData.totals.totalVentas.toFixed(2)}
               </h3>
-              <span style={{ fontSize: '0.72rem', color: '#34d399', fontWeight: 'bold' }}>Monto bruto total del período</span>
+              <span style={{ fontSize: '0.72rem', color: '#30d158', fontWeight: '600' }}>Monto bruto total del período</span>
             </div>
 
             {/* 2. Subtotal Gravado 15% */}
-            <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #34d399', background: 'rgba(15,23,42,0.6)' }}>
-              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.05em' }}>
+            <div style={{ padding: '1.25rem', background: '#16171e', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', borderLeft: '4px solid #34d399', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
+              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '700', letterSpacing: '0.05em' }}>
                 Subtotal Gravado 15%
               </span>
-              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: '#34d399', fontWeight: '800' }}>
+              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: '#34d399', fontWeight: 'bold' }}>
                 ${contadoraData.totals.subtotal15.toFixed(2)}
               </h3>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Base imponible tarifa 15%</span>
+              <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Base imponible tarifa 15%</span>
             </div>
 
             {/* 3. Subtotal Tarifa 0% */}
-            <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #fbbf24', background: 'rgba(15,23,42,0.6)' }}>
-              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.05em' }}>
+            <div style={{ padding: '1.25rem', background: '#16171e', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', borderLeft: '4px solid #ff9f0a', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
+              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '700', letterSpacing: '0.05em' }}>
                 Subtotal Tarifa 0%
               </span>
-              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: '#fbbf24', fontWeight: '800' }}>
+              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: '#ff9f0a', fontWeight: 'bold' }}>
                 ${contadoraData.totals.subtotal0.toFixed(2)}
               </h3>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Base tarifa 0%</span>
+              <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Base tarifa 0%</span>
             </div>
 
             {/* 4. IVA 15% */}
-            <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #3b82f6', background: 'rgba(15,23,42,0.6)' }}>
-              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.05em' }}>
+            <div style={{ padding: '1.25rem', background: '#16171e', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', borderLeft: '4px solid #0a84ff', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
+              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '700', letterSpacing: '0.05em' }}>
                 IVA 15%
               </span>
-              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: '#60a5fa', fontWeight: '800' }}>
+              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: '#60a5fa', fontWeight: 'bold' }}>
                 ${contadoraData.totals.iva15.toFixed(2)}
               </h3>
               <span style={{ fontSize: '0.72rem', color: '#60a5fa' }}>Monto total impuesto recaudado</span>
             </div>
 
             {/* 5. Cantidad de Facturas */}
-            <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #60a5fa', background: 'rgba(15,23,42,0.6)' }}>
+            <div style={{ padding: '1.25rem', background: '#16171e', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', borderLeft: '4px solid #0a84ff', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800' }}>
+                <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '700' }}>
                   Cant. Facturas
                 </span>
-                <span style={{ background: 'rgba(59,130,246,0.15)', color: '#60a5fa', fontSize: '0.68rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>SRI</span>
+                <span style={{ background: 'rgba(10, 132, 255, 0.15)', color: '#60a5fa', fontSize: '0.68rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>SRI</span>
               </div>
-              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: 'white', fontWeight: '800' }}>
+              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: '#f1f5f9', fontWeight: 'bold' }}>
                 {contadoraData.totals.numFacturas}
               </h3>
               <span style={{ fontSize: '0.72rem', color: '#60a5fa' }}>Facturas electrónicas válidas</span>
             </div>
 
             {/* 6. Cantidad de Notas de Venta */}
-            <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #c084fc', background: 'rgba(15,23,42,0.6)' }}>
+            <div style={{ padding: '1.25rem', background: '#16171e', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', borderLeft: '4px solid #bf5af2', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800' }}>
+                <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '700' }}>
                   Cant. Notas Venta
                 </span>
-                <span style={{ background: 'rgba(168,85,247,0.15)', color: '#c084fc', fontSize: '0.68rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>Interna</span>
+                <span style={{ background: 'rgba(191, 90, 242, 0.15)', color: '#c084fc', fontSize: '0.68rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>Interna</span>
               </div>
-              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: 'white', fontWeight: '800' }}>
+              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: '#f1f5f9', fontWeight: 'bold' }}>
                 {contadoraData.totals.numNotasVenta}
               </h3>
               <span style={{ fontSize: '0.72rem', color: '#c084fc' }}>Notas de venta válidas</span>
             </div>
 
             {/* 7. Cantidad de Comprobantes Anulados (ESTRICTAMENTE ANULADOS) */}
-            <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #ef4444', background: 'rgba(15,23,42,0.6)' }}>
+            <div style={{ padding: '1.25rem', background: '#16171e', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', borderLeft: '4px solid #ff453a', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800' }}>
+                <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '700' }}>
                   Cant. Anulados
                 </span>
-                <span style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171', fontSize: '0.68rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>Exclusivo</span>
+                <span style={{ background: 'rgba(255, 69, 58, 0.15)', color: '#f87171', fontSize: '0.68rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>Exclusivo</span>
               </div>
-              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: '#f87171', fontWeight: '800' }}>
+              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: '#f87171', fontWeight: 'bold' }}>
                 {contadoraData.totals.numAnulados}
               </h3>
               <span style={{ fontSize: '0.72rem', color: '#f87171' }}>Solo estado ANULADO</span>
             </div>
 
             {/* 8. Total Efectivo */}
-            <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #22c55e', background: 'rgba(15,23,42,0.6)' }}>
-              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800' }}>
+            <div style={{ padding: '1.25rem', background: '#16171e', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', borderLeft: '4px solid #30d158', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
+              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '700' }}>
                 Total Efectivo
               </span>
-              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: '#4ade80', fontWeight: '800' }}>
+              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.8rem', color: '#30d158', fontWeight: 'bold' }}>
                 ${contadoraData.totals.totalEfectivo.toFixed(2)}
               </h3>
-              <span style={{ fontSize: '0.72rem', color: '#4ade80' }}>Recaudación en efectivo</span>
+              <span style={{ fontSize: '0.72rem', color: '#30d158' }}>Recaudación en efectivo</span>
             </div>
 
             {/* 9. Total Transferencias */}
-            <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #06b6d4', background: 'rgba(15,23,42,0.6)' }}>
-              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800' }}>
+            <div style={{ padding: '1.25rem', background: '#16171e', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', borderLeft: '4px solid #64d2ff', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
+              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '700' }}>
                 Total Transferencias
               </span>
-              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: '#22d3ee', fontWeight: '800' }}>
+              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: '#64d2ff', fontWeight: 'bold' }}>
                 ${contadoraData.totals.totalTransferencias.toFixed(2)}
               </h3>
-              <span style={{ fontSize: '0.72rem', color: '#22d3ee' }}>Recaudación en transferencia</span>
+              <span style={{ fontSize: '0.72rem', color: '#64d2ff' }}>Recaudación en transferencia</span>
             </div>
 
             {/* 10. Total Pagos Mixtos */}
-            <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '5px solid #a855f7', background: 'rgba(15,23,42,0.6)' }}>
-              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '800' }}>
+            <div style={{ padding: '1.25rem', background: '#16171e', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', borderLeft: '4px solid #5e5ce6', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
+              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '700' }}>
                 Total Pagos Mixtos
               </span>
-              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: '#c084fc', fontWeight: '800' }}>
+              <h3 style={{ margin: '8px 0 2px 0', fontSize: '1.7rem', color: '#818cf8', fontWeight: 'bold' }}>
                 ${contadoraData.totals.totalPagosMixtos.toFixed(2)}
               </h3>
-              <span style={{ fontSize: '0.72rem', color: '#c084fc' }}>Ventas con método mixto</span>
+              <span style={{ fontSize: '0.72rem', color: '#818cf8' }}>Ventas con método mixto</span>
             </div>
 
           </div>
 
           {/* Barra de Filtros Complementarios (Emisor, Forma de Pago, Tipo Doc, Estado, Búsqueda de Cliente y Producto) */}
-          <div className="glass-panel" style={{ padding: '1.25rem', background: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ padding: '1.25rem', background: '#16171e', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '14px', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', alignItems: 'end' }}>
               
               {/* Selector de Emisor / RUC */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: '800', color: '#34d399', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: '700', color: '#0a84ff', marginBottom: '6px' }}>
                   🏢 Emisor (RUC)
                 </label>
                 <select
@@ -3233,17 +3257,17 @@ export default function ReportesDashboard({ sales, issuers }) {
                     width: '100%',
                     padding: '0.55rem',
                     borderRadius: '8px',
-                    background: 'rgba(0,0,0,0.5)',
-                    border: '1px solid #10b981',
-                    color: 'white',
+                    background: '#101116',
+                    border: '1px solid rgba(10, 132, 255, 0.4)',
+                    color: '#f1f5f9',
                     fontWeight: 'bold',
                     fontSize: '0.85rem',
                     outline: 'none'
                   }}
                 >
-                  <option value="TODOS" style={{ background: '#0f172a' }}>🌐 TODOS LOS EMISORES</option>
+                  <option value="TODOS" style={{ background: '#101116' }}>🌐 TODOS LOS EMISORES</option>
                   {(issuers || []).map(issuer => (
-                    <option key={issuer.id} value={issuer.id} style={{ background: '#0f172a' }}>
+                    <option key={issuer.id} value={issuer.id} style={{ background: '#101116' }}>
                       {issuer.shortName || issuer.name || issuer.razonSocial} - RUC: {issuer.ruc || 'S/N'}
                     </option>
                   ))}
@@ -3252,7 +3276,7 @@ export default function ReportesDashboard({ sales, issuers }) {
 
               {/* Filtro Forma de Pago */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: '800', color: '#94a3b8', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: '700', color: '#94a3b8', marginBottom: '6px' }}>
                   💳 Forma de Pago
                 </label>
                 <select
@@ -3262,23 +3286,23 @@ export default function ReportesDashboard({ sales, issuers }) {
                     width: '100%',
                     padding: '0.55rem',
                     borderRadius: '8px',
-                    background: 'rgba(0,0,0,0.4)',
-                    border: '1px solid var(--panel-border)',
-                    color: 'white',
+                    background: '#101116',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    color: '#f1f5f9',
                     fontSize: '0.85rem',
                     outline: 'none'
                   }}
                 >
-                  <option value="Todos" style={{ background: '#0f172a' }}>Todas las formas</option>
-                  <option value="EFECTIVO" style={{ background: '#0f172a' }}>Efectivo</option>
-                  <option value="TRANSFERENCIA" style={{ background: '#0f172a' }}>Transferencia</option>
-                  <option value="MIXTO" style={{ background: '#0f172a' }}>Pago Mixto</option>
+                  <option value="Todos" style={{ background: '#101116' }}>Todas las formas</option>
+                  <option value="EFECTIVO" style={{ background: '#101116' }}>Efectivo</option>
+                  <option value="TRANSFERENCIA" style={{ background: '#101116' }}>Transferencia</option>
+                  <option value="MIXTO" style={{ background: '#101116' }}>Pago Mixto</option>
                 </select>
               </div>
 
               {/* Filtro Tipo de Comprobante */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: '800', color: '#94a3b8', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: '700', color: '#94a3b8', marginBottom: '6px' }}>
                   📄 Tipo Comprobante
                 </label>
                 <select
@@ -3288,22 +3312,22 @@ export default function ReportesDashboard({ sales, issuers }) {
                     width: '100%',
                     padding: '0.55rem',
                     borderRadius: '8px',
-                    background: 'rgba(0,0,0,0.4)',
-                    border: '1px solid var(--panel-border)',
-                    color: 'white',
+                    background: '#101116',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    color: '#f1f5f9',
                     fontSize: '0.85rem',
                     outline: 'none'
                   }}
                 >
-                  <option value="Todos" style={{ background: '#0f172a' }}>Todos los tipos</option>
-                  <option value="Factura" style={{ background: '#0f172a' }}>Facturas</option>
-                  <option value="Nota de venta" style={{ background: '#0f172a' }}>Notas de venta</option>
+                  <option value="Todos" style={{ background: '#101116' }}>Todos los tipos</option>
+                  <option value="Factura" style={{ background: '#101116' }}>Facturas</option>
+                  <option value="Nota de venta" style={{ background: '#101116' }}>Notas de venta</option>
                 </select>
               </div>
 
               {/* Filtro Estado del Comprobante */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: '800', color: '#94a3b8', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: '700', color: '#94a3b8', marginBottom: '6px' }}>
                   🔍 Estado Comprobante
                 </label>
                 <select
@@ -3313,22 +3337,22 @@ export default function ReportesDashboard({ sales, issuers }) {
                     width: '100%',
                     padding: '0.55rem',
                     borderRadius: '8px',
-                    background: 'rgba(0,0,0,0.4)',
-                    border: '1px solid var(--panel-border)',
-                    color: 'white',
+                    background: '#101116',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    color: '#f1f5f9',
                     fontSize: '0.85rem',
                     outline: 'none'
                   }}
                 >
-                  <option value="Todos" style={{ background: '#0f172a' }}>Todos los estados</option>
-                  <option value="Valida" style={{ background: '#0f172a' }}>Válidas / Autorizadas</option>
-                  <option value="Anulada" style={{ background: '#0f172a' }}>Anuladas</option>
+                  <option value="Todos" style={{ background: '#101116' }}>Todos los estados</option>
+                  <option value="Valida" style={{ background: '#101116' }}>Válidas / Autorizadas</option>
+                  <option value="Anulada" style={{ background: '#101116' }}>Anuladas</option>
                 </select>
               </div>
 
               {/* Filtro por Cliente */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: '800', color: '#94a3b8', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: '700', color: '#94a3b8', marginBottom: '6px' }}>
                   👤 Buscar Cliente / RUC
                 </label>
                 <input
@@ -3340,9 +3364,9 @@ export default function ReportesDashboard({ sales, issuers }) {
                     width: '100%',
                     padding: '0.55rem 0.75rem',
                     borderRadius: '8px',
-                    background: 'rgba(0,0,0,0.4)',
-                    border: '1px solid var(--panel-border)',
-                    color: 'white',
+                    background: '#101116',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    color: '#f1f5f9',
                     fontSize: '0.85rem',
                     outline: 'none'
                   }}
@@ -3351,7 +3375,7 @@ export default function ReportesDashboard({ sales, issuers }) {
 
               {/* Filtro por Producto */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: '800', color: '#94a3b8', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: '700', color: '#94a3b8', marginBottom: '6px' }}>
                   📦 Buscar Producto / SKU
                 </label>
                 <input
@@ -3363,9 +3387,9 @@ export default function ReportesDashboard({ sales, issuers }) {
                     width: '100%',
                     padding: '0.55rem 0.75rem',
                     borderRadius: '8px',
-                    background: 'rgba(0,0,0,0.4)',
-                    border: '1px solid var(--panel-border)',
-                    color: 'white',
+                    background: '#101116',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    color: '#f1f5f9',
                     fontSize: '0.85rem',
                     outline: 'none'
                   }}
@@ -3376,10 +3400,10 @@ export default function ReportesDashboard({ sales, issuers }) {
           </div>
 
           {/* Tabla Detallada de Comprobantes del Período */}
-          <div className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(15, 23, 42, 0.75)', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ padding: '1.4rem', background: '#16171e', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '14px', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
-                <h4 style={{ margin: 0, color: 'white', fontSize: '1.15rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h4 style={{ margin: 0, color: '#f1f5f9', fontSize: '1.1rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   📋 Detalle de Comprobantes del Período Seleccionado
                 </h4>
                 <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
@@ -3391,7 +3415,7 @@ export default function ReportesDashboard({ sales, issuers }) {
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
-                  <tr style={{ borderBottom: '2px solid rgba(255,255,255,0.12)', textAlign: 'left', color: '#94a3b8', background: 'rgba(0,0,0,0.2)' }}>
+                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', textAlign: 'left', color: '#8e919e', background: '#101116' }}>
                     <th style={{ padding: '12px 10px' }}>Fecha</th>
                     <th style={{ padding: '12px 10px' }}>Tipo</th>
                     <th style={{ padding: '12px 10px' }}>No. Comprobante</th>
@@ -3414,8 +3438,8 @@ export default function ReportesDashboard({ sales, issuers }) {
                       <tr
                         key={v.id || i}
                         style={{
-                          borderBottom: '1px solid rgba(255,255,255,0.05)',
-                          background: isAnul ? 'rgba(239, 68, 68, 0.08)' : 'transparent',
+                          borderBottom: '1px solid rgba(255,255,255,0.04)',
+                          background: isAnul ? 'rgba(255, 69, 58, 0.08)' : 'transparent',
                           opacity: isAnul ? 0.75 : 1
                         }}
                       >
@@ -3426,46 +3450,46 @@ export default function ReportesDashboard({ sales, issuers }) {
                             borderRadius: '6px',
                             fontSize: '0.75rem',
                             fontWeight: '700',
-                            background: v.docType === 'Factura' ? 'rgba(59,130,246,0.18)' : 'rgba(168,85,247,0.18)',
+                            background: v.docType === 'Factura' ? 'rgba(10, 132, 255, 0.15)' : 'rgba(191, 90, 242, 0.15)',
                             color: v.docType === 'Factura' ? '#60a5fa' : '#c084fc',
-                            border: v.docType === 'Factura' ? '1px solid rgba(59,130,246,0.3)' : '1px solid rgba(168,85,247,0.3)'
+                            border: v.docType === 'Factura' ? '1px solid rgba(10, 132, 255, 0.3)' : '1px solid rgba(191, 90, 242, 0.3)'
                           }}>
                             {v.docType}
                           </span>
                         </td>
-                        <td style={{ padding: '12px 10px', fontFamily: 'monospace', fontWeight: 'bold', color: 'white' }}>
+                        <td style={{ padding: '12px 10px', fontFamily: 'monospace', fontWeight: 'bold', color: '#f1f5f9' }}>
                           {v.numeroComprobante}
                         </td>
-                        <td style={{ padding: '12px 10px', color: 'white', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <td style={{ padding: '12px 10px', color: '#f1f5f9', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {v.clienteNombre}
                         </td>
                         <td style={{ padding: '12px 10px', color: '#94a3b8', fontFamily: 'monospace' }}>
                           {v.clienteRuc}
                         </td>
-                        <td style={{ padding: '12px 10px', textAlign: 'right', color: isAnul ? '#ef4444' : 'var(--text-main)' }}>
+                        <td style={{ padding: '12px 10px', textAlign: 'right', color: isAnul ? '#ff453a' : '#f1f5f9' }}>
                           ${isAnul ? '0.00' : v.vSubtotal15.toFixed(2)}
                         </td>
-                        <td style={{ padding: '12px 10px', textAlign: 'right', color: isAnul ? '#ef4444' : 'var(--text-main)' }}>
+                        <td style={{ padding: '12px 10px', textAlign: 'right', color: isAnul ? '#ff453a' : '#f1f5f9' }}>
                           ${isAnul ? '0.00' : v.vSubtotal0.toFixed(2)}
                         </td>
-                        <td style={{ padding: '12px 10px', textAlign: 'right', color: isAnul ? '#ef4444' : '#60a5fa', fontWeight: 'bold' }}>
+                        <td style={{ padding: '12px 10px', textAlign: 'right', color: isAnul ? '#ff453a' : '#64d2ff', fontWeight: 'bold' }}>
                           ${isAnul ? '0.00' : v.iva.toFixed(2)}
                         </td>
-                        <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold', color: isAnul ? '#ef4444' : '#34d399', fontSize: '0.9rem' }}>
+                        <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold', color: isAnul ? '#ff453a' : '#30d158', fontSize: '0.9rem' }}>
                           ${isAnul ? '0.00' : v.total.toFixed(2)}
                         </td>
                         <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                          <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '4px', background: 'rgba(255,255,255,0.06)', color: '#cbd5e1', fontWeight: 'bold' }}>
+                          <span style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.06)', color: '#cbd5e1', fontWeight: '600' }}>
                             {v.pMethod}
                           </span>
                         </td>
                         <td style={{ padding: '12px 10px', textAlign: 'center' }}>
                           {isAnul ? (
-                            <span style={{ color: '#f87171', fontWeight: 'bold', fontSize: '0.75rem', padding: '3px 10px', background: 'rgba(239,68,68,0.2)', borderRadius: '6px', border: '1px solid rgba(239,68,68,0.3)' }}>
+                            <span style={{ color: '#f87171', fontWeight: 'bold', fontSize: '0.75rem', padding: '3px 10px', background: 'rgba(255, 69, 58, 0.15)', borderRadius: '6px', border: '1px solid rgba(255, 69, 58, 0.3)' }}>
                               Anulada
                             </span>
                           ) : (
-                            <span style={{ color: '#34d399', fontWeight: 'bold', fontSize: '0.75rem', padding: '3px 10px', background: 'rgba(16,185,129,0.2)', borderRadius: '6px', border: '1px solid rgba(16,185,129,0.3)' }}>
+                            <span style={{ color: '#34d399', fontWeight: 'bold', fontSize: '0.75rem', padding: '3px 10px', background: 'rgba(48, 209, 88, 0.15)', borderRadius: '6px', border: '1px solid rgba(48, 209, 88, 0.3)' }}>
                               Válida
                             </span>
                           )}
@@ -3475,7 +3499,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                             <button
                               onClick={() => window.open(`/api/sri/pdf?claveAcceso=${saleKey}`, '_blank')}
                               title="Ver RIDE PDF"
-                              style={{ padding: '4px 8px', borderRadius: '6px', background: '#2563eb', border: 'none', color: 'white', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}
+                              style={{ padding: '4px 9px', borderRadius: '6px', background: '#0a84ff', border: 'none', color: 'white', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}
                             >
                               PDF
                             </button>
@@ -3483,7 +3507,7 @@ export default function ReportesDashboard({ sales, issuers }) {
                               <button
                                 onClick={() => window.open(`/api/sri/xml?claveAcceso=${saleKey}`, '_blank')}
                                 title="Descargar XML SRI"
-                                style={{ padding: '4px 8px', borderRadius: '6px', background: '#059669', border: 'none', color: 'white', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}
+                                style={{ padding: '4px 9px', borderRadius: '6px', background: '#059669', border: 'none', color: 'white', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}
                               >
                                 XML
                               </button>
