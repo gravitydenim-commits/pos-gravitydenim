@@ -1,21 +1,23 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import POSScreen from './components/POS/POSScreen';
-import ReportesDashboard from './components/Reports/ReportesDashboard';
-import AgregarProductoModal from './components/Products/AgregarProductoModal';
-import InventarioScreen from './components/Products/InventarioScreen';
-import ClientesScreen from './components/Customers/ClientesScreen';
-import AgregarClienteModal from './components/Customers/AgregarClienteModal';
-import ConfiguracionGeneral from './components/Settings/ConfiguracionGeneral';
 import LoginScreen from './components/Auth/LoginScreen';
-import FacturasSRI from './components/Contingencia/FacturasSRI';
-import AdminScreen from './components/Admin/AdminScreen';
 import { usePermissions } from './hooks/usePermissions';
 import { LayoutDashboard, Receipt, PackagePlus, Settings, LogOut, Loader2, Package, Users, AlertTriangle, Truck, Moon, Sun, Shield, Menu, X, Maximize2, Minimize2, Eye, EyeOff } from 'lucide-react';
 import { auth, db } from './firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, onSnapshot, addDoc, doc, setDoc, deleteDoc, query, where } from 'firebase/firestore';
 import './index.css';
+
+// Dynamic lazy imports for heavy submodules
+const ReportesDashboard = lazy(() => import('./components/Reports/ReportesDashboard'));
+const InventarioScreen = lazy(() => import('./components/Products/InventarioScreen'));
+const ClientesScreen = lazy(() => import('./components/Customers/ClientesScreen'));
+const ConfiguracionGeneral = lazy(() => import('./components/Settings/ConfiguracionGeneral'));
+const FacturasSRI = lazy(() => import('./components/Contingencia/FacturasSRI'));
+const AdminScreen = lazy(() => import('./components/Admin/AdminScreen'));
+const AgregarProductoModal = lazy(() => import('./components/Products/AgregarProductoModal'));
+const AgregarClienteModal = lazy(() => import('./components/Customers/AgregarClienteModal'));
 
 // UID de emergencia — solo para usePermissions (fallback si se borra el documento Firestore del admin)
 // La lógica de negocio NO depende de este UID; los permisos se leen de Firestore (RBAC puro).
@@ -519,66 +521,73 @@ function App() {
 
         {/* Main Content Area */}
         <main className="main-content">
-          {currentView === 'pos' && (
-            <POSScreen 
-              issuers={issuers} 
-              productsDB={productsDB}
-              salesDB={salesDB}
-              recordSale={recordSale} 
-              customersDB={customersDB}
-              recordCustomer={recordCustomer}
-            />
-          )}
-          {currentView === 'admin' && isAdmin && (
-            <AdminScreen permissions={permissions} modulesConfig={modulesConfig} isSuperAdmin={isAdmin} />
-          )}
-          {currentView === 'admin' && !isAdmin && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '1rem', color: 'var(--text-muted)' }}>
-              <Shield size={64} style={{ color: '#e11d48', opacity: 0.7 }} />
-              <h2 style={{ color: 'var(--text-main)', margin: 0 }}>Acceso Denegado</h2>
-              <p style={{ textAlign: 'center', maxWidth: '400px' }}>
-                No tienes permisos para acceder al módulo de Administración.<br />
-                Contacta a tu administrador si necesitas acceso.
-              </p>
-              <button
-                onClick={() => setCurrentView('pos')}
-                style={{ padding: '10px 24px', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
-              >
-                Volver a Caja
-              </button>
+          <Suspense fallback={
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '0.75rem', color: 'var(--text-muted)' }}>
+              <Loader2 size={32} className="animate-spin" style={{ color: 'var(--accent)' }} />
+              <span>Cargando módulo...</span>
             </div>
-          )}
-          {(currentView === 'report' && hasPermission('reportes', 'ver_ventas')) && (
-            <ReportesDashboard issuers={issuers} sales={salesDB} />
-          )}
-          {(currentView === 'sri' && isAdmin) && (
-            <FacturasSRI isAdmin={isAdmin} issuers={issuers} />
-          )}
+          }>
+            {currentView === 'pos' && (
+              <POSScreen 
+                issuers={issuers} 
+                productsDB={productsDB}
+                salesDB={salesDB}
+                recordSale={recordSale} 
+                customersDB={customersDB}
+                recordCustomer={recordCustomer}
+              />
+            )}
+            {currentView === 'admin' && isAdmin && (
+              <AdminScreen permissions={permissions} modulesConfig={modulesConfig} isSuperAdmin={isAdmin} />
+            )}
+            {currentView === 'admin' && !isAdmin && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '1rem', color: 'var(--text-muted)' }}>
+                <Shield size={64} style={{ color: '#e11d48', opacity: 0.7 }} />
+                <h2 style={{ color: 'var(--text-main)', margin: 0 }}>Acceso Denegado</h2>
+                <p style={{ textAlign: 'center', maxWidth: '400px' }}>
+                  No tienes permisos para acceder al módulo de Administración.<br />
+                  Contacta a tu administrador si necesitas acceso.
+                </p>
+                <button
+                  onClick={() => setCurrentView('pos')}
+                  style={{ padding: '10px 24px', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  Volver a Caja
+                </button>
+              </div>
+            )}
+            {(currentView === 'report' && hasPermission('reportes', 'ver_ventas')) && (
+              <ReportesDashboard issuers={issuers} sales={salesDB} products={productsDB} />
+            )}
+            {(currentView === 'sri' && isAdmin) && (
+              <FacturasSRI isAdmin={isAdmin} issuers={issuers} />
+            )}
 
-          {(currentView === 'settings' && isAdmin) && (
-            <ConfiguracionGeneral 
-              companyData={companyData} 
-              saveCompanyData={saveCompanyData} 
-              issuers={issuers} 
-              updateIssuer={updateIssuer} 
-            />
-          )}
-          {(currentView === 'inventory' && hasPermission('inventario', 'ver')) && (
-            <InventarioScreen 
-              productsDB={productsDB}
-              onEdit={(prod) => { setProductToEdit(prod); setIsModalOpen(true); }}
-              onDelete={eliminarProducto}
-              onAdd={() => { setProductToEdit(null); setIsModalOpen(true); }}
-            />
-          )}
-          {(currentView === 'customers' && hasPermission('clientes', 'ver')) && (
-            <ClientesScreen 
-              customersDB={customersDB}
-              onAdd={() => { setCustomerToEdit(null); setIsCustomerModalOpen(true); }}
-              onEdit={(cliente) => { setCustomerToEdit(cliente); setIsCustomerModalOpen(true); }}
-              onDelete={eliminarCliente}
-            />
-          )}
+            {(currentView === 'settings' && isAdmin) && (
+              <ConfiguracionGeneral 
+                companyData={companyData} 
+                saveCompanyData={saveCompanyData} 
+                issuers={issuers} 
+                updateIssuer={updateIssuer} 
+              />
+            )}
+            {(currentView === 'inventory' && hasPermission('inventario', 'ver')) && (
+              <InventarioScreen 
+                productsDB={productsDB}
+                onEdit={(prod) => { setProductToEdit(prod); setIsModalOpen(true); }}
+                onDelete={eliminarProducto}
+                onAdd={() => { setProductToEdit(null); setIsModalOpen(true); }}
+              />
+            )}
+            {(currentView === 'customers' && hasPermission('clientes', 'ver')) && (
+              <ClientesScreen 
+                customersDB={customersDB}
+                onAdd={() => { setCustomerToEdit(null); setIsCustomerModalOpen(true); }}
+                onEdit={(cliente) => { setCustomerToEdit(cliente); setIsCustomerModalOpen(true); }}
+                onDelete={eliminarCliente}
+              />
+            )}
+          </Suspense>
         </main>
       </div>
 

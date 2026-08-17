@@ -78,13 +78,13 @@ const getSaleFiscalDate = (sale) => {
   return null;
 };
 
-export default function ReportesDashboard({ sales, issuers }) {
+export default function ReportesDashboard({ sales, issuers, products, users }) {
   const [filterDate, setFilterDate] = useState('');
   const [filterClient, setFilterClient] = useState('');
   const [filterInvoice, setFilterInvoice] = useState('');
   const [filterSriState, setFilterSriState] = useState('');
   const [selectedVenta, setSelectedVenta] = useState(null);
-  const [usersList, setUsersList] = useState([]);
+  const [usersList, setUsersList] = useState(users || []);
   const [openMenuId, setOpenMenuId] = useState(null);
 
   // --- VARIABLES DE ESTADO PARA NAVEGACIÓN Y REPORTES ---
@@ -107,9 +107,13 @@ export default function ReportesDashboard({ sales, issuers }) {
   const [printOption, setPrintOption] = useState('detalle'); // 'detalle' | 'resumen'
   const [cierrePaperFormat, setCierrePaperFormat] = useState('80mm'); // '80mm' | 'normal'
 
-  const [productsList, setProductsList] = useState([]);
+  const [productsList, setProductsList] = useState(products || []);
 
   useEffect(() => {
+    if (products && products.length > 0) {
+      setProductsList(products);
+      return;
+    }
     const fetchProducts = async () => {
       try {
         const { getDocs, collection } = await import('firebase/firestore');
@@ -121,9 +125,13 @@ export default function ReportesDashboard({ sales, issuers }) {
       }
     };
     fetchProducts();
-  }, []);
+  }, [products]);
 
   useEffect(() => {
+    if (users && users.length > 0) {
+      setUsersList(users);
+      return;
+    }
     const fetchUsers = async () => {
       try {
         const { getDocs, collection } = await import('firebase/firestore');
@@ -135,7 +143,7 @@ export default function ReportesDashboard({ sales, issuers }) {
       }
     };
     fetchUsers();
-  }, []);
+  }, [users]);
 
   const filteredSales = useMemo(() => {
     return sales.filter(sale => {

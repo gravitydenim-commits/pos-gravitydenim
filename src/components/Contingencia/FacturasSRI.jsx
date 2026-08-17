@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, limit } from 'firebase/firestore';
 import { AlertTriangle, CheckCircle, RefreshCw, Printer, Search, FileCode } from 'lucide-react';
 import ModalAnularFactura from './ModalAnularFactura';
 import ModalSolicitarAnulacionSRI from './ModalSolicitarAnulacionSRI';
@@ -98,7 +98,7 @@ export default function FacturasSRI({ isAdmin, issuers = [] }) {
   const [filterSriState, setFilterSriState] = useState('');
 
   useEffect(() => {
-    const q = query(collection(db, 'ventas'), orderBy('fechaTransaccion', 'desc'));
+    const q = query(collection(db, 'ventas'), orderBy('fechaTransaccion', 'desc'), limit(150));
     const unsub = onSnapshot(q, (snapshot) => {
       const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setVentas(docs);

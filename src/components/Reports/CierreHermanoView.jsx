@@ -22,45 +22,66 @@ const parseSaleDate = (sale) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
+export const getCanonicalOwnerId = (entity) => {
+  if (!entity) return 'pendiente';
+
+  const rawId = (entity.ownerId || entity.recipientId || entity.firebaseId || entity.id || '').toString().toLowerCase().trim();
+  const rawName = (entity.ownerName || entity.ownerShortName || entity.recipientName || entity.name || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  const rawLegal = (entity.ownerLegalName || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
+  if (
+    rawId === 'edgar' ||
+    rawId === 'hermano_geovanny' ||
+    rawName.includes('edgar') ||
+    rawLegal.includes('edgar') ||
+    rawLegal.includes('geovanny')
+  ) {
+    return 'edgar';
+  }
+
+  if (
+    rawId === 'amparito' ||
+    rawId === 'hermano_maria' ||
+    rawName.includes('amparito') ||
+    rawName.includes('deysi') ||
+    rawLegal.includes('amparito') ||
+    rawLegal.includes('deysi')
+  ) {
+    return 'amparito';
+  }
+
+  if (
+    rawId === 'fabian' ||
+    rawId === 'domingo' ||
+    rawId === 'hermano_carlos' ||
+    rawName.includes('fabian') ||
+    rawName.includes('domingo') ||
+    rawName.includes('junior') ||
+    rawName.includes('sanchez') ||
+    rawLegal.includes('fabian') ||
+    rawLegal.includes('domingo')
+  ) {
+    return 'fabian';
+  }
+
+  if (rawId === 'diana' || rawName.includes('diana') || rawLegal.includes('diana')) {
+    return 'diana';
+  }
+
+  return 'pendiente';
+};
+
 export default function CierreHermanoView({ sales }) {
-  const [users, setUsers] = useState([]);
   const [selectedSiblingId, setSelectedSiblingId] = useState('');
   const [dateFrom, setDateFrom] = useState(() => new Date().toISOString().split('T')[0]);
   const [dateTo, setDateTo] = useState(() => new Date().toISOString().split('T')[0]);
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const { getDocs, collection } = await import('firebase/firestore');
-        const { db } = await import('../../firebase/config');
-        const snap = await getDocs(collection(db, 'users'));
-        setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      } catch (err) {
-        console.error("Error loading users in CierreHermanoView:", err);
-      }
-    };
-    fetchUsers();
-  }, []);
-
-  const siblingProfiles = useMemo(() => {
-    const list = [
-      { id: 'Edgar', name: 'Edgar', dbKeys: ['edgar'] },
-      { id: 'Amparito', name: 'Amparito', dbKeys: ['amparito'] },
-      { id: 'Fabian', name: 'Fabian (Domingo Sánchez)', dbKeys: ['domingo', 'fabian', 'junior', 'sanchez'] },
-      { id: 'Diana', name: 'Diana (Esposa de Fabian)', dbKeys: ['diana'] }
-    ];
-    return list.map(item => {
-      const matchedUser = users.find(u => {
-        const uName = (u.name || '').toLowerCase();
-        return item.dbKeys.some(k => uName.includes(k));
-      });
-      return {
-        ...item,
-        firebaseId: matchedUser ? matchedUser.id : item.id,
-        firebaseName: matchedUser ? matchedUser.name : item.name
-      };
-    });
-  }, [users]);
+  const siblingProfiles = useMemo(() => [
+    { id: 'edgar', name: 'Edgar', canonicalId: 'edgar' },
+    { id: 'amparito', name: 'Amparito', canonicalId: 'amparito' },
+    { id: 'fabian', name: 'Fabian (Domingo Sánchez)', canonicalId: 'fabian' },
+    { id: 'diana', name: 'Diana (Esposa de Fabian)', canonicalId: 'diana' }
+  ], []);
 
   // Filtrar ventas por fecha (excluyendo revertidas con NC y notas de crédito)
   const salesInDateRange = useMemo(() => {
@@ -93,7 +114,7 @@ export default function CierreHermanoView({ sales }) {
 
       const compensations = {};
       siblingProfiles.forEach(p => {
-        compensations[p.firebaseId] = {
+        compensations[p.canonicalId] = {
           brotherName: p.name,
           amountOwedToSibling: 0,
           amountSiblingOwesToUs: 0
@@ -136,28 +157,20 @@ export default function CierreHermanoView({ sales }) {
 
         // Calcular compensación general entre hermanos
         transfersPart.forEach(t => {
-          const recipientProfile = siblingProfiles.find(p => {
-            if (t.recipientId && p.firebaseId === t.recipientId) return true;
-            return t.recipientName && t.recipientName.toLowerCase().includes(p.id.toLowerCase());
-          });
-          const recipientId = recipientProfile ? recipientProfile.firebaseId : (t.recipientId || 'unknown');
+          const recipientCanonicalId = getCanonicalOwnerId({ recipientId: t.recipientId, recipientName: t.recipientName });
 
           items.forEach(item => {
-            const itemOwnerProfile = siblingProfiles.find(p => {
-              if (item.ownerId && p.firebaseId === item.ownerId) return true;
-              return item.ownerName && item.ownerName.toLowerCase().includes(p.id.toLowerCase());
-            });
-            const ownerId = itemOwnerProfile ? itemOwnerProfile.firebaseId : (item.ownerId || 'unknown');
+            const itemCanonicalId = getCanonicalOwnerId(item);
             const itemVal = (item.price || item.precio || 0) * (item.qty || 1) - (item.descuento || 0);
             const itemProp = itemVal / totalItemsVal;
             const itemTransferAmount = itemProp * t.amount;
 
-            if (recipientId !== ownerId) {
-              if (compensations[recipientId]) {
-                compensations[recipientId].amountSiblingOwesToUs += itemTransferAmount;
+            if (recipientCanonicalId !== itemCanonicalId) {
+              if (compensations[recipientCanonicalId]) {
+                compensations[recipientCanonicalId].amountSiblingOwesToUs += itemTransferAmount;
               }
-              if (compensations[ownerId]) {
-                compensations[ownerId].amountOwedToSibling += itemTransferAmount;
+              if (compensations[itemCanonicalId]) {
+                compensations[itemCanonicalId].amountOwedToSibling += itemTransferAmount;
               }
             }
           });
@@ -196,8 +209,8 @@ export default function CierreHermanoView({ sales }) {
     // Matriz de saldos cruzados
     const compensations = {};
     siblingProfiles.forEach(p => {
-      if (p.id !== selectedSiblingId) {
-        compensations[p.firebaseId] = {
+      if (p.canonicalId !== selectedProfile.canonicalId) {
+        compensations[p.canonicalId] = {
           brotherName: p.name,
           amountOwedToSibling: 0,
           amountSiblingOwesToUs: 0
@@ -210,11 +223,8 @@ export default function CierreHermanoView({ sales }) {
       const totalItemsVal = items.reduce((acc, item) => acc + ((item.price || item.precio || 0) * (item.qty || 1) - (item.descuento || 0)), 0);
       if (totalItemsVal <= 0) return;
 
-      // Calcular lo vendido por el hermano seleccionado en esta venta
-      const siblingItems = items.filter(item => {
-        return item.ownerId === selectedProfile.firebaseId || 
-               (item.ownerName && item.ownerName.toLowerCase().includes(selectedProfile.id.toLowerCase()));
-      });
+      // Calcular lo vendido por el hermano seleccionado en esta venta usando el ID canónico
+      const siblingItems = items.filter(item => getCanonicalOwnerId(item) === selectedProfile.canonicalId);
       const siblingItemsVal = siblingItems.reduce((acc, item) => acc + ((item.price || item.precio || 0) * (item.qty || 1) - (item.descuento || 0)), 0);
       
       // Proporción (incluyendo IVA proporcional)
@@ -248,14 +258,11 @@ export default function CierreHermanoView({ sales }) {
           ventasPropiasTransferencias += tPart;
 
           // Si el destinatario de la transferencia es otro hermano
-          const isOther = t.recipientId ? (t.recipientId !== selectedProfile.firebaseId) : (t.recipientName && !t.recipientName.toLowerCase().includes(selectedProfile.id.toLowerCase()));
+          const recipientCanonicalId = getCanonicalOwnerId({ recipientId: t.recipientId, recipientName: t.recipientName });
+          const isOther = recipientCanonicalId !== selectedProfile.canonicalId;
           if (isOther) {
-            // Buscar cuál de los otros hermanos recibió la transferencia
-            const otherProfile = siblingProfiles.find(p => {
-              if (t.recipientId && p.firebaseId === t.recipientId) return true;
-              return t.recipientName && t.recipientName.toLowerCase().includes(p.id.toLowerCase());
-            });
-            const otherId = otherProfile ? otherProfile.firebaseId : (t.recipientId || 'unknown');
+            const otherProfile = siblingProfiles.find(p => p.canonicalId === recipientCanonicalId);
+            const otherId = recipientCanonicalId;
             const otherName = otherProfile ? otherProfile.name : (t.recipientName || 'Otro');
 
             transferenciasPropiasEnOtrosHermanos.push({
@@ -295,23 +302,21 @@ export default function CierreHermanoView({ sales }) {
 
       const transfersPart = paymentDetails.transfers || [];
       transfersPart.forEach(t => {
-        // Si el hermano seleccionado recibió esta transferencia
-        const receivedByUs = t.recipientId ? (t.recipientId === selectedProfile.firebaseId) : (t.recipientName && t.recipientName.toLowerCase().includes(selectedProfile.id.toLowerCase()));
+        const recipientCanonicalId = getCanonicalOwnerId({ recipientId: t.recipientId, recipientName: t.recipientName });
+        const receivedByUs = recipientCanonicalId === selectedProfile.canonicalId;
         if (receivedByUs) {
           // Analizar a quién pertenecen los productos de esta transferencia
           items.forEach(item => {
-            const itemOwnerProfile = siblingProfiles.find(p => {
-              if (item.ownerId && p.firebaseId === item.ownerId) return true;
-              return item.ownerName && item.ownerName.toLowerCase().includes(p.id.toLowerCase());
-            });
-            const itemOwnerId = itemOwnerProfile ? itemOwnerProfile.firebaseId : (item.ownerId || 'unknown');
+            const itemCanonicalId = getCanonicalOwnerId(item);
+            const itemOwnerProfile = siblingProfiles.find(p => p.canonicalId === itemCanonicalId);
+            const itemOwnerId = itemCanonicalId;
             const itemOwnerName = itemOwnerProfile ? itemOwnerProfile.name : (item.ownerName || 'Otro Hermano');
             const itemVal = (item.price || item.precio || 0) * (item.qty || 1) - (item.descuento || 0);
             const itemProp = itemVal / totalItemsVal;
             const itemTransferAmount = itemProp * t.amount;
 
             // Si pertenece a otro hermano, le debemos entregar este dinero
-            if (itemOwnerId !== selectedProfile.firebaseId) {
+            if (itemCanonicalId !== selectedProfile.canonicalId) {
               transferenciasRecibidas.push({
                 ownerId: itemOwnerId,
                 ownerName: itemOwnerName,
