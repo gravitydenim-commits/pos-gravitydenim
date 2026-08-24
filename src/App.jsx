@@ -3,7 +3,7 @@ import React, { useState, useEffect, lazy, Suspense } from 'react';
 import POSScreen from './components/POS/POSScreen';
 import LoginScreen from './components/Auth/LoginScreen';
 import { usePermissions } from './hooks/usePermissions';
-import { LayoutDashboard, Receipt, PackagePlus, Settings, LogOut, Loader2, Package, Users, AlertTriangle, Truck, Moon, Sun, Shield, Menu, X, Maximize2, Minimize2, Eye, EyeOff } from 'lucide-react';
+import { LayoutDashboard, Receipt, PackagePlus, Settings, LogOut, Loader2, Package, Users, AlertTriangle, Truck, Moon, Sun, Shield, Menu, X, Maximize2, Minimize2, Eye, EyeOff, CreditCard } from 'lucide-react';
 import { auth, db } from './firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, onSnapshot, addDoc, doc, setDoc, deleteDoc, query, where } from 'firebase/firestore';
@@ -11,6 +11,7 @@ import './index.css';
 
 // Dynamic lazy imports for heavy submodules
 const ReportesDashboard = lazy(() => import('./components/Reports/ReportesDashboard'));
+const CuentasPorCobrarScreen = lazy(() => import('./components/Receivables/CuentasPorCobrarScreen'));
 const InventarioScreen = lazy(() => import('./components/Products/InventarioScreen'));
 const ClientesScreen = lazy(() => import('./components/Customers/ClientesScreen'));
 const ConfiguracionGeneral = lazy(() => import('./components/Settings/ConfiguracionGeneral'));
@@ -36,6 +37,8 @@ function App() {
   
   const [customersDB, setCustomersDB] = useState([]);
   const [productsDB, setProductsDB] = useState([]);
+  const [usersDB, setUsersDB] = useState([]);
+  const [cobrosDB, setCobrosDB] = useState([]);
 
   const [companyData, setCompanyData] = useState({});
   const [issuers, setIssuers] = useState([]);
@@ -123,6 +126,8 @@ function App() {
     let unsubProductos;
     let unsubVentas;
     let unsubIssuers;
+    let unsubCobros;
+    let unsubUsers;
 
     if (currentUser && !permissionsLoading) {
       if (isAdmin || hasPermission('clientes', 'ver') || hasPermission('caja', 'ver')) {
@@ -158,6 +163,17 @@ function App() {
         }
       }, (err) => console.error(`ERROR EN [issuers] (uid=${currentUser.uid}):`, err));
 
+      if (isAdmin || hasPermission('cuentas_por_cobrar', 'ver') || hasPermission('caja', 'ver') || hasPermission('reportes', 'ver_ventas')) {
+        unsubCobros = onSnapshot(collection(db, 'cobros_credito'), (snapshot) => {
+          const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+          setCobrosDB(data);
+        }, (err) => console.error(`ERROR EN [cobros_credito] (uid=${currentUser.uid}):`, err));
+      }
+
+      unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+        const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        setUsersDB(data);
+      }, (err) => console.error(`ERROR EN [users] (uid=${currentUser.uid}):`, err));
     }
 
     return () => {
@@ -165,8 +181,23 @@ function App() {
       if (unsubProductos) unsubProductos();
       if (unsubVentas) unsubVentas();
       if (unsubIssuers) unsubIssuers();
+      if (unsubCobros) unsubCobros();
+      if (unsubUsers) unsubUsers();
     };
   }, [currentUser, permissionsLoading, isAdmin, permissions, hasPermission]);
+
+  // --- OPTIMIZACIÓN 2: PRE-CARGA EN SEGUNDO PLANO DE MÓDULOS LAZY (IDLE PREFETCH) ---
+  useEffect(() => {
+    if (currentUser) {
+      const timer = setTimeout(() => {
+        import('./components/Reports/ReportesDashboard');
+        import('./components/Receivables/CuentasPorCobrarScreen');
+        import('./components/Products/InventarioScreen');
+        import('./components/Customers/ClientesScreen');
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [currentUser]);
 
 
 
@@ -446,6 +477,16 @@ function App() {
               </button>
             )}
 
+            {(isAdmin || hasPermission('cuentas_por_cobrar', 'ver') || hasPermission('caja', 'ver')) && (
+              <button 
+                className={`nav-btn ${currentView === 'receivables' ? 'active' : ''}`}
+                onClick={() => setCurrentView('receivables')}
+              >
+                <CreditCard size={24} />
+                <span className="nav-btn-text">Cuentas por Cobrar</span>
+              </button>
+            )}
+
             {hasPermission('reportes', 'ver_ventas') && (
               <button 
                 className={`nav-btn ${currentView === 'report' ? 'active' : ''}`}
@@ -557,7 +598,7 @@ function App() {
               </div>
             )}
             {(currentView === 'report' && hasPermission('reportes', 'ver_ventas')) && (
-              <ReportesDashboard issuers={issuers} sales={salesDB} products={productsDB} />
+              <ReportesDashboard issuers={issuers} sales={salesDB} products={productsDB} users={usersDB} cobros={cobrosDB} />
             )}
             {(currentView === 'sri' && isAdmin) && (
               <FacturasSRI isAdmin={isAdmin} issuers={issuers} />
@@ -586,6 +627,9 @@ function App() {
                 onEdit={(cliente) => { setCustomerToEdit(cliente); setIsCustomerModalOpen(true); }}
                 onDelete={eliminarCliente}
               />
+            )}
+            {(currentView === 'receivables' && (isAdmin || hasPermission('cuentas_por_cobrar', 'ver') || hasPermission('caja', 'ver'))) && (
+              <CuentasPorCobrarScreen currentUser={currentUser} issuers={issuers} cobrosProp={cobrosDB} />
             )}
           </Suspense>
         </main>

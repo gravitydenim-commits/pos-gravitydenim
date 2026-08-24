@@ -40,8 +40,9 @@ export function usePermissions(user) {
         setModulesConfig(docSnap.data().modules);
       } else {
         setModulesConfig([
-          { id: 'caja',          label: 'Caja',          actions: ['ver', 'cobrar', 'anular', 'reimprimir', 'descuentos'] },
-          { id: 'inventario',    label: 'Inventario',    actions: ['ver', 'crear', 'editar', 'eliminar', 'ajustar', 'exportar'] },
+          { id: 'caja',               label: 'Caja',               actions: ['ver', 'cobrar', 'anular', 'reimprimir', 'descuentos'] },
+          { id: 'cuentas_por_cobrar', label: 'Cuentas por Cobrar', actions: ['ver', 'cobrar', 'anular'] },
+          { id: 'inventario',         label: 'Inventario',         actions: ['ver', 'crear', 'editar', 'eliminar', 'ajustar', 'exportar'] },
           { id: 'clientes',      label: 'Clientes',      actions: ['ver', 'crear', 'editar', 'eliminar'] },
           { id: 'reportes',      label: 'Reportes',      actions: ['ver_ventas', 'ver_utilidades', 'exportar', 'imprimir'] },
           { id: 'configuracion', label: 'Configuración', actions: ['ver', 'editar'] },

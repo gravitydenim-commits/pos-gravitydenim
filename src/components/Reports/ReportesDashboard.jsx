@@ -78,7 +78,7 @@ const getSaleFiscalDate = (sale) => {
   return null;
 };
 
-export default function ReportesDashboard({ sales, issuers, products, users }) {
+export default function ReportesDashboard({ sales, issuers, products, users, cobros }) {
   const [filterDate, setFilterDate] = useState('');
   const [filterClient, setFilterClient] = useState('');
   const [filterInvoice, setFilterInvoice] = useState('');
@@ -107,43 +107,27 @@ export default function ReportesDashboard({ sales, issuers, products, users }) {
   const [printOption, setPrintOption] = useState('detalle'); // 'detalle' | 'resumen'
   const [cierrePaperFormat, setCierrePaperFormat] = useState('80mm'); // '80mm' | 'normal'
 
+  const [cierreTablePage, setCierreTablePage] = useState(1);
+  const ITEMS_PER_PAGE = 30;
+
   const [productsList, setProductsList] = useState(products || []);
+  const [cobrosList, setCobrosList] = useState(cobros || []);
 
   useEffect(() => {
-    if (products && products.length > 0) {
-      setProductsList(products);
-      return;
-    }
-    const fetchProducts = async () => {
-      try {
-        const { getDocs, collection } = await import('firebase/firestore');
-        const { db } = await import('../../firebase/config');
-        const snap = await getDocs(collection(db, 'productos'));
-        setProductsList(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      } catch (err) {
-        console.error("Error loading products in ReportesDashboard:", err);
-      }
-    };
-    fetchProducts();
+    if (products && products.length > 0) setProductsList(products);
   }, [products]);
 
   useEffect(() => {
-    if (users && users.length > 0) {
-      setUsersList(users);
-      return;
-    }
-    const fetchUsers = async () => {
-      try {
-        const { getDocs, collection } = await import('firebase/firestore');
-        const { db } = await import('../../firebase/config');
-        const snap = await getDocs(collection(db, 'users'));
-        setUsersList(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      } catch (err) {
-        console.error("Error loading users in ReportesDashboard:", err);
-      }
-    };
-    fetchUsers();
+    if (users && users.length > 0) setUsersList(users);
   }, [users]);
+
+  useEffect(() => {
+    if (cobros && cobros.length > 0) setCobrosList(cobros);
+  }, [cobros]);
+
+  useEffect(() => {
+    setCierreTablePage(1);
+  }, [cierreDate, cierreFilterDocType, cierreFilterPayment, cierreFilterEmitter, cierreFilterOwner, cierreFilterClientText, cierreFilterProductText]);
 
   const filteredSales = useMemo(() => {
     return sales.filter(sale => {
@@ -1135,16 +1119,21 @@ export default function ReportesDashboard({ sales, issuers, products, users }) {
     let totalVendido = 0;
     let totalEfectivo = 0;
     let totalTransferencia = 0;
+    let totalCreditoVentas = 0;
     let totalPagosMixtos = 0;
     let totalFacturas = 0;
     let totalNotasVenta = 0;
     let totalIva = 0;
     let totalPrendas = 0;
     
+    // A. Ventas del Día
     filteredItemRows.forEach(row => {
       totalVendido += row.total;
       totalEfectivo += row.allocatedCash;
       totalTransferencia += row.allocatedTransfer;
+      if (row.paymentMethod === 'CREDITO') {
+        totalCreditoVentas += row.total;
+      }
       if (row.isMixed) totalPagosMixtos += row.total;
       if (row.docType === 'Factura') {
         totalFacturas += row.total;
@@ -1155,20 +1144,52 @@ export default function ReportesDashboard({ sales, issuers, products, users }) {
       totalPrendas += row.qty;
     });
 
+    // B. Cobros de Créditos Anteriores Recibidos Hoy
+    const cobrosHoy = cobrosList.filter(c => {
+      if (c.estado === 'ANULADO') return false;
+      const fPago = c.fechaPago || c.createdAt;
+      if (!fPago) return false;
+      return fPago.slice(0, 10) === cierreDate;
+    });
+
+    let cobrosEfectivoCreditos = 0;
+    let cobrosTransferenciaCreditos = 0;
+
+    cobrosHoy.forEach(c => {
+      if (c.formaPago === 'EFECTIVO') cobrosEfectivoCreditos += (c.monto || 0);
+      else if (c.formaPago === 'TRANSFERENCIA') cobrosTransferenciaCreditos += (c.monto || 0);
+    });
+
+    const totalCobradoCreditosHoy = cobrosEfectivoCreditos + cobrosTransferenciaCreditos;
+
+    // C. Dinero Realmente Recibido Hoy
+    const efectivoRealHoy = totalEfectivo + cobrosEfectivoCreditos;
+    const transferenciasRealesHoy = totalTransferencia + cobrosTransferenciaCreditos;
+    const totalDineroRealRecibidoHoy = efectivoRealHoy + transferenciasRealesHoy;
+
     const uniqueSalesCount = new Set(filteredItemRows.map(row => row.saleId)).size;
 
     return {
       totalVendido,
       totalEfectivo,
       totalTransferencia,
+      totalCreditoVentas,
       totalPagosMixtos,
       totalFacturas,
       totalNotasVenta,
       totalIva,
       totalPrendas,
-      numVentas: uniqueSalesCount
+      numVentas: uniqueSalesCount,
+      // Cobros Crédito
+      cobrosEfectivoCreditos,
+      cobrosTransferenciaCreditos,
+      totalCobradoCreditosHoy,
+      // Dinero Real
+      efectivoRealHoy,
+      transferenciasRealesHoy,
+      totalDineroRealRecibidoHoy
     };
-  }, [filteredItemRows]);
+  }, [filteredItemRows, cobrosList, cierreDate]);
 
   const groupedSections = useMemo(() => {
     if (cierreGrouping === 'Sin agrupar') return null;

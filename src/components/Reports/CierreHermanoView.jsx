@@ -198,6 +198,7 @@ export default function CierreHermanoView({ sales }) {
     let ventasPropiasCantidad = 0;
     let ventasPropiasEfectivo = 0;
     let ventasPropiasTransferencias = 0;
+    let ventasPropiasCredito = 0;
     const ventasPropiasDetalle = [];
 
     // 2. Transferencias recibidas en su cuenta
@@ -251,6 +252,9 @@ export default function CierreHermanoView({ sales }) {
 
         const cashPart = proportion * (paymentDetails.cashAmount || 0);
         ventasPropiasEfectivo += cashPart;
+
+        const creditPart = proportion * (paymentDetails.creditAmount || (sale.paymentMethod === 'CREDITO' ? (sale.totals?.total || sale.total || 0) : 0));
+        ventasPropiasCredito += creditPart;
 
         const transfersPart = paymentDetails.transfers || [];
         transfersPart.forEach(t => {
@@ -340,6 +344,7 @@ export default function CierreHermanoView({ sales }) {
       ventasPropiasCantidad,
       ventasPropiasEfectivo,
       ventasPropiasTransferencias,
+      ventasPropiasCredito,
       ventasPropiasDetalle,
       transferenciasRecibidas,
       transferenciasPropiasEnOtrosHermanos,
@@ -391,7 +396,7 @@ export default function CierreHermanoView({ sales }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
           
           {/* Fila de KPIs de Ventas Propias */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
             <div style={{ padding: '1.25rem', background: '#181920', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.08)', borderLeft: '4px solid #30d158' }}>
               <p style={{ color: '#94a3b8', fontSize: '0.82rem', margin: '0 0 5px 0', textTransform: 'uppercase', fontWeight: '700' }}>Total Vendido Propio</p>
               <h3 style={{ fontSize: '1.8rem', margin: 0, color: '#30d158', fontWeight: 'bold' }}>${siblingData.ventasPropiasTotal.toFixed(2)}</h3>
@@ -406,6 +411,11 @@ export default function CierreHermanoView({ sales }) {
             <div style={{ padding: '1.25rem', background: '#181920', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.08)', borderLeft: '4px solid #64d2ff' }}>
               <p style={{ color: '#94a3b8', fontSize: '0.82rem', margin: '0 0 5px 0', textTransform: 'uppercase', fontWeight: '700' }}>Proporción Transferencias</p>
               <h3 style={{ fontSize: '1.8rem', margin: 0, color: '#64d2ff', fontWeight: 'bold' }}>${siblingData.ventasPropiasTransferencias.toFixed(2)}</h3>
+            </div>
+
+            <div style={{ padding: '1.25rem', background: '#181920', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.08)', borderLeft: '4px solid #ef4444' }}>
+              <p style={{ color: '#94a3b8', fontSize: '0.82rem', margin: '0 0 5px 0', textTransform: 'uppercase', fontWeight: '700' }}>Proporción Crédito</p>
+              <h3 style={{ fontSize: '1.8rem', margin: 0, color: '#ef4444', fontWeight: 'bold' }}>${(siblingData.ventasPropiasCredito || 0).toFixed(2)}</h3>
             </div>
           </div>
 

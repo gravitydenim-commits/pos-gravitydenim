@@ -162,8 +162,46 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
   const [liveIssuerDoc, setLiveIssuerDoc] = useState(null);
 
   const selectDocumentType = (type) => {
-    setDocumentType(type);
-    setIsNotaVenta(type === 'NOTA_DE_VENTA');
+    const consumidorFinalData = {
+      tipoDocumento: 'CONSUMIDOR_FINAL',
+      numeroIdentificacion: '9999999999999',
+      nombre: 'CONSUMIDOR FINAL',
+      correo: 'N/A',
+      direccion: 'N/A',
+      telefono: 'N/A'
+    };
+
+    const emptyCustomerData = {
+      tipoDocumento: 'CEDULA',
+      numeroIdentificacion: '',
+      nombre: '',
+      correo: '',
+      direccion: '',
+      telefono: ''
+    };
+
+    if (type === 'FACTURA') {
+      setDocumentType('FACTURA');
+      setIsNotaVenta(false);
+      if (paymentMethod === 'CREDITO') setPaymentMethod('EFECTIVO');
+    } else if (type === 'NOTA_DE_VENTA') {
+      setDocumentType('NOTA_DE_VENTA');
+      setIsNotaVenta(true);
+      if (paymentMethod === 'CREDITO') setPaymentMethod('EFECTIVO');
+      setCustomer(consumidorFinalData);
+      syncSecondaryCustomerScreen(consumidorFinalData);
+    } else if (type === 'CREDITO') {
+      setDocumentType('NOTA_DE_VENTA');
+      setIsNotaVenta(true);
+      setPaymentMethod('CREDITO');
+      
+      const docNum = (customer?.numeroIdentificacion || '').trim();
+      const isAnonym = !docNum || docNum === '9999999999999' || customer?.tipoDocumento === 'CONSUMIDOR_FINAL';
+      if (isAnonym) {
+        setCustomer(emptyCustomerData);
+        syncSecondaryCustomerScreen(emptyCustomerData);
+      }
+    }
   };
 
   const getShortIssuerName = (issuer) => {
@@ -920,6 +958,11 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
           total: totalsData.total,
           paymentMethod: paymentMethod,
           paymentDetails: paymentDetails,
+          isCredito: paymentMethod === 'CREDITO' || (paymentDetails?.creditAmount > 0),
+          creditAmount: paymentDetails?.creditAmount || 0,
+          saldoPendiente: paymentDetails?.creditAmount || 0,
+          totalPagadoCredito: 0,
+          estadoCredito: (paymentMethod === 'CREDITO' || (paymentDetails?.creditAmount > 0)) ? 'PENDIENTE' : null,
           paymentRecipientId: recipientId,
           paymentRecipientName: recipientName,
           paymentRecipientType: recipientType,
@@ -1037,12 +1080,25 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       return;
     }
 
+    // Validar cliente para ventas a crédito (Exigir cliente identificado)
+    const hasCreditLine = paymentMethod === 'CREDITO' || (isMixedPayment && paymentsList.some(p => p.method === 'CREDITO'));
+    if (hasCreditLine) {
+      const docNum = (customer?.numeroIdentificacion || '').trim();
+      const isAnonym = !docNum || docNum === '9999999999999' || customer?.tipoDocumento === 'CONSUMIDOR_FINAL';
+      if (isAnonym) {
+        setIsProcessing(false);
+        alert("⚠️ Para registrar una venta a CRÉDITO, es obligatorio seleccionar o ingresar un cliente identificado con Cédula o RUC. No se permite a Consumidor Final anónimo.");
+        return;
+      }
+    }
+
     // Generar Llave de Idempotencia única para esta transacción
     const transactionId = crypto.randomUUID ? crypto.randomUUID() : `tx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     // Construir paymentDetails estructurado según si es Normal o Pago Mixto
     let paymentDetails;
     if (!isMixedPayment) {
+      const isCreditMethod = paymentMethod === 'CREDITO';
       paymentDetails = {
         isMixed: false,
         method: paymentMethod,
@@ -1065,9 +1121,14 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
             bank: transferBank,
             reference: transferReference
           }
-        ] : []
+        ] : [],
+        creditAmount: isCreditMethod ? total : 0,
+        saldoPendiente: isCreditMethod ? total : 0,
+        totalPagadoCredito: 0,
+        estadoCredito: isCreditMethod ? 'PENDIENTE' : null
       };
     } else {
+      const mixedCreditAmt = paymentsList.filter(p => p.method === 'CREDITO').reduce((s, p) => s + (Number(p.amount) || 0), 0);
       paymentDetails = {
         isMixed: true,
         method: 'MIXTO',
@@ -1091,14 +1152,18 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
           amount: Number(p.amount) || 0,
           bank: p.bank,
           reference: p.reference
-        }))
+        })),
+        creditAmount: mixedCreditAmt,
+        saldoPendiente: mixedCreditAmt,
+        totalPagadoCredito: 0,
+        estadoCredito: mixedCreditAmt > 0 ? 'PENDIENTE' : null
       };
     }
 
     const totalsData = { subtotal, baseImponible, ivaAmount, total };
 
-    // 🔴 SI ES NOTA DE VENTA INTERNA: Proceso 100% local atómico sin llamar al SRI
-    if (isNotaVenta) {
+    // 🔴 SI ES NOTA DE VENTA O VENTA A CRÉDITO: Proceso 100% local atómico sin llamar al SRI
+    if (isNotaVenta || paymentMethod === 'CREDITO') {
       await emitirNotaVentaInterna(withPrint, issuerData, paymentDetails, totalsData, transactionId);
       return;
     }
@@ -1516,6 +1581,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
             <h2><ShoppingCart className="inline" style={{verticalAlign: 'bottom'}}/> Carrito</h2>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button 
+                type="button"
                 onClick={() => selectDocumentType('FACTURA')}
                 style={{
                   padding: '6px 12px',
@@ -1527,16 +1593,17 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
-                  background: documentType === 'FACTURA' ? '#3b82f6' : 'rgba(255,255,255,0.05)',
-                  color: documentType === 'FACTURA' ? '#ffffff' : 'var(--text-muted)',
-                  border: documentType === 'FACTURA' ? '1.5px solid #60a5fa' : '1px solid rgba(255,255,255,0.1)',
-                  boxShadow: documentType === 'FACTURA' ? '0 0 10px rgba(59, 130, 246, 0.4)' : 'none',
+                  background: (documentType === 'FACTURA' && paymentMethod !== 'CREDITO') ? '#3b82f6' : 'rgba(255,255,255,0.05)',
+                  color: (documentType === 'FACTURA' && paymentMethod !== 'CREDITO') ? '#ffffff' : 'var(--text-muted)',
+                  border: (documentType === 'FACTURA' && paymentMethod !== 'CREDITO') ? '1.5px solid #60a5fa' : '1px solid rgba(255,255,255,0.1)',
+                  boxShadow: (documentType === 'FACTURA' && paymentMethod !== 'CREDITO') ? '0 0 10px rgba(59, 130, 246, 0.4)' : 'none',
                   outline: 'none'
                 }}
               >
                 📄 FACTURA
               </button>
               <button 
+                type="button"
                 onClick={() => selectDocumentType('NOTA_DE_VENTA')}
                 style={{
                   padding: '6px 12px',
@@ -1548,14 +1615,36 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
-                  background: documentType === 'NOTA_DE_VENTA' ? '#f97316' : 'rgba(255,255,255,0.05)',
-                  color: documentType === 'NOTA_DE_VENTA' ? '#ffffff' : 'var(--text-muted)',
-                  border: documentType === 'NOTA_DE_VENTA' ? '1.5px solid #fdba74' : '1px solid rgba(255,255,255,0.1)',
-                  boxShadow: documentType === 'NOTA_DE_VENTA' ? '0 0 10px rgba(249, 115, 22, 0.4)' : 'none',
+                  background: paymentMethod === 'CREDITO' ? '#a855f7' : (documentType === 'NOTA_DE_VENTA' ? '#f97316' : 'rgba(255,255,255,0.05)'),
+                  color: (documentType === 'NOTA_DE_VENTA' || paymentMethod === 'CREDITO') ? '#ffffff' : 'var(--text-muted)',
+                  border: paymentMethod === 'CREDITO' ? '1.5px solid #c084fc' : (documentType === 'NOTA_DE_VENTA' ? '1.5px solid #fdba74' : '1px solid rgba(255,255,255,0.1)'),
+                  boxShadow: paymentMethod === 'CREDITO' ? '0 0 10px rgba(168, 85, 247, 0.5)' : (documentType === 'NOTA_DE_VENTA' ? '0 0 10px rgba(249, 115, 22, 0.4)' : 'none'),
                   outline: 'none'
                 }}
               >
                 🧾 NOTA DE VENTA
+              </button>
+              <button 
+                type="button"
+                onClick={() => selectDocumentType('CREDITO')}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontSize: '0.8rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: paymentMethod === 'CREDITO' ? '#a855f7' : 'rgba(255,255,255,0.05)',
+                  color: paymentMethod === 'CREDITO' ? '#ffffff' : 'var(--text-muted)',
+                  border: paymentMethod === 'CREDITO' ? '1.5px solid #c084fc' : '1px solid rgba(255,255,255,0.1)',
+                  boxShadow: paymentMethod === 'CREDITO' ? '0 0 10px rgba(168, 85, 247, 0.5)' : 'none',
+                  outline: 'none'
+                }}
+              >
+                🟣 V. A CRÉDITO
               </button>
             </div>
           </div>
@@ -1777,6 +1866,22 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
                     }}
                   >
                     🏦 Transferencia
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setPaymentMethod('CREDITO')}
+                    style={{ 
+                      flex: 1, 
+                      padding: '8px', 
+                      borderRadius: '8px', 
+                      border: `2px solid ${paymentMethod === 'CREDITO' ? '#ef4444' : 'var(--panel-border)'}`,
+                      background: paymentMethod === 'CREDITO' ? 'rgba(239, 68, 68, 0.15)' : 'transparent',
+                      color: 'var(--text-main)',
+                      fontWeight: paymentMethod === 'CREDITO' ? 'bold' : 'normal',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    💳 Crédito
                   </button>
                 </div>
 
