@@ -89,8 +89,7 @@ export default function ReportesDashboard({ sales, issuers, products, users, cob
   const [openMenuId, setOpenMenuId] = useState(null);
 
   // --- VARIABLES DE ESTADO PARA NAVEGACIÓN Y REPORTES ---
-  // Por defecto 'general' (Cierre del Día), que es la vista que el cajero utiliza continuamente
-  const [mainTab, setMainTab] = useState('general'); // 'contadora' | 'general'
+  const [mainTab, setMainTab] = useState('contadora'); // 'contadora' | 'general'
   const [cierreDate, setCierreDate] = useState(() => {
     const d = new Date();
     // Timezone safe Ecuador (UTC-5)
@@ -112,9 +111,6 @@ export default function ReportesDashboard({ sales, issuers, products, users, cob
   const [cierreTablePage, setCierreTablePage] = useState(1);
   const ITEMS_PER_PAGE = 30;
 
-  const [contadoraTablePage, setContadoraTablePage] = useState(1);
-  const CONTADORA_ITEMS_PER_PAGE = 30;
-
   const [productsList, setProductsList] = useState(products || []);
   const [cobrosList, setCobrosList] = useState(cobros || []);
 
@@ -133,10 +129,6 @@ export default function ReportesDashboard({ sales, issuers, products, users, cob
   useEffect(() => {
     setCierreTablePage(1);
   }, [cierreDate, cierreFilterDocType, cierreFilterPayment, cierreFilterEmitter, cierreFilterOwner, cierreFilterClientText, cierreFilterProductText]);
-
-  useEffect(() => {
-    setContadoraTablePage(1);
-  }, [appliedStartDate, appliedEndDate, contadoraIssuerId, contadoraPaymentFilter, contadoraDocTypeFilter, contadoraStatusFilter]);
 
   const filteredSales = useMemo(() => {
     return sales.filter(sale => {
@@ -2927,7 +2919,6 @@ export default function ReportesDashboard({ sales, issuers, products, users, cob
       {activeTab === 'cierre_hermano' && (
         <CierreHermanoView sales={sales} />
       )}
-
       {activeTab === 'top_productos' && (
         <TopProductosView sales={filteredSales} />
       )}
@@ -3479,137 +3470,102 @@ export default function ReportesDashboard({ sales, issuers, products, users, cob
                   </tr>
                 </thead>
                 <tbody>
-                  {(() => {
-                    const totalVouchers = contadoraData.filteredVouchers;
-                    const totalPages = Math.ceil(totalVouchers.length / CONTADORA_ITEMS_PER_PAGE) || 1;
-                    const startIndex = (contadoraTablePage - 1) * CONTADORA_ITEMS_PER_PAGE;
-                    const visibleVouchers = totalVouchers.slice(startIndex, startIndex + CONTADORA_ITEMS_PER_PAGE);
-
-                    if (totalVouchers.length === 0) {
-                      return (
-                        <tr>
-                          <td colSpan="12" style={{ textAlign: 'center', padding: '3rem 1rem', color: '#94a3b8' }}>
-                            No se encontraron comprobantes registrados para las fechas y filtros seleccionados.
-                          </td>
-                        </tr>
-                      );
-                    }
-
-                    return visibleVouchers.map((v, i) => {
-                      const isAnul = v.isAnulado;
-                      const saleKey = v.rawSale?.claveAcceso || v.rawSale?.claveAccesoOriginal || v.id;
-                      return (
-                        <tr
-                          key={v.id || i}
-                          style={{
-                            borderBottom: '1px solid rgba(255,255,255,0.04)',
-                            background: isAnul ? 'rgba(255, 69, 58, 0.08)' : 'transparent',
-                            opacity: isAnul ? 0.75 : 1
-                          }}
-                        >
-                          <td style={{ padding: '12px 10px', color: '#cbd5e1' }}>{v.fecha}</td>
-                          <td style={{ padding: '12px 10px', fontWeight: 'bold' }}>
-                            <span style={{
-                              padding: '3px 10px',
-                              borderRadius: '6px',
-                              fontSize: '0.75rem',
-                              fontWeight: '700',
-                              background: v.docType === 'Factura' ? 'rgba(10, 132, 255, 0.15)' : 'rgba(191, 90, 242, 0.15)',
-                              color: v.docType === 'Factura' ? '#60a5fa' : '#c084fc',
-                              border: v.docType === 'Factura' ? '1px solid rgba(10, 132, 255, 0.3)' : '1px solid rgba(191, 90, 242, 0.3)'
-                            }}>
-                              {v.docType}
+                  {contadoraData.filteredVouchers.map((v, i) => {
+                    const isAnul = v.isAnulado;
+                    const saleKey = v.rawSale?.claveAcceso || v.rawSale?.claveAccesoOriginal || v.id;
+                    return (
+                      <tr
+                        key={v.id || i}
+                        style={{
+                          borderBottom: '1px solid rgba(255,255,255,0.04)',
+                          background: isAnul ? 'rgba(255, 69, 58, 0.08)' : 'transparent',
+                          opacity: isAnul ? 0.75 : 1
+                        }}
+                      >
+                        <td style={{ padding: '12px 10px', color: '#cbd5e1' }}>{v.fecha}</td>
+                        <td style={{ padding: '12px 10px', fontWeight: 'bold' }}>
+                          <span style={{
+                            padding: '3px 10px',
+                            borderRadius: '6px',
+                            fontSize: '0.75rem',
+                            fontWeight: '700',
+                            background: v.docType === 'Factura' ? 'rgba(10, 132, 255, 0.15)' : 'rgba(191, 90, 242, 0.15)',
+                            color: v.docType === 'Factura' ? '#60a5fa' : '#c084fc',
+                            border: v.docType === 'Factura' ? '1px solid rgba(10, 132, 255, 0.3)' : '1px solid rgba(191, 90, 242, 0.3)'
+                          }}>
+                            {v.docType}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 10px', fontFamily: 'monospace', fontWeight: 'bold', color: '#f1f5f9' }}>
+                          {v.numeroComprobante}
+                        </td>
+                        <td style={{ padding: '12px 10px', color: '#f1f5f9', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {v.clienteNombre}
+                        </td>
+                        <td style={{ padding: '12px 10px', color: '#94a3b8', fontFamily: 'monospace' }}>
+                          {v.clienteRuc}
+                        </td>
+                        <td style={{ padding: '12px 10px', textAlign: 'right', color: isAnul ? '#ff453a' : '#f1f5f9' }}>
+                          ${isAnul ? '0.00' : v.vSubtotal15.toFixed(2)}
+                        </td>
+                        <td style={{ padding: '12px 10px', textAlign: 'right', color: isAnul ? '#ff453a' : '#f1f5f9' }}>
+                          ${isAnul ? '0.00' : v.vSubtotal0.toFixed(2)}
+                        </td>
+                        <td style={{ padding: '12px 10px', textAlign: 'right', color: isAnul ? '#ff453a' : '#64d2ff', fontWeight: 'bold' }}>
+                          ${isAnul ? '0.00' : v.iva.toFixed(2)}
+                        </td>
+                        <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold', color: isAnul ? '#ff453a' : '#30d158', fontSize: '0.9rem' }}>
+                          ${isAnul ? '0.00' : v.total.toFixed(2)}
+                        </td>
+                        <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                          <span style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.06)', color: '#cbd5e1', fontWeight: '600' }}>
+                            {v.pMethod}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                          {isAnul ? (
+                            <span style={{ color: '#f87171', fontWeight: 'bold', fontSize: '0.75rem', padding: '3px 10px', background: 'rgba(255, 69, 58, 0.15)', borderRadius: '6px', border: '1px solid rgba(255, 69, 58, 0.3)' }}>
+                              Anulada
                             </span>
-                          </td>
-                          <td style={{ padding: '12px 10px', fontFamily: 'monospace', fontWeight: 'bold', color: '#f1f5f9' }}>
-                            {v.numeroComprobante}
-                          </td>
-                          <td style={{ padding: '12px 10px', color: '#f1f5f9', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {v.clienteNombre}
-                          </td>
-                          <td style={{ padding: '12px 10px', color: '#94a3b8', fontFamily: 'monospace' }}>
-                            {v.clienteRuc}
-                          </td>
-                          <td style={{ padding: '12px 10px', textAlign: 'right', color: isAnul ? '#ff453a' : '#f1f5f9' }}>
-                            ${isAnul ? '0.00' : v.vSubtotal15.toFixed(2)}
-                          </td>
-                          <td style={{ padding: '12px 10px', textAlign: 'right', color: isAnul ? '#ff453a' : '#f1f5f9' }}>
-                            ${isAnul ? '0.00' : v.vSubtotal0.toFixed(2)}
-                          </td>
-                          <td style={{ padding: '12px 10px', textAlign: 'right', color: isAnul ? '#ff453a' : '#64d2ff', fontWeight: 'bold' }}>
-                            ${isAnul ? '0.00' : v.iva.toFixed(2)}
-                          </td>
-                          <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold', color: isAnul ? '#ff453a' : '#30d158', fontSize: '0.9rem' }}>
-                            ${isAnul ? '0.00' : v.total.toFixed(2)}
-                          </td>
-                          <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                            <span style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.06)', color: '#cbd5e1', fontWeight: '600' }}>
-                              {v.pMethod}
+                          ) : (
+                            <span style={{ color: '#34d399', fontWeight: 'bold', fontSize: '0.75rem', padding: '3px 10px', background: 'rgba(48, 209, 88, 0.15)', borderRadius: '6px', border: '1px solid rgba(48, 209, 88, 0.3)' }}>
+                              Válida
                             </span>
-                          </td>
-                          <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                            {isAnul ? (
-                              <span style={{ color: '#f87171', fontWeight: 'bold', fontSize: '0.75rem', padding: '3px 10px', background: 'rgba(255, 69, 58, 0.15)', borderRadius: '6px', border: '1px solid rgba(255, 69, 58, 0.3)' }}>
-                                Anulada
-                              </span>
-                            ) : (
-                              <span style={{ color: '#34d399', fontWeight: 'bold', fontSize: '0.75rem', padding: '3px 10px', background: 'rgba(48, 209, 88, 0.15)', borderRadius: '6px', border: '1px solid rgba(48, 209, 88, 0.3)' }}>
-                                Válida
-                              </span>
-                            )}
-                          </td>
-                          <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                          )}
+                        </td>
+                        <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                            <button
+                              onClick={() => window.open(`/api/sri/pdf?claveAcceso=${saleKey}`, '_blank')}
+                              title="Ver RIDE PDF"
+                              style={{ padding: '4px 9px', borderRadius: '6px', background: '#0a84ff', border: 'none', color: 'white', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}
+                            >
+                              PDF
+                            </button>
+                            {v.docType === 'Factura' && (
                               <button
-                                onClick={() => window.open(`/api/sri/pdf?claveAcceso=${saleKey}`, '_blank')}
-                                title="Ver RIDE PDF"
-                                style={{ padding: '4px 9px', borderRadius: '6px', background: '#0a84ff', border: 'none', color: 'white', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}
+                                onClick={() => window.open(`/api/sri/xml?claveAcceso=${saleKey}`, '_blank')}
+                                title="Descargar XML SRI"
+                                style={{ padding: '4px 9px', borderRadius: '6px', background: '#059669', border: 'none', color: 'white', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}
                               >
-                                PDF
+                                XML
                               </button>
-                              {v.docType === 'Factura' && (
-                                <button
-                                  onClick={() => window.open(`/api/sri/xml?claveAcceso=${saleKey}`, '_blank')}
-                                  title="Descargar XML SRI"
-                                  style={{ padding: '4px 9px', borderRadius: '6px', background: '#059669', border: 'none', color: 'white', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}
-                                >
-                                  XML
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    });
-                  })()}
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {contadoraData.filteredVouchers.length === 0 && (
+                    <tr>
+                      <td colSpan="12" style={{ textAlign: 'center', padding: '3rem 1rem', color: '#94a3b8' }}>
+                        No se encontraron comprobantes registrados para las fechas y filtros seleccionados.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
-
-            {/* Controles de Paginación Contadora */}
-            {Math.ceil(contadoraData.filteredVouchers.length / CONTADORA_ITEMS_PER_PAGE) > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', padding: '0.75rem 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                  Página {contadoraTablePage} de {Math.ceil(contadoraData.filteredVouchers.length / CONTADORA_ITEMS_PER_PAGE)} ({contadoraData.filteredVouchers.length} comprobantes en total)
-                </span>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button
-                    onClick={() => setContadoraTablePage(p => Math.max(1, p - 1))}
-                    disabled={contadoraTablePage <= 1}
-                    style={{ padding: '6px 12px', borderRadius: '6px', background: contadoraTablePage <= 1 ? 'rgba(255,255,255,0.05)' : 'rgba(10, 132, 255, 0.2)', color: contadoraTablePage <= 1 ? '#64748b' : '#60a5fa', border: '1px solid rgba(255,255,255,0.1)', cursor: contadoraTablePage <= 1 ? 'not-allowed' : 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}
-                  >
-                    ← Anterior
-                  </button>
-                  <button
-                    onClick={() => setContadoraTablePage(p => Math.min(Math.ceil(contadoraData.filteredVouchers.length / CONTADORA_ITEMS_PER_PAGE), p + 1))}
-                    disabled={contadoraTablePage >= Math.ceil(contadoraData.filteredVouchers.length / CONTADORA_ITEMS_PER_PAGE)}
-                    style={{ padding: '6px 12px', borderRadius: '6px', background: contadoraTablePage >= Math.ceil(contadoraData.filteredVouchers.length / CONTADORA_ITEMS_PER_PAGE) ? 'rgba(255,255,255,0.05)' : 'rgba(10, 132, 255, 0.2)', color: contadoraTablePage >= Math.ceil(contadoraData.filteredVouchers.length / CONTADORA_ITEMS_PER_PAGE) ? '#64748b' : '#60a5fa', border: '1px solid rgba(255,255,255,0.1)', cursor: contadoraTablePage >= Math.ceil(contadoraData.filteredVouchers.length / CONTADORA_ITEMS_PER_PAGE) ? 'not-allowed' : 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}
-                  >
-                    Siguiente →
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       ) : null}

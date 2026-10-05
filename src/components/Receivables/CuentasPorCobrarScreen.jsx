@@ -5,6 +5,7 @@ import {
   onSnapshot, 
   query, 
   orderBy, 
+  where,
   doc, 
   runTransaction 
 } from 'firebase/firestore';
@@ -44,10 +45,15 @@ const parseDateStr = (rawDate) => {
   return Number.isNaN(parsed.getTime()) ? 'N/A' : parsed.toLocaleDateString('es-EC');
 };
 
-export default function CuentasPorCobrarScreen({ currentUser, issuers = [], cobrosProp }) {
-  const [sales, setSales] = useState([]);
-  const [cobros, setCobros] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function CuentasPorCobrarScreen({ currentUser, issuers = [], cobrosProp, salesProp }) {
+  const [sales, setSales] = useState(() => {
+    if (salesProp && salesProp.length > 0) {
+      return salesProp.filter(s => s.paymentMethod === 'CREDITO' || s.isCredito || s.paymentDetails?.creditAmount > 0);
+    }
+    return [];
+  });
+  const [cobros, setCobros] = useState(cobrosProp || []);
+  const [loading, setLoading] = useState(!salesProp || salesProp.length === 0);
 
   // Estados de Filtro
   const [searchTerm, setSearchTerm] = useState('');
@@ -73,19 +79,28 @@ export default function CuentasPorCobrarScreen({ currentUser, issuers = [], cobr
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // 1. Escuchar ventas que sean a Crédito (isCredito == true o paymentMethod == 'CREDITO')
+  // 1. Escuchar ÚNICAMENTE ventas que sean a Crédito (isCredito == true)
+  // Evita descargar cientos de documentos históricos de efectivo/transferencia innecesarios
   useEffect(() => {
-    const qVentas = query(collection(db, 'ventas'), orderBy('fechaTransaccion', 'desc'));
+    const qVentas = query(
+      collection(db, 'ventas'), 
+      where('isCredito', '==', true)
+    );
+
     const unsubVentas = onSnapshot(qVentas, (snapshot) => {
       const docs = snapshot.docs
         .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
         .filter(sale => {
           const est = (sale.estadoSri || sale.status || '').toUpperCase();
           if (est === 'ERROR_DUPLICADO' || est === 'REEMPLAZADO' || est === 'ANULADA' || est === 'REVERTIDA_NC') return false;
-          
-          const isCreditSale = sale.paymentMethod === 'CREDITO' || sale.isCredito || sale.paymentDetails?.creditAmount > 0;
-          return isCreditSale;
+          return true;
+        })
+        .sort((a, b) => {
+          const dateA = a.fechaTransaccion ? new Date(a.fechaTransaccion).getTime() : 0;
+          const dateB = b.fechaTransaccion ? new Date(b.fechaTransaccion).getTime() : 0;
+          return dateB - dateA;
         });
+
       setSales(docs);
       setLoading(false);
     }, (err) => {

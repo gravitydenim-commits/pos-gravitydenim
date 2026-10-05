@@ -64,7 +64,7 @@ export function getProductImageUrl(prod) {
   return getFallback3DImage(prod);
 }
 
-export default function POSScreen({ issuers, productsDB, salesDB = [], recordSale, customersDB, recordCustomer }) {
+export default function POSScreen({ issuers, productsDB, salesDB = [], recordSale, customersDB, recordCustomer, users: usersProp }) {
   const isIminMode = typeof window !== 'undefined' && (
     localStorage.getItem('iminSwanEnabled') === 'true' || 
     /imin|iMin|I20D01|D4-504|I24D03|DS2-25/i.test(navigator.userAgent) ||
@@ -124,7 +124,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
   };
   const [paymentMethod, setPaymentMethod] = useState('EFECTIVO');
   const [transferRecipient, setTransferRecipient] = useState('Edgar');
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState(usersProp || []);
   const [mixCashAmount, setMixCashAmount] = useState(0);
   const [mixTransferAmount, setMixTransferAmount] = useState(0);
   const [transferBank, setTransferBank] = useState('');
@@ -141,6 +141,10 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
   }, []);
 
   useEffect(() => {
+    if (usersProp && usersProp.length > 0) {
+      setUsers(usersProp);
+      return;
+    }
     const fetchUsers = async () => {
       try {
         const { getDocs, collection } = await import('firebase/firestore');
@@ -152,7 +156,7 @@ export default function POSScreen({ issuers, productsDB, salesDB = [], recordSal
       }
     };
     fetchUsers();
-  }, []);
+  }, [usersProp]);
 
   const [isNotaVenta, setIsNotaVenta] = useState(false);
   const [documentType, setDocumentType] = useState(''); // '' | 'FACTURA' | 'NOTA_DE_VENTA'

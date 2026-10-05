@@ -33,6 +33,18 @@ function App() {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const [currentView, setCurrentView] = useState('pos'); // 'pos', 'report', 'settings', 'inventory'
+  const [visitedViews, setVisitedViews] = useState(() => new Set(['pos']));
+
+  const handleNavigate = (view) => {
+    setVisitedViews(prev => {
+      if (prev.has(view)) return prev;
+      const next = new Set(prev);
+      next.add(view);
+      return next;
+    });
+    setCurrentView(view);
+  };
+
   const [salesDB, setSalesDB] = useState([]); 
   
   const [customersDB, setCustomersDB] = useState([]);
@@ -205,6 +217,7 @@ function App() {
     try {
       await signOut(auth);
       setCurrentView('pos'); // Resetear vista
+      setVisitedViews(new Set(['pos']));
     } catch (error) {
       console.error("Error al cerrar sesión", error);
     }
@@ -451,7 +464,7 @@ function App() {
             
             <button 
               className={`nav-btn ${currentView === 'pos' ? 'active' : ''}`}
-              onClick={() => setCurrentView('pos')}
+              onClick={() => handleNavigate('pos')}
             >
               <Receipt size={24} />
               <span className="nav-btn-text">Caja</span>
@@ -460,7 +473,7 @@ function App() {
             {hasPermission('inventario', 'ver') && (
               <button 
                 className={`nav-btn ${currentView === 'inventory' ? 'active' : ''}`}
-                onClick={() => setCurrentView('inventory')}
+                onClick={() => handleNavigate('inventory')}
               >
                 <Package size={24} />
                 <span className="nav-btn-text">Inventario</span>
@@ -470,7 +483,7 @@ function App() {
             {hasPermission('clientes', 'ver') && (
               <button 
                 className={`nav-btn ${currentView === 'customers' ? 'active' : ''}`}
-                onClick={() => setCurrentView('customers')}
+                onClick={() => handleNavigate('customers')}
               >
                 <Users size={24} />
                 <span className="nav-btn-text">Clientes</span>
@@ -480,7 +493,7 @@ function App() {
             {(isAdmin || hasPermission('cuentas_por_cobrar', 'ver') || hasPermission('caja', 'ver')) && (
               <button 
                 className={`nav-btn ${currentView === 'receivables' ? 'active' : ''}`}
-                onClick={() => setCurrentView('receivables')}
+                onClick={() => handleNavigate('receivables')}
               >
                 <CreditCard size={24} />
                 <span className="nav-btn-text">Cuentas por Cobrar</span>
@@ -490,7 +503,7 @@ function App() {
             {hasPermission('reportes', 'ver_ventas') && (
               <button 
                 className={`nav-btn ${currentView === 'report' ? 'active' : ''}`}
-                onClick={() => setCurrentView('report')}
+                onClick={() => handleNavigate('report')}
               >
                 <LayoutDashboard size={24} />
                 <span className="nav-btn-text">Reportes</span>
@@ -500,7 +513,7 @@ function App() {
             {isAdmin && (
               <button 
                 className={`nav-btn ${currentView === 'sri' ? 'active' : ''}`}
-                onClick={() => setCurrentView('sri')}
+                onClick={() => handleNavigate('sri')}
               >
                 <AlertTriangle size={24} />
                 <span className="nav-btn-text">Facturas SRI</span>
@@ -511,7 +524,7 @@ function App() {
               <>
                 <button 
                   className={`nav-btn ${currentView === 'admin' ? 'active' : ''}`}
-                  onClick={() => setCurrentView('admin')}
+                  onClick={() => handleNavigate('admin')}
                 >
                   <Shield size={24} />
                   <span className="nav-btn-text">Admin</span>
@@ -519,7 +532,7 @@ function App() {
 
                 <button 
                   className={`nav-btn ${currentView === 'settings' ? 'active' : ''}`}
-                  onClick={() => setCurrentView('settings')}
+                  onClick={() => handleNavigate('settings')}
                 >
                   <Settings size={24} />
                   <span className="nav-btn-text">Ajustes</span>
@@ -568,7 +581,8 @@ function App() {
               <span>Cargando módulo...</span>
             </div>
           }>
-            {currentView === 'pos' && (
+            {/* 1. Caja / POS: NUNCA se desmonta para preservar carrito, cliente y rendimiento instantáneo */}
+            <div style={{ display: currentView === 'pos' ? 'block' : 'none', height: '100%' }}>
               <POSScreen 
                 issuers={issuers} 
                 productsDB={productsDB}
@@ -576,60 +590,89 @@ function App() {
                 recordSale={recordSale} 
                 customersDB={customersDB}
                 recordCustomer={recordCustomer}
+                users={usersDB}
               />
-            )}
-            {currentView === 'admin' && isAdmin && (
-              <AdminScreen permissions={permissions} modulesConfig={modulesConfig} isSuperAdmin={isAdmin} />
-            )}
-            {currentView === 'admin' && !isAdmin && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '1rem', color: 'var(--text-muted)' }}>
-                <Shield size={64} style={{ color: '#e11d48', opacity: 0.7 }} />
-                <h2 style={{ color: 'var(--text-main)', margin: 0 }}>Acceso Denegado</h2>
-                <p style={{ textAlign: 'center', maxWidth: '400px' }}>
-                  No tienes permisos para acceder al módulo de Administración.<br />
-                  Contacta a tu administrador si necesitas acceso.
-                </p>
-                <button
-                  onClick={() => setCurrentView('pos')}
-                  style={{ padding: '10px 24px', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
-                >
-                  Volver a Caja
-                </button>
+            </div>
+
+            {/* 2. Admin Screen */}
+            {visitedViews.has('admin') && (
+              <div style={{ display: currentView === 'admin' ? 'block' : 'none', height: '100%' }}>
+                {isAdmin ? (
+                  <AdminScreen permissions={permissions} modulesConfig={modulesConfig} isSuperAdmin={isAdmin} />
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '1rem', color: 'var(--text-muted)' }}>
+                    <Shield size={64} style={{ color: '#e11d48', opacity: 0.7 }} />
+                    <h2 style={{ color: 'var(--text-main)', margin: 0 }}>Acceso Denegado</h2>
+                    <p style={{ textAlign: 'center', maxWidth: '400px' }}>
+                      No tienes permisos para acceder al módulo de Administración.<br />
+                      Contacta a tu administrador si necesitas acceso.
+                    </p>
+                    <button
+                      onClick={() => handleNavigate('pos')}
+                      style={{ padding: '10px 24px', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
+                    >
+                      Volver a Caja
+                    </button>
+                  </div>
+                )}
               </div>
             )}
-            {(currentView === 'report' && hasPermission('reportes', 'ver_ventas')) && (
-              <ReportesDashboard issuers={issuers} sales={salesDB} products={productsDB} users={usersDB} cobros={cobrosDB} />
-            )}
-            {(currentView === 'sri' && isAdmin) && (
-              <FacturasSRI isAdmin={isAdmin} issuers={issuers} />
+
+            {/* 3. Reportes Dashboard */}
+            {visitedViews.has('report') && hasPermission('reportes', 'ver_ventas') && (
+              <div style={{ display: currentView === 'report' ? 'block' : 'none', height: '100%' }}>
+                <ReportesDashboard issuers={issuers} sales={salesDB} products={productsDB} users={usersDB} cobros={cobrosDB} />
+              </div>
             )}
 
-            {(currentView === 'settings' && isAdmin) && (
-              <ConfiguracionGeneral 
-                companyData={companyData} 
-                saveCompanyData={saveCompanyData} 
-                issuers={issuers} 
-                updateIssuer={updateIssuer} 
-              />
+            {/* 4. Facturas SRI */}
+            {visitedViews.has('sri') && isAdmin && (
+              <div style={{ display: currentView === 'sri' ? 'block' : 'none', height: '100%' }}>
+                <FacturasSRI isAdmin={isAdmin} issuers={issuers} sales={salesDB} />
+              </div>
             )}
-            {(currentView === 'inventory' && hasPermission('inventario', 'ver')) && (
-              <InventarioScreen 
-                productsDB={productsDB}
-                onEdit={(prod) => { setProductToEdit(prod); setIsModalOpen(true); }}
-                onDelete={eliminarProducto}
-                onAdd={() => { setProductToEdit(null); setIsModalOpen(true); }}
-              />
+
+            {/* 5. Configuración General */}
+            {visitedViews.has('settings') && isAdmin && (
+              <div style={{ display: currentView === 'settings' ? 'block' : 'none', height: '100%' }}>
+                <ConfiguracionGeneral 
+                  companyData={companyData} 
+                  saveCompanyData={saveCompanyData} 
+                  issuers={issuers} 
+                  updateIssuer={updateIssuer} 
+                />
+              </div>
             )}
-            {(currentView === 'customers' && hasPermission('clientes', 'ver')) && (
-              <ClientesScreen 
-                customersDB={customersDB}
-                onAdd={() => { setCustomerToEdit(null); setIsCustomerModalOpen(true); }}
-                onEdit={(cliente) => { setCustomerToEdit(cliente); setIsCustomerModalOpen(true); }}
-                onDelete={eliminarCliente}
-              />
+
+            {/* 6. Inventario */}
+            {visitedViews.has('inventory') && hasPermission('inventario', 'ver') && (
+              <div style={{ display: currentView === 'inventory' ? 'block' : 'none', height: '100%' }}>
+                <InventarioScreen 
+                  productsDB={productsDB}
+                  onEdit={(prod) => { setProductToEdit(prod); setIsModalOpen(true); }}
+                  onDelete={eliminarProducto}
+                  onAdd={() => { setProductToEdit(null); setIsModalOpen(true); }}
+                />
+              </div>
             )}
-            {(currentView === 'receivables' && (isAdmin || hasPermission('cuentas_por_cobrar', 'ver') || hasPermission('caja', 'ver'))) && (
-              <CuentasPorCobrarScreen currentUser={currentUser} issuers={issuers} cobrosProp={cobrosDB} />
+
+            {/* 7. Clientes */}
+            {visitedViews.has('customers') && hasPermission('clientes', 'ver') && (
+              <div style={{ display: currentView === 'customers' ? 'block' : 'none', height: '100%' }}>
+                <ClientesScreen 
+                  customersDB={customersDB}
+                  onAdd={() => { setCustomerToEdit(null); setIsCustomerModalOpen(true); }}
+                  onEdit={(cliente) => { setCustomerToEdit(cliente); setIsCustomerModalOpen(true); }}
+                  onDelete={eliminarCliente}
+                />
+              </div>
+            )}
+
+            {/* 8. Cuentas por Cobrar */}
+            {visitedViews.has('receivables') && (isAdmin || hasPermission('cuentas_por_cobrar', 'ver') || hasPermission('caja', 'ver')) && (
+              <div style={{ display: currentView === 'receivables' ? 'block' : 'none', height: '100%' }}>
+                <CuentasPorCobrarScreen currentUser={currentUser} issuers={issuers} cobrosProp={cobrosDB} salesProp={salesDB} />
+              </div>
             )}
           </Suspense>
         </main>

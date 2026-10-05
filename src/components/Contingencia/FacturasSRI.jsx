@@ -68,9 +68,9 @@ const getNombreEmisorReal = (venta, issuersList = []) => {
   return venta.issuerName || 'GRAVITY DENIM';
 };
 
-export default function FacturasSRI({ isAdmin, issuers = [] }) {
-  const [ventas, setVentas] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function FacturasSRI({ isAdmin, issuers = [], sales: salesProp }) {
+  const [ventas, setVentas] = useState(salesProp || []);
+  const [loading, setLoading] = useState(!salesProp || salesProp.length === 0);
   const [activeTab, setActiveTab] = useState('contingencia'); // 'contingencia' o 'historial'
   const [procesandoId, setProcesandoId] = useState(null);
   const [eliminandoId, setEliminandoId] = useState(null);
