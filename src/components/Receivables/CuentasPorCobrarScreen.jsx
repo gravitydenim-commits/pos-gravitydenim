@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { db } from '../../firebase/config';
+import { db, auth } from '../../firebase/config';
 import { 
   collection, 
   onSnapshot, 
@@ -25,7 +25,9 @@ import {
   History, 
   ArrowRight,
   Filter,
-  PlusCircle
+  PlusCircle,
+  FileText,
+  Send
 } from 'lucide-react';
 
 const formatCurrency = (val) => {
@@ -67,6 +69,11 @@ export default function CuentasPorCobrarScreen({ currentUser, issuers = [], cobr
   const [historyAccount, setHistoryAccount] = useState(null); // Para modal de historial
   const [historyList, setHistoryList] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // Estado para conversión de Nota de Venta a Factura SRI
+  const [convertAccount, setConvertAccount] = useState(null);
+  const [isConverting, setIsConverting] = useState(false);
+  const [convertError, setConvertError] = useState('');
 
   // Estado del formulario de cobro
   const [montoCobro, setMontoCobro] = useState('');
@@ -223,6 +230,45 @@ export default function CuentasPorCobrarScreen({ currentUser, issuers = [], cobr
     const accountCobros = cobros.filter(c => c.ventaId === sale.id);
     setHistoryList(accountCobros);
     setLoadingHistory(false);
+  };
+
+  // Confirmar y Ejecutar Conversión de Nota de Venta a Factura Electrónica SRI
+  const handleConfirmConversion = async () => {
+    if (!convertAccount || isConverting) return;
+    setIsConverting(true);
+    setConvertError('');
+
+    try {
+      const currentUserAuth = auth.currentUser;
+      if (!currentUserAuth) {
+        throw new Error("No hay una sesión activa de usuario. Inicie sesión nuevamente.");
+      }
+      const token = await currentUserAuth.getIdToken();
+
+      const response = await fetch('/api/sri/convertir-nv', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ventaId: convertAccount.id
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al emitir la factura ante el SRI');
+      }
+
+      alert(`✅ ¡FACTURA EMITIDA EXITOSAMENTE!\n\n${data.message || 'Comprobante autorizado por el SRI.'}\n\nNúmero de Factura: ${data.numeroComprobante}\nClave de Acceso: ${data.claveAcceso}`);
+      setConvertAccount(null);
+    } catch (err) {
+      console.error("Error en conversión a Factura SRI:", err);
+      setConvertError(err.message || 'Ocurrió un error inesperado al procesar.');
+    } finally {
+      setIsConverting(false);
+    }
   };
 
   // Ejecutar Cobro Atómico mediante Transacción Firestore
@@ -465,6 +511,11 @@ export default function CuentasPorCobrarScreen({ currentUser, issuers = [], cobr
                   const clientObj = sale.cliente || sale.customer || {};
                   const clientName = clientObj.nombre || 'Consumidor Final';
                   const clientDoc = clientObj.numeroIdentificacion ? `(${clientObj.numeroIdentificacion})` : '';
+                  const isNotaVenta = Boolean(
+                    sale.isNotaVenta || 
+                    sale.tipoComprobante === 'NOTA_DE_VENTA' || 
+                    (sale.numeroComprobante && sale.numeroComprobante.startsWith('NV-'))
+                  );
 
                   return (
                     <tr key={sale.id} style={{ borderBottom: '1px solid var(--panel-border)', transition: 'background 0.2s' }}>
@@ -540,6 +591,31 @@ export default function CuentasPorCobrarScreen({ currentUser, issuers = [], cobr
                           >
                             <History size={14} /> Historial
                           </button>
+                          {isNotaVenta && (
+                            <button
+                              onClick={() => {
+                                setConvertError('');
+                                setConvertAccount(sale);
+                              }}
+                              title="Convertir esta Nota de Venta en Factura Electrónica SRI"
+                              style={{
+                                padding: '6px 10px',
+                                borderRadius: '6px',
+                                border: '1px solid rgba(168, 85, 247, 0.5)',
+                                background: 'rgba(168, 85, 247, 0.15)',
+                                color: '#c084fc',
+                                fontSize: '0.8rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              <FileText size={14} /> Facturar SRI
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -780,6 +856,125 @@ export default function CuentasPorCobrarScreen({ currentUser, issuers = [], cobr
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Conversión de Nota de Venta a Factura Electrónica SRI */}
+      {convertAccount && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '1rem' }}>
+          <div style={{ background: 'var(--panel-bg)', border: '1px solid rgba(168, 85, 247, 0.4)', borderRadius: '16px', width: '100%', maxWidth: '540px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+            
+            {/* Modal Header */}
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--panel-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(168, 85, 247, 0.1)' }}>
+              <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <FileText style={{ color: '#c084fc' }} /> Facturar al SRI (Fiscal)
+              </h3>
+              {!isConverting && (
+                <button onClick={() => setConvertAccount(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                  <X size={20} />
+                </button>
+              )}
+            </div>
+
+            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {convertError && (
+                <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <AlertCircle size={18} />
+                  <span>{convertError}</span>
+                </div>
+              )}
+
+              <div style={{ background: 'var(--bg-main)', border: '1px solid var(--panel-border)', borderRadius: '10px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.9rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Comprobante actual:</span>
+                  <span style={{ fontWeight: 700, color: '#f97316' }}>{convertAccount.numeroComprobante || convertAccount.secuencial}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Cliente:</span>
+                  <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>{(convertAccount.cliente || convertAccount.customer)?.nombre}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Identificación:</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{(convertAccount.cliente || convertAccount.customer)?.numeroIdentificacion}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Correo para RIDE:</span>
+                  <span style={{ color: '#60a5fa' }}>{(convertAccount.cliente || convertAccount.customer)?.correo || 'Sin correo registrado'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed var(--panel-border)', paddingTop: '8px', marginTop: '4px' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Total Venta:</span>
+                  <span style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--accent)' }}>{formatCurrency(convertAccount.totals?.total || convertAccount.total || 0)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Saldo en Crédito:</span>
+                  <span style={{ fontWeight: 700, color: '#ef4444' }}>{formatCurrency(convertAccount.saldoPendiente ?? (convertAccount.totals?.total || convertAccount.total || 0))}</span>
+                </div>
+              </div>
+
+              <div style={{ padding: '0.85rem', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.2)', fontSize: '0.82rem', color: '#93c5fd', lineHeight: 1.4 }}>
+                ℹ️ <strong>¿Qué pasará al confirmar?</strong>
+                <ul style={{ margin: '6px 0 0 1.2rem', padding: 0 }}>
+                  <li>Se emitirá la <strong>Factura Electrónica oficial</strong> ante el SRI con firma digital.</li>
+                  <li>El comprobante en Cuentas por Cobrar se actualizará con el nuevo número de Factura.</li>
+                  <li><strong>El inventario no se volverá a descontar</strong> (conserva el descuento ya aplicado).</li>
+                  <li>Se enviará automáticamente el RIDE PDF al correo del cliente.</li>
+                </ul>
+              </div>
+
+              {/* Botones */}
+              <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                <button
+                  type="button"
+                  disabled={isConverting}
+                  onClick={() => setConvertAccount(null)}
+                  style={{
+                    flex: 1,
+                    padding: '11px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--panel-border)',
+                    background: 'var(--bg-main)',
+                    color: 'var(--text-main)',
+                    fontWeight: 600,
+                    cursor: isConverting ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={isConverting}
+                  onClick={handleConfirmConversion}
+                  style={{
+                    flex: 2,
+                    padding: '11px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: isConverting ? '#64748b' : '#9333ea',
+                    color: 'white',
+                    fontWeight: 700,
+                    cursor: isConverting ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: isConverting ? 'none' : '0 4px 12px rgba(147, 51, 234, 0.35)'
+                  }}
+                >
+                  {isConverting ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      Emitiendo ante el SRI...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={18} />
+                      Confirmar y Emitir al SRI
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
