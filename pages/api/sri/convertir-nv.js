@@ -81,30 +81,46 @@ export default async function handler(req, res) {
     }
     const emisor = emisorDoc.data();
 
-    // 4. Cargar firma electrónica (.p12)
+    // 4. Cargar firma electrónica (.p12) desde la bóveda segura issuers_secrets
     let p12Buffer = null;
-    const p12Password = emisor.passwordP12 || emisor.firmaPassword;
+    let p12Password = null;
 
-    if (emisor.p12Url || emisor.firmaUrl) {
-      try {
-        const fetchUrl = emisor.p12Url || emisor.firmaUrl;
-        const response = await fetch(fetchUrl);
-        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-        const arrayBuffer = await response.arrayBuffer();
-        p12Buffer = Buffer.from(arrayBuffer);
-        console.log(`[CONVERTIR NV] Firma electrónica cargada desde URL para ${emisor.name || emisor.razonSocial}.`);
-      } catch (err) {
-        console.error("Error al descargar firma desde URL:", err);
-        return res.status(500).json({ error: 'No se pudo descargar la firma electrónica del emisor desde almacenamiento.' });
+    const secretDoc = await adminDb.collection('issuers_secrets').doc(emisorId).get();
+    if (secretDoc.exists) {
+      const secretData = secretDoc.data();
+      if (secretData.p12Base64) {
+        p12Buffer = Buffer.from(secretData.p12Base64, 'base64');
       }
-    } else if (emisor.firmaPath) {
-      const absoluteFirmaPath = path.resolve(process.cwd(), emisor.firmaPath);
-      if (!fs.existsSync(absoluteFirmaPath)) {
-        return res.status(404).json({ error: `Archivo de firma no encontrado en la ruta: ${emisor.firmaPath}` });
+      p12Password = secretData.password || emisor.passwordP12 || emisor.firmaPassword;
+    }
+
+    // Fallback secundario si no está en la bóveda
+    if (!p12Buffer) {
+      if (emisor.p12Url || emisor.firmaUrl) {
+        try {
+          const fetchUrl = emisor.p12Url || emisor.firmaUrl;
+          const response = await fetch(fetchUrl);
+          if (response.ok) {
+            const arrayBuffer = await response.arrayBuffer();
+            p12Buffer = Buffer.from(arrayBuffer);
+            p12Password = p12Password || emisor.passwordP12 || emisor.firmaPassword;
+          }
+        } catch (err) {
+          console.warn("Fallback de descarga de firma falló:", err);
+        }
+      } else if (emisor.firmaPath) {
+        const absoluteFirmaPath = path.resolve(process.cwd(), emisor.firmaPath);
+        if (fs.existsSync(absoluteFirmaPath)) {
+          p12Buffer = fs.readFileSync(absoluteFirmaPath);
+          p12Password = p12Password || emisor.passwordP12 || emisor.firmaPassword;
+        }
       }
-      p12Buffer = fs.readFileSync(absoluteFirmaPath);
-    } else {
-      return res.status(400).json({ error: 'El emisor no tiene configurada una firma electrónica (.p12).' });
+    }
+
+    if (!p12Buffer || !p12Password) {
+      return res.status(400).json({ 
+        error: `Falta la firma electrónica (.p12) para el emisor ${emisor.razonSocial || emisor.name}. Verifique la firma en Ajustes.` 
+      });
     }
 
     // 5. Reservar secuencial de factura de forma atómica
