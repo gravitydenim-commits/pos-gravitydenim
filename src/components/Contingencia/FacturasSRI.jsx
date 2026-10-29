@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { db } from '../../firebase/config';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, limit } from 'firebase/firestore';
 import { AlertTriangle, CheckCircle, RefreshCw, Printer, Search, FileCode } from 'lucide-react';
@@ -475,7 +476,7 @@ export default function FacturasSRI({ isAdmin, issuers = [], sales: salesProp })
   };
 
   return (
-    <div className="report-container animate-fade-in" style={{ padding: '2rem' }}>
+    <div className="report-container" style={{ padding: '2rem' }}>
       <div className="header" style={{ marginBottom: '2rem' }}>
         <h2><AlertTriangle className="inline" style={{verticalAlign: 'bottom'}}/> Facturación Electrónica SRI</h2>
         <span style={{color: 'var(--text-muted)'}}>Contingencia y Documentos Emitidos</span>
@@ -681,10 +682,10 @@ export default function FacturasSRI({ isAdmin, issuers = [], sales: salesProp })
          )}
        </div>
 
-       {/* Detalle Modal */}
-       {selectedVenta && (
-         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-           <div className="glass-panel" style={{ width: '100%', maxWidth: '600px', padding: '2rem', maxHeight: '90vh', overflowY: 'auto', background: 'var(--panel-bg)', border: '1px solid var(--panel-border)', borderRadius: '12px', color: 'var(--text-main)' }}>
+       {/* Detalle Modal con Portal en document.body para evitar desplazamiento hacia abajo */}
+       {selectedVenta && typeof document !== 'undefined' && createPortal(
+         <div style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '20px' }}>
+           <div className="glass-panel" style={{ width: '100%', maxWidth: '620px', padding: '2rem', maxHeight: '88vh', overflowY: 'auto', background: '#181920', border: '1px solid var(--panel-border)', borderRadius: '14px', color: 'var(--text-main)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)' }}>
              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', borderBottom: '1px solid var(--panel-border)', paddingBottom: '10px' }}>
                <h3 style={{ margin: 0, color: 'var(--text-main)' }}>Detalle de Factura SRI</h3>
                <button onClick={() => setSelectedVenta(null)} style={{ background: 'none', border: 'none', color: 'var(--text-main)', fontSize: '1.5rem', cursor: 'pointer', lineHeight: '1' }}>&times;</button>
@@ -779,7 +780,8 @@ export default function FacturasSRI({ isAdmin, issuers = [], sales: salesProp })
                </button>
              </div>
            </div>
-         </div>
+         </div>,
+         document.body
        )}
 
         {ventaAnular && (
