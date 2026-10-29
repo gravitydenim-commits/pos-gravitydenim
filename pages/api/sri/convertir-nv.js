@@ -169,7 +169,7 @@ export default async function handler(req, res) {
         dirMatriz: emisor.direccionMatriz || 'Av. Maldonado y Quimiag'
       },
       infoFactura: {
-        fechaEmision: new Date().toLocaleDateString('es-EC'),
+        fechaEmision: new Date().toISOString(),
         dirEstablecimiento: emisor.direccionEstablecimiento || emisor.direccionMatriz,
         obligadoContabilidad: emisor.obligadoContabilidad ? 'SI' : 'NO',
         tipoIdentificacionComprador: tipoDoc === 'CEDULA' ? '05' : tipoDoc === 'RUC' ? '04' : '06',
@@ -206,10 +206,10 @@ export default async function handler(req, res) {
         detalle: totalsCalc.detalles.map(d => ({
           codigoPrincipal: d.codigoPrincipal || getCodigoPrincipal(d),
           descripcion: d.nombre,
-          cantidad: Number(d.qty).toFixed(6),
-          precioUnitario: Number(d.precioUnitario).toFixed(6),
-          descuento: 0,
-          precioTotalSinImpuesto: Number(d.precioTotalSinImpuesto).toFixed(2),
+          cantidad: d.qty,
+          precioUnitario: d.precioUnitario,
+          descuento: d.descuento || 0,
+          precioTotalSinImpuesto: d.precioTotalSinImpuesto,
           impuestos: {
             impuesto: [
               {
@@ -222,6 +222,12 @@ export default async function handler(req, res) {
             ]
           }
         }))
+      },
+      infoAdicional: {
+        campoAdicional: [
+          { nombre: 'Email', value: cliente.correo || 'N/A' },
+          { nombre: 'Telefono', value: cliente.telefono || 'N/A' }
+        ]
       }
     };
 
@@ -370,6 +376,7 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Error general en conversión de Nota de Venta a Factura:', error);
-    return res.status(500).json({ error: 'Error interno en conversión: ' + error.message });
+    const detail = error.errors ? ` (${Array.isArray(error.errors) ? error.errors.join(', ') : JSON.stringify(error.errors)})` : '';
+    return res.status(500).json({ error: 'Error interno en conversión: ' + error.message + detail });
   }
 }
